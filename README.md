@@ -45,3 +45,23 @@ att aterimplementera odokumenterade heuristiker (`priority_score`, `signature_v2
 Malet ar ett giltigt 600-radersurval som uppfyller samtliga frysta villkor,
 byggt fran raflodet.
 
+
+## BLOCKERING — natverk (2026-09-07)
+
+Varken molnmiljon eller enhetens skal nar ut till de kallor forvarvslagret behover:
+
+| Mal | Behovs for | Resultat |
+|---|---|---|
+| `data.gdeltproject.org` | GDELT Events (ActionGeo -> review_region), nya dygn | HTTP 403 |
+| `web.archive.org` | bevisfangst, arkivlank per observation | ingen anslutning |
+
+Foljd: **forvarvslagret kan inte koras harifran.** Allt som arbetar pa redan
+nedladdad data fungerar (de tio pilotdygnens Mentions ligger pa disk).
+
+`review_region` harleds ur ActionGeo, som finns i GDELT **Events**, inte i Mentions.
+Mentions saknar geografi helt. Manifesten har `action_geo_country` for de *valda*
+raderna, men urvalet kraver geografi for *alla* kandidater. Utan Events gar
+regionkvoterna inte att satta.
+
+Losning kravs innan nya dygn kan produceras: allowlista domanerna, eller ladda
+ner Events for de tio dygnen utanfor sandladan.
