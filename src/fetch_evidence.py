@@ -34,7 +34,10 @@ def fetch_one(url, allowed=None):
            "page_title": "", "error": None}
     if allowed is not None:
         dom = re.sub(r"^www\.", "", (urllib.request.urlparse(url).netloc or "").lower())
-        if dom not in allowed:
+        # Registret listar den registrerade domanen. Ett vards subdoman (edition.cnn.com,
+        # wellington.scoop.co.nz) ar samma publicist och ska slappas igenom - urvalslagret
+        # normaliserar redan sa. Uppmatt fel 2026-09-07: 7 rutor sparrades av var egen grind.
+        if not (dom in allowed or any(dom.endswith("." + a) for a in allowed)):
             rec["error"] = f"DOMAN_EJ_I_REGISTER:{dom}"
             return rec
     req = urllib.request.Request(url, headers={"User-Agent": UA, "Accept": "text/html,*/*"})
