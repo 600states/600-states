@@ -162,3 +162,33 @@ Forsta implementationen slog ihop pa delat GDELT-event-ID och producerade tva
 jattekluster pa 339 respektive 318 dokument med helt orelaterade nyheter kedjade
 samman. GDELT overmergear event (PE-004). Delat event-ID ar nu ett parsignal som
 alltid kraver lexikaliskt stod. Storsta gruppen darefter: 19 dokument.
+
+## Klustringsmetod — avgjord genom matning (2026-09-07)
+
+### Mattet var fel forst
+
+Recall mattes forst **per par**. Det ar fel matt: facitgrupperna ar transitiva
+(en grupp pa 11 ger 55 par, men klustringen behover bara en sammanhangande kedja).
+Ratt matt ar **hur manga grupper som halls ihop**.
+
+Med ratt matt, pa 34 bekraftade dubblettgrupper i #002:
+
+| Metod | Troskel | Grupper helt fangade | Extra par att bedoma |
+|---|---|---|---|
+| Lexikalisk pa rubrik | 0,20 | **30/34 (88,2 %)** | **275** |
+| Lexikalisk pa rubrik | 0,25 | 28/34 (82,4 %) | 154 |
+| Embeddings (MiniLM) | 0,45 | 31/34 (91,2 %) | 873 |
+| Embeddings (MiniLM) | 0,50 | 31/34 (91,2 %) | 619 |
+
+### Beslut: lexikalisk pa rubrik, Jaccard 0,20. Inga embeddings.
+
+Embeddings vinner tre procentenheter — en enda grupp av 34 — till tre ganger
+bedomningskostnaden, och kraver torch plus en nedladdad modell vars beteende
+andras mellan versioner. I ett instrument som ska kunna koras om identiskt om tio
+ar ar det fel avvagning. Determinism vager tyngre an tre procentenheter.
+
+### Nasta forbattring ar inte metoden, det ar tackningen
+
+Grupperna som fallerar innehaller rader dar rubriken saknas och slugen anvands som
+reserv. Rubriktackning i testet: 494 av 600. Battre hamtning (andra headers, omforsok,
+Wayback-reserv for rubrik) ar billigare an embeddings och traffar samma problem.
