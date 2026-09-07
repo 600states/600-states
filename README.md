@@ -84,3 +84,40 @@ natverk, som ar blockerat i bada miljoerna:
 | `web.archive.org` | arkivlank per observation (bevisfangst) | ingen anslutning |
 
 Utan allowlist kan pipelinen aldrig kora automatiskt pa nya dygn.
+
+## Bevisfangst — matning 2026-09-07 (natverk oppnat)
+
+Stickprov: 120 slumpvis valda av #002:s 600 URL:er.
+
+| Utfall | Antal | Andel |
+|---|---|---|
+| 200 OK direkt | 95 | 79,2 % |
+| HTTP 403 (botspärr) | 20 | 16,7 % |
+| timeout / 308 / 406 | 5 | 4,2 % |
+| **404 eller 410 (dod lank)** | **0** | **0 %** |
+
+**Noll doda lankar.** Artiklarna finns kvar; misslyckandena ar sajter som
+blockerar var hamtare, inte forsvunnet innehall.
+
+Av de 25 misslyckade fanns 23 i Wayback. **Total tackning 118/120 = 98,3 %.**
+
+### Foljd for evidence_basis
+
+Wayback-traffarna ar daterade 2026-01-02/03 — allts fran sjalva
+observationsdygnet, inte fran idag. For de raderna ar beviset *samtida*, inte
+retrospektivt. v0.2 var for pessimistisk. Tre nivaer galler:
+
+| Varde | Betydelse |
+|---|---|
+| `OBSERVED_AT_CAPTURE` | hamtad under observationsdygnet (nya dygn) |
+| `CONTEMPORANEOUS_ARCHIVE` | arkivkopia fran observationsdygnet (manga pilotrader) |
+| `RETROSPECTIVE` | hamtad i efterhand, manader senare |
+
+Wayback ar fortfarande inte kritisk vag och far aldrig blockera ett dygn — men
+for pilotdagarna ar den mer varde an v0.2 antog.
+
+### Domanspärr
+
+`fetch_evidence.py` slapper bara igenom domaner ur det frusna kallregistret
+(75 st), oavsett att plattformens egress ar oppen. Plattformen ar oppen,
+programmet ar last.
