@@ -121,3 +121,44 @@ for pilotdagarna ar den mer varde an v0.2 antog.
 `fetch_evidence.py` slapper bara igenom domaner ur det frusna kallregistret
 (75 st), oavsett att plattformens egress ar oppen. Plattformen ar oppen,
 programmet ar last.
+
+## Lager 2a — kandidathamtning, matt recall (2026-09-07)
+
+Facit: 34 bekraftade dubblettgrupper i #002 fran den historiska re-auditen, 177 par.
+Bada URL:erna finns i kandidatpoolen for samtliga 177.
+
+| Trosklar | Recall | Grupper | Par att bedoma |
+|---|---|---|---|
+| jac 0,50 / ev 0,25 | 68,9 % | 205 | 734 |
+| jac 0,45 / ev 0,20 | 76,3 % | 209 | 862 |
+| **jac 0,40 / ev 0,20** | **79,7 %** | 218 | 1004 |
+| jac 0,35 / ev 0,15 | 79,7 % | 238 | 1225 |
+
+**Recall planar pa ~80 %.** Lagre trosklar ger fler par men inte fler traffar.
+
+### Diagnos
+
+De sista 20 % ar dubbletter som URL-slugen omojligt kan fanga: olika redaktioner
+skriver genuint olika slugar for samma handelse. Det ar exakt samma tak som gav
+upphov till ursprungsdefekten (FYND 002) — man kan inte deduplicera information
+genom att titta pa adresser.
+
+### Foljd: pipelineordningen andras
+
+Retrieval maste kora pa **artikelrubrik**, inte pa URL-slug. Rubriken finns i
+bevisfangsten, som darmed maste ske FORE klustringen.
+
+    tidigare:  kandidater -> klustra -> valj 600 -> bevisfangst
+    ratt:      kandidater -> rangordna -> bevisfangst -> klustra pa rubrik
+               -> materialitetsbedomning -> valj 600
+
+Kostnad: bevisfangst pa fler an 600 dokument per dygn. Motmedel: rangordna forst
+och fanga bevis for en delmangd med marginal (storleksordning 1200 av 2880),
+i stallet for hela poolen.
+
+### Event-ID far aldrig sla samman transitivt
+
+Forsta implementationen slog ihop pa delat GDELT-event-ID och producerade tva
+jattekluster pa 339 respektive 318 dokument med helt orelaterade nyheter kedjade
+samman. GDELT overmergear event (PE-004). Delat event-ID ar nu ett parsignal som
+alltid kraver lexikaliskt stod. Storsta gruppen darefter: 19 dokument.
