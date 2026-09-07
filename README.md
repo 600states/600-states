@@ -45,23 +45,42 @@ att aterimplementera odokumenterade heuristiker (`priority_score`, `signature_v2
 Malet ar ett giltigt 600-radersurval som uppfyller samtliga frysta villkor,
 byggt fran raflodet.
 
+## Events-data (löst 2026-09-07)
 
-## BLOCKERING — natverk (2026-09-07)
+Events-filerna finns nu i `01_RAW_GDELT_2026_001_010` — **GDELT 1.0 dagsfiler**
+(`YYYYMMDD.export.CSV.zip`, 58 falt, en fil per dygn), inte GDELT 2.0:s
+15-minutersfiler. Fungerar lika bra och ar enklare: 1 fil per dygn i stallet for 96.
 
-Varken molnmiljon eller enhetens skal nar ut till de kallor forvarvslagret behover:
+Faltindex som anvands: `GLOBALEVENTID` 0, `ActionGeo_CountryCode` 51,
+`ActionGeo_FullName` 50, `SOURCEURL` 57.
+
+Verifierat mot #002 (2026-01-02): 73 887 events, 600/600 av manifestets
+`representative_event_ids` aterfinns.
+
+### Regel for review_region
+
+Geografin ligger pa de *lankade* eventen, inte pa ett enskilt. Traffsakerhet mot
+den frusna `action_geo_country`:
+
+| Regel | Traff |
+|---|---|
+| forsta event-id | 81,6 % |
+| URL-matchad event | 67,7 % |
+| **vanligaste bland event-ids (majoritet)** | **97,4 %** |
+| nagon av event-ids | 100 % |
+
+v3.0 anvander **majoritetsregeln**: vanligaste `ActionGeo_CountryCode` bland
+klustrets lankade events. Deterministisk och reproducerar den historiska
+tilldelningen till 97,4 %.
+
+## KVARSTAENDE BLOCKERING — natverk for nya dygn
+
+Pilotdygnen ar losta med lokal data. For **nya** dygn kravs fortfarande utgaende
+natverk, som ar blockerat i bada miljoerna:
 
 | Mal | Behovs for | Resultat |
 |---|---|---|
-| `data.gdeltproject.org` | GDELT Events (ActionGeo -> review_region), nya dygn | HTTP 403 |
-| `web.archive.org` | bevisfangst, arkivlank per observation | ingen anslutning |
+| `data.gdeltproject.org` | Mentions + Events for nya dygn | HTTP 403 |
+| `web.archive.org` | arkivlank per observation (bevisfangst) | ingen anslutning |
 
-Foljd: **forvarvslagret kan inte koras harifran.** Allt som arbetar pa redan
-nedladdad data fungerar (de tio pilotdygnens Mentions ligger pa disk).
-
-`review_region` harleds ur ActionGeo, som finns i GDELT **Events**, inte i Mentions.
-Mentions saknar geografi helt. Manifesten har `action_geo_country` for de *valda*
-raderna, men urvalet kraver geografi for *alla* kandidater. Utan Events gar
-regionkvoterna inte att satta.
-
-Losning kravs innan nya dygn kan produceras: allowlista domanerna, eller ladda
-ner Events for de tio dygnen utanfor sandladan.
+Utan allowlist kan pipelinen aldrig kora automatiskt pa nya dygn.
