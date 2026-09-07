@@ -44,3 +44,4 @@ Urvalsmotorn. Malet ar INTE att reproducera v2.2:s exakta 600 rader — det vore
 att aterimplementera odokumenterade heuristiker (`priority_score`, `signature_v2`).
 Malet ar ett giltigt 600-radersurval som uppfyller samtliga frysta villkor,
 byggt fran raflodet.
+
