@@ -90,6 +90,27 @@ def from_url(url):
     s = " ".join(words)
     return s[0].upper() + s[1:]
 
+def claim_of(page_title, domain, url):
+    """Den enda definitionen av klassificerarens input. Anvands bade av
+    urvalsfiltret och av inputbygget - annars kan urvalet slappa igenom en rad
+    som inputbygget inte kan lasa. Returnerar (claim, claim_source)."""
+    title = (page_title or "").strip()
+    claim = from_title(title, domain) if title else ""
+    slug = from_url(url)
+    usable_slug = len([w for w in re.split(r"[^A-Za-z]+", slug) if len(w) > 2]) >= 3
+    if claim and usable_slug and not _relates(claim, url):
+        claim = ""
+    if claim:
+        return claim, "LIVE_FETCH"
+    if usable_slug:
+        return slug, "URL_SLUG"
+    if title:
+        return html.unescape(title).strip(), "PAGE_TITLE_UNVERIFIED"
+    return "", "NONE"
+
+def readable(claim):
+    return len([w for w in re.split(r"[^A-Za-z]+", claim) if len(w) > 2]) >= 3
+
 def build(manifest, evidence, state_id):
     rows = list(csv.DictReader(open(manifest, encoding="utf-8")))
     ev = {}

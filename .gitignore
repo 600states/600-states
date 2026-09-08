@@ -5,3 +5,4 @@ venv/
 out/
 .env
 .DS_Store
+08_V3_STATES/*/_work/
