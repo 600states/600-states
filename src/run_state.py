@@ -148,6 +148,9 @@ def step_render(state):
     from render import render_state
     png = render_state(state)
     print(f"        {Path(png).name}  sha256 {sha(png)}")
+    from build_site import build as build_site
+    out, _ = build_site(state)
+    print(f"        sajtens datafil: {out.name}")
 
 def main():
     day, state = sys.argv[1], sys.argv[2]
