@@ -90,6 +90,19 @@ def from_url(url):
     s = " ".join(words)
     return s[0].upper() + s[1:]
 
+# En sammanfattningsartikel bar flera informationstillstand, inte ett. "5 stories you
+# might have missed" ar fem handelser i en ruta och bryter mot grundregeln en observation
+# = en ruta. Monstret ar publicerat och rakningsbart, precis som storytakets troskel.
+DIGEST = re.compile(
+    r"(while you were sleeping|stories you (might|may) have missed|morning briefing"
+    r"|evening briefing|news round-?up|roundup|today'?s headlines|what to know"
+    r"|five things|5 things|top stories|in pictures|live updates|live blog"
+    r"|as it happened|weekly digest|newsletter|up first)", re.I)
+
+def is_digest(claim):
+    """Sant om raden ar en sammanfattning av flera nyheter, inte en observation."""
+    return bool(DIGEST.search(claim or ""))
+
 def claim_of(page_title, domain, url):
     """Den enda definitionen av klassificerarens input. Anvands bade av
     urvalsfiltret och av inputbygget - annars kan urvalet slappa igenom en rad

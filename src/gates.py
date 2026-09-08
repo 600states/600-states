@@ -36,8 +36,11 @@ def gate_selection(chosen, report, regions, per_region, cap):
          f"{report['unika_observation_id']}")
     _say("unika url", report["unika_urler"] == len(chosen), f"{report['unika_urler']}")
 
-def gate_claims(items):
-    empty = [i for i in items if len(str(i["neutral_source_claim"]).split()) < 3]
+def gate_claims(items, is_readable):
+    """is_readable ar SAMMA funktion som urvalsfiltret anvander. Tva egna
+    definitioner av "lasbar" var orsaken till att urvalet slappte igenom rader
+    som inputbygget inte kunde lasa - se FYND 003."""
+    empty = [i for i in items if not is_readable(str(i["neutral_source_claim"]))]
     dist = collections.Counter(i["claim_source"] for i in items)
     print("        claim_source:", dict(dist))
     _say("varje rad har lasbar text", not empty,

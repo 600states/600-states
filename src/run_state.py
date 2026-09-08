@@ -22,7 +22,7 @@ sys.path.insert(0, str(HERE)); sys.path.insert(0, str(HERE.parent))
 from config import DATA
 import candidates, ranking, select_day, pool_evidence, gates
 from color_protocol import hex_of_row, VOCAB
-from build_classifier_input import claim_of, readable
+from build_classifier_input import claim_of, readable, is_digest
 
 REGISTRY = DATA / "00_CANONICAL_PROJECT_DOCS/01_FROZEN_PROTOCOL_LIBRARY_v1.0/600_STATES_Source_Registry_v2.0_FROZEN.csv"
 STAGES = ["candidates", "pool", "select", "input", "emotion", "color", "render"]
@@ -62,11 +62,41 @@ def step_select(state, day):
     print("\n[select]")
     pool = json.loads((work(state) / "pool.json").read_text(encoding="utf-8"))
     pool_evidence.attach(pool)
-    ok = [c for c in pool if readable(claim_of(c.get("page_title"), c["domain"], c["url"])[0])]
-    print(f"        {len(ok)}/{len(pool)} kandidater har lasbar text")
+    ok, dig = [], 0
+    for c in pool:
+        claim = claim_of(c.get("page_title"), c["domain"], c["url"])[0]
+        if not readable(claim): continue
+        if is_digest(claim): dig += 1; continue
+        ok.append(c)
+    print(f"        {len(ok)}/{len(pool)} kandidater har lasbar text ({dig} sammanfattningar bortsorterade)")
     chosen, report, near = select_day.select(ok, f"2026-{state}")
     gates.gate_selection(chosen, report, select_day.REGIONS, select_day.PER_REGION, select_day.PUBLISHER_CAP)
     (work(state) / "chosen.json").write_text(json.dumps(chosen, ensure_ascii=False), encoding="utf-8")
+    cols = ["state_id","tile_index","grid_row","grid_column","observation_id","family_key",
+            "first_mention_utc","representative_url","representative_domain","source_tier",
+            "selection_layer","review_region","action_geo_country","mention_rows",
+            "registry_version","evidence_http_status","evidence_sha256"]
+    pre = outdir(state) / f"600_STATES_2026_{state}_PRE_EMOTION_MANIFEST_v3.1.csv"
+    with open(pre, "w", encoding="utf-8", newline="") as fh:
+        w = csv.DictWriter(fh, fieldnames=cols); w.writeheader()
+        for c in chosen:
+            w.writerow({"state_id": c["state_id"], "tile_index": c["tile_index"],
+                        "grid_row": c["grid_row"], "grid_column": c["grid_column"],
+                        "observation_id": c["observation_id"], "family_key": c["family_key"],
+                        "first_mention_utc": c["first_mention_utc"], "representative_url": c["url"],
+                        "representative_domain": c["domain"], "source_tier": c["source_tier"],
+                        "selection_layer": c["selection_layer"], "review_region": c["review_region"],
+                        "action_geo_country": c.get("action_geo_country", ""),
+                        "mention_rows": c["mention_rows"], "registry_version": c["registry_version"],
+                        "evidence_http_status": c.get("http_status") or "",
+                        "evidence_sha256": c.get("content_sha256") or ""})
+    print(f"        pre-emotion manifest: {pre.name}")
+    nd = outdir(state) / f"600_STATES_2026_{state}_NEAR_DUPLICATE_OBSERVED_v3.1.csv"
+    with open(nd, "w", encoding="utf-8", newline="") as fh:
+        w = csv.writer(fh); w.writerow(["url_a", "url_b", "jaccard"])
+        for row in near:
+            w.writerow(list(row) if isinstance(row, (list, tuple)) else [row])
+    print(f"        near-duplicate log: {nd.name} ({len(near)} rader)")
     (outdir(state) / f"600_STATES_2026_{state}_SELECTION_REPORT_v3.1.json").write_text(
         json.dumps(report, ensure_ascii=False, indent=1), encoding="utf-8")
     print("       ", {k: report[k] for k in ("kandidater", "efter_storytak", "valda")})
@@ -83,7 +113,7 @@ def step_input(state):
                       "neutral_source_claim": claim, "claim_source": src,
                       "review_region": c["review_region"], "selection_layer": c["selection_layer"],
                       "source_tier": c["source_tier"], "representative_domain": c["domain"]})
-    gates.gate_claims(items)
+    gates.gate_claims(items, readable)
     d = outdir(state) / "classifier_input"; d.mkdir(parents=True, exist_ok=True)
     for k in range(0, len(items), 60):
         (d / f"batch_{k//60+1:02d}.json").write_text(
