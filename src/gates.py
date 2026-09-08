@@ -36,7 +36,7 @@ def gate_selection(chosen, report, regions, per_region, cap):
          f"{report['unika_observation_id']}")
     _say("unika url", report["unika_urler"] == len(chosen), f"{report['unika_urler']}")
 
-def gate_claims(items, is_readable):
+def gate_claims(items, is_readable, is_digest=None):
     """is_readable ar SAMMA funktion som urvalsfiltret anvander. Tva egna
     definitioner av "lasbar" var orsaken till att urvalet slappte igenom rader
     som inputbygget inte kunde lasa - se FYND 003."""
@@ -45,6 +45,10 @@ def gate_claims(items, is_readable):
     print("        claim_source:", dict(dist))
     _say("varje rad har lasbar text", not empty,
          f"{len(empty)} rader utan" + (f" (t.ex. ruta {empty[0]['tile_index']})" if empty else ""))
+    if is_digest is not None:
+        d = [i for i in items if is_digest(i["neutral_source_claim"])]
+        _say("ingen sammanfattningsartikel", not d,
+             f"{len(d)} rader" + (f" (t.ex. ruta {d[0]['tile_index']}: {d[0]['neutral_source_claim'][:50]})" if d else ""))
 
 def gate_emotion(inputs, rows, vocab):
     ids_in = {i["observation_id"] for i in inputs}

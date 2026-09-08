@@ -113,7 +113,7 @@ def step_input(state):
                       "neutral_source_claim": claim, "claim_source": src,
                       "review_region": c["review_region"], "selection_layer": c["selection_layer"],
                       "source_tier": c["source_tier"], "representative_domain": c["domain"]})
-    gates.gate_claims(items, readable)
+    gates.gate_claims(items, readable, is_digest)
     d = outdir(state) / "classifier_input"; d.mkdir(parents=True, exist_ok=True)
     for k in range(0, len(items), 60):
         (d / f"batch_{k//60+1:02d}.json").write_text(
