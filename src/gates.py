@@ -71,7 +71,24 @@ def gate_registry(cands, registry_path, version, allowed):
     FYND 004: kandidatbyggaren laste v1.1 STRICT (75 domaner) medan manifestet
     skrev v2.0 (107). De 32 tillagda domanerna kunde aldrig valjas.
     """
-    _say("kallregistret ar det manifestet anger", version in registry_path.name,
+    # TAUTOLOGIN SOM LAG HAR. Grinden testade "version in registry_path.name",
+    # dar version kom ur registry_path.name via config.registry_version(). Den
+    # kunde aldrig falla. Grinden skrevs som svar pa FYND 004 och skyddade
+    # ingenting - det var enda-definition-fixen i config.py som gjorde jobbet.
+    #
+    # Den verkliga risken i FYND 004 var ratt filnamn med fel innehall. Darfor
+    # jamfors registrets bytes nu mot den frysta sha256-sidecaren. Sidecaren
+    # skrevs med en absolut sokvag fran en annan maskin, sa bara hashen lases.
+    import hashlib, re
+    sidecar = registry_path.with_name(registry_path.stem + "_SHA256.txt")
+    if sidecar.exists():
+        vill = re.match(r"[0-9a-f]{64}", sidecar.read_text(encoding="utf-8").strip())
+        har = hashlib.sha256(registry_path.read_bytes()).hexdigest()
+        _say("kallregistrets innehall matchar den frysta hashen",
+             bool(vill) and vill.group(0) == har, f"{har[:16]} mot {vill.group(0)[:16] if vill else 'oläsbar sidecar'}")
+    else:
+        _say("kallregistret har en fryst sha256-sidecar", False, sidecar.name + " saknas")
+    _say("kallregistrets version star i filnamnet", version in registry_path.name,
          f"{registry_path.name} -> {version}")
     doms = {c["domain"] for c in cands}
     bad = doms - set(allowed)

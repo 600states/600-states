@@ -26,7 +26,7 @@ def audit(day, data=DATA):
         if line.strip():
             r = json.loads(line); ev[r["url"]] = r
 
-    out = []
+    out, matt = [], []
     def chk(name, ok, detail): out.append((ok, name, detail))
 
     chk("rader", len(pre) == 600 and len(emo) == 600, f"pre {len(pre)}, emotion {len(emo)}")
@@ -55,8 +55,17 @@ def audit(day, data=DATA):
 
     have = sum(1 for r in pre if r["representative_url"] in ev)
     chk("varje url har en bevispost", have == 600, f"{have}/600")
+    # MATNING, INTE KONTROLL. Raden skickade tidigare hardkodat True till chk()
+    # och skrev alltsa OK oavsett utfall - en kontroll som inte kunde falla, i
+    # den fil som ar granskarens sista. Andelen med innehallshash ligger pa
+    # 88-91 procent; resten ar 403, 404 eller betalvagg. Protokollets krav att
+    # varje observation har en atkomlig kalla (Observation Verification V02) ar
+    # alltsa INTE uppfyllt till hundra procent, och vilket golv som ska galla ar
+    # ett obeslutat varde. Tills det ar beslutat redovisas siffran utan att
+    # pasta att den ar godkand. Se AGENTS.md.
     withhash = sum(1 for r in pre if ev.get(r["representative_url"], {}).get("content_sha256"))
-    chk("bevispost med innehallshash", True, f"{withhash}/600 (ovriga ar 403/404/betalvagg)")
+    matt.append(("bevispost med innehallshash",
+                 f"{withhash}/600 = {withhash/6:.1f}% (ovriga ar 403/404/betalvagg)"))
 
     from datetime import date
     dd = date(int(day[:4]), int(day[4:6]), int(day[6:8])).strftime("%Y%m%d")
@@ -88,6 +97,8 @@ def audit(day, data=DATA):
     print(f"\n=== STATE {sp.state_id(day)} ===")
     for ok, name, detail in out:
         print(("  OK   " if ok else "  FEL  ") + f"{name}" + (f": {detail}" if detail else ""))
+    for name, detail in matt:
+        print(f"  MATT  {name}: {detail}")
     print("  hashar:")
     for k, f in files.items(): print(f"    {k:<15} {sha(f)}")
     return all(o for o, _, _ in out)

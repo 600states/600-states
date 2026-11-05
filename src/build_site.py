@@ -37,7 +37,9 @@ def build(day, data=DATA):
 
     ag = collections.Counter(r["primary_agreement"] for r in emo)
     cs = collections.Counter(r["claim_source"] for r in emo)
-    day = next(iter(pre.values()))["first_mention_utc"]
+    # day ar redan dygnet (AAAAMMDD) och ska inte skrivas over. Raden satte
+    # tidigare day till forsta radens first_mention_utc, 14 tecken, vilket fick
+    # statepaths att kasta ValueError och steget site att aldrig kunna avslutas.
     sha = lambda f: hashlib.sha256((D / f).read_bytes()).hexdigest()
     nd = sp.near_duplicate(data, day).name
     meta = {"id": sp.state_id(day).replace("/", " / "),

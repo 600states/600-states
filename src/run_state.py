@@ -104,11 +104,20 @@ def step_select(day):
                         "evidence_sha256": c.get("content_sha256") or ""})
     print(f"        {pre.name}")
 
+    # near_duplicates() returnerar {"a": kandidat, "b": kandidat, "jaccard": tal}.
+    # Skrivningen gjorde tidigare w.writerow([row]) for allt som inte var list
+    # eller tuple, sa varje rad blev EN cell med en dict-repr av tva hela
+    # kandidatposter under rubriken url_a,url_b,jaccard. Kolumnerna var tomma.
+    # Loftet att gransfallen 0,20-0,25 syns offentligt uppfylldes alltsa inte,
+    # och ingen upptackte det: audit_state hashar filen och build_site raknar
+    # rader, men ingen laser kolumnerna.
     nd = sp.near_duplicate(DATA, day)
     with atomic_write(nd) as fh:
-        w = csv.writer(fh); w.writerow(["url_a", "url_b", "jaccard"])
+        w = csv.writer(fh)
+        w.writerow(["url_a", "url_b", "jaccard", "domain_a", "domain_b"])
         for row in near:
-            w.writerow(list(row) if isinstance(row, (list, tuple)) else [row])
+            a, b = row["a"], row["b"]
+            w.writerow([a["url"], b["url"], row["jaccard"], a["domain"], b["domain"]])
     print(f"        {nd.name} ({len(near)} rader)")
 
     write_text(sp.selection_report(DATA, day), json.dumps(report, ensure_ascii=False, indent=1))
