@@ -90,15 +90,31 @@ def validate(rows, inp):
     for r in rows:
         oid = str(r.get("observation_id"))[:22]
         s = r.get("scores")
-        if not isinstance(s, dict) or set(s) != V:
-            fel.append(f"{oid}: scores har inte exakt 16 nycklar"); continue
-        if any(not isinstance(v, (int, float)) or not 0 <= v <= 1 for v in s.values()):
-            fel.append(f"{oid}: poang utanfor 0-1")
+        # Felet ska namna skillnaden. "scores har inte exakt 16 nycklar" kraver
+        # ett nytt anrop for att forstas; vilka nycklar som saknas och vilka som
+        # ar over gar att atgarda direkt. Valideringen ar oforandrat strikt -
+        # ingenting fylls i, droppas eller normaliseras, vi mater bara battre.
+        if not isinstance(s, dict):
+            fel.append(f"{oid}: scores saknas eller ar inte ett objekt"); continue
+        if set(s) != V:
+            fel.append(f"{oid}: scores matchar inte protokollets 16 nycklar "
+                       f"({len(s)} angivna) — saknar {sorted(V - set(s)) or 'inget'}, "
+                       f"over {sorted(set(s) - V) or 'inget'}"); continue
+        ut = {k: v for k, v in s.items()
+              if not isinstance(v, (int, float)) or not 0 <= v <= 1}
+        if ut:
+            fel.append(f"{oid}: poang utanfor 0-1: {ut}")
         rank = sorted(s, key=lambda e: -s[e])
         if r.get("primary_emotion") != rank[0]:
-            fel.append(f"{oid}: primary ar inte hogsta poang")
+            fel.append(f"{oid}: primary ar {r.get('primary_emotion')!r}, hogsta "
+                       f"poang har {rank[0]!r} ({s[rank[0]]}); "
+                       f"{r.get('primary_emotion')!r} har "
+                       f"{s.get(r.get('primary_emotion'))}")
         if r.get("secondary_emotion") != rank[1]:
-            fel.append(f"{oid}: secondary ar inte nast hogsta")
+            fel.append(f"{oid}: secondary ar {r.get('secondary_emotion')!r}, nast "
+                       f"hogsta poang har {rank[1]!r} ({s[rank[1]]}); "
+                       f"{r.get('secondary_emotion')!r} har "
+                       f"{s.get(r.get('secondary_emotion'))}")
         if r.get("primary_emotion") == r.get("secondary_emotion"):
             fel.append(f"{oid}: primary och secondary lika")
         for k in ("intensity", "confidence"):
@@ -177,6 +193,26 @@ def block_types(msg):
     except Exception:
         return []
 
+def spara_misslyckat(d, p, n, attempt, msg, fel=None):
+    """Ett anrop som inte leder till en sparad batch ska lamna lika mycket spar
+    som ett som gor det. Galler bada vagarna ut: undantag OCH valideringsmiss.
+    Forut skrev valideringsgrenen ingenting, sa tre anrop som gav giltig JSON
+    med nagra felaktiga rader lamnade bara ett antal och det forsta felet - och
+    radarna som behovdes for att forsta varfor var borta."""
+    raw = raw_text(msg) if msg is not None else ""
+    fil = d / f"FAILED_pass{p}_batch_{n:02d}_forsok{attempt}.txt"
+    write_text(fil, raw)
+    if fel:
+        # Hela fellistan, inte antalet och det forsta: ett fel som upprepas i
+        # alla tre forsoken ar en annan sak an ett som varierar, och den
+        # skillnaden syns bara i hela listan.
+        write_text(d / (fil.stem + ".fel.txt"), "\n".join(fel))
+    print(f"    stop_reason={getattr(msg, 'stop_reason', None)}  "
+          f"svar {len(raw):,} tecken  block {block_types(msg)}")
+    print(f"    usage {usage_fields(msg)}")
+    print(f"    rasvar sparat: {fil.name}" + (f" + {fil.stem}.fel.txt" if fel else ""))
+    return fil
+
 def parse(msg):
     """Text till rader. Samma regel som forut - ingen forlatande parsning."""
     txt = re.sub(r"^```(?:json)?|```$", "", raw_text(msg).strip(), flags=re.M).strip()
@@ -247,15 +283,8 @@ def run(day, only_pass=None, budget=None, model=DEFAULT_MODEL, dry=False):
                 # lyckas. Forut skrevs bara undantagets klassnamn, och rasvaret -
                 # det enda som kan saga varfor - kastades. Da ser ett avhugget
                 # svar ut som ett trasigt svar.
-                raw = raw_text(msg) if msg is not None else ""
-                sr = getattr(msg, "stop_reason", None)
-                fil = d / f"FAILED_pass{p}_batch_{n:02d}_forsok{attempt}.txt"
-                write_text(fil, raw)
                 print(f"  pass{p} batch{n:02d} forsok {attempt}: {type(e).__name__}: {e}")
-                print(f"    stop_reason={sr}  svar {len(raw):,} tecken  "
-                      f"block {block_types(msg)}")
-                print(f"    usage {usage_fields(msg)}")
-                print(f"    rasvar sparat: {fil.name}")
+                spara_misslyckat(d, p, n, attempt, msg)
                 time.sleep(2 * attempt); continue
             fel = validate(rows, items)
             dg = diagnostics(rows)
@@ -267,8 +296,9 @@ def run(day, only_pass=None, budget=None, model=DEFAULT_MODEL, dry=False):
                 fel = [f"glest poangvektor, median {dg['authored_scores_median']:.0f}/16 "
                        f"egna poang — protokollet har inte foljts"]
             if fel:
-                print(f"  pass{p} batch{n:02d} forsok {attempt}: {len(fel)} valideringsfel, "
-                      f"forst: {fel[0]}")
+                print(f"  pass{p} batch{n:02d} forsok {attempt}: {len(fel)} valideringsfel "
+                      f"pa {len(rows)} rader")
+                spara_misslyckat(d, p, n, attempt, msg, fel)
                 if attempt == MAX_TRIES:
                     print("  GER UPP pa denna batch"); break
                 continue

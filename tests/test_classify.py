@@ -28,6 +28,18 @@ def test_scores_maste_ha_exakt_sexton_nycklar():
     b = kopia(); b[0]["scores"].pop("Fatigue")
     assert any("16 nycklar" in f for f in classify.validate(b, INP))
 
+def test_felet_namner_vilken_nyckel_som_saknas():
+    """En felrapport som inte namner skillnaden kraver ett nytt anrop for att
+    forstas. Sexton nycklar ar fryst protokoll - felet ska peka, inte fylla i."""
+    b = kopia(); b[0]["scores"].pop("Fatigue")
+    assert any("Fatigue" in f for f in classify.validate(b, INP))
+
+def test_felet_namner_vilken_nyckel_som_ar_over():
+    b = kopia(); b[0]["scores"]["Joie"] = 0.1
+    fel = classify.validate(b, INP)
+    assert any("Joie" in f for f in fel)
+    assert all("Joie" not in str(r["scores"].keys()) for r in OK)  # originalet orort
+
 def test_primary_maste_vara_hogsta():
     b = kopia(); b[0]["primary_emotion"] = "Fear"
     assert any("hogsta" in f for f in classify.validate(b, INP))
