@@ -1,4 +1,4 @@
-"""Konsensus over tre oberoende klassificeringspass. Execution Spec v2.2.
+"""Konsensus over tre oberoende klassificeringspass. Execution Spec v2.1.
 
 Majoritet pa emotionstillstanden, median pa intensity och confidence, den
 frysta vokabularordningen som skiljedomare.
