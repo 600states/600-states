@@ -1,21 +1,32 @@
 """Enda stallet dar sokvagen till datamappen bor.
 
-Koden ligger i git (denna mapp). Datan ligger i OneDrive och foljer inte med
-i repot - den ar stor, binar och andras sallan. Satt STATES_DATA for att peka
-nagon annanstans, t.ex. pa en annan maskin.
+Koden ligger i git (denna mapp). Datan ligger utanfor och foljer inte med i
+repot - den ar stor, binar och andras sallan.
+
+Satt STATES_DATA till katalogen som innehaller 00_CANONICAL_PROJECT_DOCS och
+08_V3_STATES. Ingen sokvag ar hardkodad: en sokvag i ett publikt repo sager
+nagot om den som skrev den, och om fem ar sager den fel sak om alla.
 """
 import os
 from pathlib import Path
 
-_DEFAULT_WIN = r"%STATES_DATA%"
-_DEFAULT_NIX = Path.home() / "mnt" / "600 STATES"
+_MOUNT = Path.home() / "mnt" / "600 STATES"
 
 def data_root() -> Path:
     env = os.environ.get("STATES_DATA")
     if env:
         return Path(env)
-    p = Path(_DEFAULT_NIX)
-    return p if p.exists() else Path(_DEFAULT_WIN)
+    return _MOUNT            # kan saknas - anvand require_data() nar den kravs
+
+def require_data() -> Path:
+    d = data_root()
+    if not d.exists():
+        raise SystemExit(
+            "Hittar inte dataarkivet: " + str(d) + "\n"
+            "Satt STATES_DATA till katalogen med 00_CANONICAL_PROJECT_DOCS och 08_V3_STATES.\n"
+            '  Windows:  setx STATES_DATA "<sokvag>"\n'
+            '  bash:     export STATES_DATA="<sokvag>"')
+    return d
 
 DATA = data_root()
 RAW_GDELT = DATA / "01_RAW_GDELT_2026_001_010"
