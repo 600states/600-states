@@ -1,0 +1,747 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>600 STATES</title>
+<meta name="description" content="One UTC day becomes 600 news observations, 600 colours and one irreversible visual state. The series begins 1 December 2026.">
+<link rel="canonical" href="https://600states.com/">
+<meta name="build" content="dev">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0a0b; --surface:#16121a; --ink:#ffffff; --muted:#dbd5dd; --dim:#a79fa9;
+  --accent:#e8c354; --accent-ink:#0a0a0b;
+  --field-deep:#2d5580; --field-deep-ink:#ffffff;
+  --paper:#ffffff; --paper-ink:#101014; --paper-muted:#5d5a63;
+  --grief:#6b2e38;
+  --gap:8px;
+  --m:clamp(16px,2.2vw,32px);
+  --axis:42%;
+  --step-small:clamp(1rem,0.97rem + 0.12vw,1.0625rem);
+  --step-micro:clamp(0.8125rem,0.79rem + 0.1vw,0.875rem);
+  --step-body:clamp(1.0625rem,1rem + 0.25vw,1.1875rem);
+  --step-lead:clamp(1.3rem,1.1rem + 0.9vw,2rem);
+  --step-head:clamp(2.2rem,1.2rem + 4.2vw,5.2rem);
+  --step-huge:clamp(3.5rem,1rem + 10vw,11.5rem);
+}
+:root:not([data-theme="light"]){color-scheme:dark}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Hanken Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:var(--step-body);line-height:1.45;letter-spacing:-0.005em;
+  font-weight:400;-webkit-font-smoothing:antialiased;overflow-x:hidden;
+}
+h1,h2,h3{font-weight:500;letter-spacing:-0.05em;line-height:0.9;margin:0}
+p{margin:0}
+a{color:inherit}
+img{display:block;max-width:100%}
+::selection{background:var(--accent);color:var(--accent-ink)}
+:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+@keyframes rise{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
+@keyframes shutter{from{clip-path:inset(0 0 100% 0)}to{clip-path:inset(0 0 0 0)}}
+.r{opacity:0}
+.r.in{animation:rise 1.15s cubic-bezier(.2,.7,.3,1) both}
+.lift{opacity:0;animation:rise 1.1s cubic-bezier(.2,.7,.3,1) both}
+.board .lift:nth-child(1){animation-delay:.05s}
+.board .lift:nth-child(2){animation-delay:.14s}
+.board .lift:nth-child(3){animation-delay:.23s}
+.board .lift:nth-child(4){animation-delay:.32s}
+.t-split .lift:nth-child(1){animation-delay:.38s}
+.t-split .lift:nth-child(2){animation-delay:.46s}
+.topbar .lift:nth-child(1){animation-delay:0s}
+.topbar .lift:nth-child(2){animation-delay:.06s}
+.topbar .lift:nth-child(3){animation-delay:.12s}
+.shutter{clip-path:inset(0 0 100% 0)}
+.shutter.in{animation:shutter 1.1s cubic-bezier(.65,0,.2,1) both}
+@media (prefers-reduced-motion:reduce){
+  .r,.r.in,.lift,.shutter,.shutter.in{
+    opacity:1;transform:none;clip-path:none;animation:none}
+  .track{scroll-behavior:auto}
+}
+
+.board{padding:var(--gap);display:grid;gap:var(--gap);grid-template-rows:60px 1fr;min-height:100svh}
+.topbar{display:grid;gap:var(--gap);grid-template-columns:60px 1fr auto}
+.tile{background:var(--surface);overflow:hidden;position:relative}
+.t-logo{background:var(--ink);color:var(--bg);display:grid;place-items:center;font-weight:500;font-size:18px;letter-spacing:-0.05em}
+.t-nav{display:flex;align-items:center;gap:28px;padding-left:var(--axis);font-size:var(--step-micro)}
+.t-nav a{text-decoration:none;color:var(--muted);transition:color .2s}
+.t-nav a:hover{color:var(--ink)}
+.t-act{background:var(--ink);color:var(--bg);display:flex;align-items:center;padding:0 24px;font-size:var(--step-micro);text-decoration:none;transition:background .2s,color .2s}
+.t-act:hover{background:var(--accent);color:var(--accent-ink)}
+.grid2{display:grid;gap:var(--gap);grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
+.t-name{background:var(--paper);color:var(--paper-ink);display:flex;flex-direction:column;justify-content:flex-end;padding:24px}
+.t-name h1{font-size:var(--step-huge);line-height:0.82}
+.t-sub{font-size:clamp(1.125rem,1.1vw,1.3125rem);line-height:1.3;letter-spacing:-0.015em;color:var(--paper-muted);max-width:34ch;margin-top:20px}
+.t-pic{background:#0B0E12}
+.t-pic img{width:100%;height:100%;object-fit:contain}
+.t-split{display:grid;gap:var(--gap);grid-template-columns:1fr 1fr}
+.t-say{background:var(--surface);padding:24px;font-size:clamp(1.05rem,1.4vw,1.5rem);line-height:1.25;letter-spacing:-0.02em}
+.t-count{background:var(--accent);color:var(--accent-ink);padding:24px;display:flex;flex-direction:column;justify-content:space-between;gap:16px}
+.t-count .n{font-size:clamp(3rem,7vw,7rem);font-weight:500;letter-spacing:-0.06em;line-height:0.85}
+.t-count .l{font-size:clamp(1.05rem,1.4vw,1.5rem);line-height:1.2;letter-spacing:-0.02em}
+
+section{padding:clamp(80px,11vw,170px) var(--m)}
+.wrap{max-width:1680px;margin:0 auto}
+.axis{margin-left:var(--axis)}
+h2{font-size:var(--step-head)}
+
+.intro .big{margin-top:36px;font-size:clamp(1.35rem,2.4vw,2.2rem);line-height:1.2;letter-spacing:-0.035em;max-width:44ch;font-weight:400;color:var(--ink)}
+.cols{display:grid;grid-template-columns:repeat(4,1fr);gap:28px;margin-top:72px}
+.cols p{font-size:var(--step-small);line-height:1.52;color:#eae6eb}
+.cols b{font-weight:500;color:var(--ink)}
+
+.bar{display:flex;gap:6px;height:22vh;min-height:200px;margin-top:64px}
+.seg{flex-grow:1;flex-basis:0;min-width:12%;padding:20px;display:flex;flex-direction:column;justify-content:space-between;gap:16px}
+.seg .q{font-size:clamp(1.2rem,1.9vw,1.85rem);font-weight:500;letter-spacing:-0.04em;line-height:0.98}
+.seg .c{font-size:var(--step-small);max-width:25ch;line-height:1.4;opacity:.92}
+.s1{background:var(--field-deep);color:#fff}
+.s2{background:var(--grief);color:#fff}
+.s3{background:var(--accent);color:var(--accent-ink)}
+.s4{background:var(--paper);color:var(--paper-ink)}
+
+.field-sec{background:var(--paper);color:var(--paper-ink)}
+.field-layout{display:grid;grid-template-columns:1fr 34%;gap:clamp(24px,3vw,56px);align-items:start;margin-top:56px}
+.field-keys{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)} /* taste-skill-ignore: visually hidden keyboard layer, not a rule */
+.field-keys button{position:absolute;width:1px;height:1px;border:0;padding:0;margin:0} /* taste-skill-ignore: visually hidden, not a rule */
+#fieldcv{display:block;margin-inline:auto;max-width:100%;cursor:pointer}
+.field-keys:focus-visible + #fieldcv{outline:3px solid var(--accent);outline-offset:4px}
+.readout{background:#f2f0ee;padding:clamp(20px,2vw,32px);min-height:420px;position:sticky;top:24px}
+.readout .idx{font-size:var(--step-micro);color:var(--paper-muted)}
+.readout .lock{margin-top:9px;font-size:var(--step-micro);line-height:1.4;font-weight:500;color:var(--paper-ink)}
+.readout .swatch{width:100%;height:84px;margin:16px 0 20px;background:#2d5580}
+.readout .txt{font-size:clamp(1.1rem,1.4vw,1.45rem);line-height:1.25;letter-spacing:-0.025em}
+.readout dl{display:grid;grid-template-columns:auto 1fr;gap:7px 18px;margin:26px 0 0;font-size:var(--step-small)}
+.readout dt{color:var(--paper-muted)}
+.readout dd{margin:0;font-weight:500}
+.readout dd a{color:inherit;text-decoration:underline;text-underline-offset:2px}
+.readout dd{overflow-wrap:anywhere}
+.readout .src-note{margin-top:18px;font-size:var(--step-micro);line-height:1.45;color:var(--paper-muted)}
+.readout .note{margin-top:22px;font-size:var(--step-small);line-height:1.5;color:var(--paper-muted)}
+.field-cap{margin-top:24px;font-size:var(--step-small);color:var(--paper-muted);max-width:72ch}
+
+.carousel{margin-top:64px}
+.track{display:flex;gap:8px;background:#0B0E12;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth}
+.track figure{margin:0;flex:0 0 calc((100% - 16px) / 3);scroll-snap-align:start}
+.track img{width:100%;height:auto;aspect-ratio:3 / 2;object-fit:contain;background:#0B0E12}
+.track figcaption{padding:14px 4px 12px;font-size:var(--step-small);color:var(--muted)}
+.dist{padding:14px;background:var(--surface)}
+.dist ul{list-style:none;margin:0;padding:0;display:grid;gap:9px}
+.dist .dh{font-size:var(--step-micro);color:var(--dim);margin-bottom:11px}
+.dist li{display:grid;grid-template-columns:11ch minmax(24px,1fr) 3ch;align-items:center;gap:10px;font-size:var(--step-micro);line-height:1.2}
+.dist .dl{color:var(--muted)}
+.dist .db{height:10px;background:#0B0E12}
+.dist .db span{display:block;height:100%}
+.dist .dn{text-align:right;font-weight:500;font-variant-numeric:tabular-nums}
+.cnav{display:flex;gap:8px;margin-top:24px}
+.cbtn{background:var(--surface);color:var(--ink);border:0;width:52px;height:52px;cursor:pointer;font-size:20px;line-height:1;display:grid;place-items:center;transition:background .2s,color .2s,transform .15s}
+.cbtn:hover{background:var(--accent);color:var(--accent-ink)}
+.cbtn:active{transform:translateY(2px)}
+.show-head{display:grid;grid-template-columns:8fr 50fr 42fr;align-items:end;gap:32px}
+.show-head h2{grid-column:2}
+.show-head .cap{grid-column:3;margin:0 0 8px}
+.cap{margin-top:22px;font-size:var(--step-small);color:var(--muted);max-width:74ch}
+.field-sec .cap{color:var(--paper-muted)}
+
+.stmt{display:flex;align-items:center}
+.stmt p{font-size:clamp(1.25rem,2.5vw,2.25rem);line-height:1.25;letter-spacing:-0.035em;color:var(--muted);font-weight:400;max-width:42ch}
+.stmt b{font-weight:400;color:var(--ink)}
+.stmt .hl{color:var(--accent)}
+.stmt .stmt-note{margin-top:30px;font-size:var(--step-small);line-height:1.5;letter-spacing:normal;color:var(--dim);max-width:46ch}
+
+.scarce{background:var(--field-deep);color:var(--field-deep-ink);min-height:86svh;display:flex;flex-direction:column;justify-content:center}
+.scarce .n{font-size:clamp(5rem,20vw,22rem);line-height:0.78;letter-spacing:-0.07em;font-weight:500}
+.scarce .sub{font-size:clamp(1.3rem,3vw,2.8rem);line-height:1.08;letter-spacing:-0.04em;max-width:22ch;margin-top:32px}
+.scarce .grid3{margin-top:64px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:32px;max-width:1180px}
+.scarce .grid3 span{display:block;font-size:clamp(2rem,4vw,3.4rem);font-weight:500;letter-spacing:-0.05em;line-height:1}
+.scarce .grid3 p{font-size:var(--step-small);margin-top:10px;opacity:.92;max-width:28ch}
+
+.proof table{width:100%;border-collapse:collapse;margin-top:72px;font-size:clamp(0.95rem,1.1vw,1.0625rem)}
+.proof td,.proof th{padding:15px 16px;text-align:left;vertical-align:top}
+.proof th{font-weight:500;font-size:var(--step-micro);color:var(--dim)}
+.proof tbody tr:nth-child(odd){background:var(--surface)}
+.proof td:last-child,.proof th:last-child{text-align:right;color:var(--muted)}
+.proof h2 span{display:block;margin-left:14%}
+
+.faq{padding:0}
+.faq .head{background:var(--accent);color:var(--accent-ink);min-height:30svh;display:flex;align-items:flex-end;padding:var(--m)}
+.faq .head h2{font-size:clamp(2.6rem,7vw,7rem)}
+.faq .q{display:grid;grid-template-columns:5fr 1fr 6fr;padding:56px var(--m)}
+.faq .q:nth-of-type(odd){background:var(--surface)}
+.faq .q h3{font-size:clamp(1.3rem,2.2vw,2rem);letter-spacing:-0.035em;line-height:1.05;grid-column:1}
+.faq .q p{grid-column:3;font-size:var(--step-body);line-height:1.5;color:#e9e4ea}
+.faq .q p + p{margin-top:14px}
+
+.cta{background:var(--paper);color:var(--paper-ink);display:flex;flex-direction:column;justify-content:space-between;gap:clamp(56px,9vh,120px);padding:clamp(60px,8vw,110px) var(--m) 40px}
+.cta h2{font-size:clamp(3rem,10vw,10rem);line-height:0.88;max-width:11ch}
+.cta .row{display:grid;grid-template-columns:5fr 4fr 3fr;align-items:end;gap:24px}
+.cta .row p{font-size:1.25rem;line-height:1.3;letter-spacing:-0.02em;max-width:34ch}
+.btn{background:var(--accent);color:var(--accent-ink);text-decoration:none;height:56px;display:flex;align-items:center;justify-content:center;padding:0 28px;font-size:1.0625rem;font-weight:500;grid-column:3;transition:transform .18s,filter .18s}
+.btn:hover{filter:brightness(1.1)}
+.btn:active{transform:translateY(2px)}
+
+.foot{background:var(--paper);color:var(--paper-ink);display:grid;grid-template-rows:auto auto;gap:clamp(64px,12vh,150px);padding:56px var(--m) 20px}
+.foot .cols4{display:grid;grid-template-columns:repeat(4,1fr);gap:28px;font-size:var(--step-small)}
+.foot .cols4 li{color:var(--paper-muted)}
+.foot .cols4 ul{list-style:none;margin:0;padding:0}
+.foot .cols4 li{color:var(--paper-muted);line-height:1.75}
+.foot .cols4 li:first-child{color:var(--paper-ink);font-weight:500}
+.foot .cols4 a{text-decoration:none}
+.foot .cols4 a:hover{text-decoration:underline}
+.foot .mark{font-size:clamp(3rem,15.2vw,17rem);font-weight:500;letter-spacing:-0.06em;line-height:0.8}
+.foot .legal{font-size:var(--step-micro);color:var(--paper-muted);margin-top:20px;max-width:90ch}
+
+@media (max-width:900px){
+  :root{--axis:0px}
+  .t-nav{display:none}
+  .board{grid-template-rows:56px auto}
+  .topbar{grid-template-columns:56px 1fr}
+  .grid2{grid-template-columns:1fr;grid-template-rows:auto 34svh auto}
+  .t-name{min-height:30svh;padding:20px}
+  .t-sub{margin-top:14px;font-size:1.125rem}
+  .grid2 .second{display:none}
+  .t-name h1{font-size:clamp(3rem,20vw,7rem)}
+  .cols{grid-template-columns:1fr 1fr;gap:28px 20px;margin-top:40px}
+  .bar{flex-direction:column;height:auto;min-height:0;gap:6px}
+  .seg{flex:0 0 auto;min-width:0;min-height:0;padding:18px;gap:10px}
+  .field-layout{grid-template-columns:1fr}
+  .readout{position:static;min-height:0}
+  .track figure{flex:0 0 100%}
+  .faq .q{grid-template-columns:1fr;padding:32px var(--m)}
+  .faq .q h3,.faq .q p{grid-column:1}
+  .faq .q p{margin-top:14px}
+  .cta .row{grid-template-columns:1fr}
+  .btn{grid-column:1;width:100%}
+  .foot .cols4{grid-template-columns:1fr 1fr;gap:32px 20px}
+  .scarce .grid3{grid-template-columns:1fr;gap:26px}
+  .proof td,.proof th{padding:12px 8px;font-size:0.95rem}
+  .show-head{grid-template-columns:1fr;gap:20px}
+  .show-head h2,.show-head .cap{grid-column:1}
+}
+</style>
+</head>
+<body>
+
+<header class="board">
+  <div class="topbar">
+    <div class="tile t-logo lift" aria-hidden="true">600</div>
+    <nav class="tile t-nav lift" aria-label="Main">
+      <a href="#about">About</a>
+      <a href="#method">Method</a>
+      <a href="#field">The field</a>
+      <a href="#first">The first State</a>
+    </nav>
+    <a class="tile t-act lift" href="mailto:archive@600states.com?subject=600%20STATES%20%E2%80%94%20notify%20me%20before%20the%20first%20State&amp;body=Please%20tell%20me%20before%20the%20series%20opens%20on%201%20December%202026.%0A%0AName%3A%0AInterest%20(collector%2C%20press%2C%20research)%3A">Get the opening notice</a>
+  </div>
+
+  <div class="grid2">
+    <div class="tile t-name lift">
+      <h1>600<br>STATES</h1>
+      <p class="t-sub">A daily data artwork. One UTC day, 600 news observations, one irreversible field of colour.</p>
+    </div>
+    <div class="tile t-pic shutter lift" id="shutter">
+      <img src="img/state_002.png" alt="A rendered 600 STATES field: 600 solid colour squares in a 30 by 20 grid." width="3087" height="2057">
+    </div>
+    <div class="tile t-pic second lift">
+      <img src="img/state_003.png" alt="A second rendered field of 600 colours from another observed day." width="3087" height="2057" loading="lazy">
+    </div>
+    <div class="t-split lift">
+      <p class="tile t-say lift">One UTC day becomes 600 news observations, 600 colours and one irreversible visual state.</p>
+      <div class="tile t-count lift">
+        <p class="n" id="countdown">26</p>
+        <p class="l">days until the first State.<br>1 December 2026.</p>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section class="intro" id="about">
+  <div class="wrap">
+    <h2 class="axis r">Never designed. Observed.</h2>
+    <p class="big r axis">One calendar day of the world's news flow, 600 materially distinct observations, each read three times, becoming a single image.</p>
+    <div class="cols">
+      <p class="r"><b>What it is.</b> A daily data artwork. Each of the 600 tiles stands for one News Observation: one thing the monitored news flow established that day. Interpreted under a frozen emotion model, translated into one RGB value by a frozen formula, placed in chronological order.</p>
+      <p class="r"><b>What it is not.</b> No image model makes the picture. No tile is chosen because its colour helps the composition, and no colour is adjusted once the day is frozen. An ugly day is a valid result, not a bug to be corrected.</p>
+      <p class="r"><b>Why it is public.</b> The claim that nothing was tuned cannot be demonstrated after the fact. So the instrument, every frozen constant in it, and the evidence behind every tile are published before the series begins.</p>
+      <p class="r"><b>When it begins.</b> Sharp start 1 December 2026, day 335 of 2026. One State per UTC day from then on. The days already behind us will never have one. Write to <a href="mailto:archive@600states.com">archive@600states.com</a>.</p>
+    </div>
+  </div>
+</section>
+
+<section id="method">
+  <div class="wrap">
+    <h2 class="axis r">Observe, select, read three times, render</h2>
+    <div class="bar" role="img" aria-label="Four stages: 24 hours of monitored news flow, 600 frozen observations, 1800 independent classifications, one rendered image.">
+      <div class="seg s1 r"><p class="q">24 hours</p><p class="c">of the monitored global news flow, reviewed for qualifying information states.</p></div>
+      <div class="seg s2 r"><p class="q">600 observations</p><p class="c">frozen before any colour exists. The same event is allowed. The same information state is not.</p></div>
+      <div class="seg s3 r"><p class="q">1&thinsp;800 readings</p><p class="c">every observation classified three times, independently. The tile carries the consensus.</p></div>
+      <div class="seg s4 r"><p class="q">1 image</p><p class="c">rendered deterministically, its manifest hashed and published the same day.</p></div>
+    </div>
+    <p class="cap r">The colour model is unreachable until the 600-observation manifest is frozen. A chain that <em>can</em> reach colour at any point cannot show that it did not.</p>
+  </div>
+</section>
+
+<section class="field-sec" id="field">
+  <div class="wrap">
+    <h2 class="r">Click any square</h2>
+    <p class="field-cap r">Find the news behind the colour. This is a real field from the instrument: 600 observations of a single observed day, every tile carrying its own evidence, its own reading and its own level of agreement. It is a calibration day, one of the ten days used to test the instrument, rebuilt under the current consensus protocol, and it is not a canonical State. The canonical series opens on 1 December 2026.</p>
+    <div class="field-layout">
+      <div>
+        <div class="field-keys" id="grid" role="group" aria-label="600 tiles. Use the arrow keys to move between tiles." tabindex="0"></div>
+        <canvas id="fieldcv" aria-hidden="true"></canvas>
+        <noscript><img src="img/state_001.png" alt="The rendered field of 600 colours for the first calibration day." width="3087" height="2057"></noscript>
+        <p class="field-cap r">Chronological order, left to right, top to bottom. Nothing has been moved. This field carries 527 distinct colours.</p>
+      </div>
+      <aside class="readout" id="readout" aria-live="polite">
+        <p class="idx">Tile — of 600</p>
+        <p class="lock" hidden>Held on this tile, so you can reach the source. Click it again, or press Escape, to follow the pointer.</p>
+        <div class="swatch"></div>
+        <p class="txt">Pick a square. The observation that produced its colour appears here.</p>
+        <dl>
+          <dt>Primary state</dt><dd>—</dd>
+          <dt>Secondary</dt><dd>—</dd>
+          <dt>Intensity</dt><dd>—</dd>
+          <dt>Confidence</dt><dd>—</dd>
+          <dt>Agreement</dt><dd>—</dd>
+          <dt>Source</dt><dd>—</dd>
+          <dt>Observed</dt><dd>—</dd>
+          <dt>Evidence</dt><dd>—</dd>
+          <dt>Observation</dt><dd>—</dd>
+        </dl>
+        <p class="src-note">The representative source as captured on the observation day. Some links have since moved or gone behind a paywall; the record is the manifest, not the link.</p>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<section id="showcase">
+  <div class="wrap show-head">
+    <h2 class="r">Same instrument. Different world.</h2>
+    <p class="cap r">Four days, four fields, and at a glance they are the same. The mean colour of each differs by less than six steps. The difference is not in the surface: between 1 and 4 January, uncertainty in the observed flow more than doubled, from 28 tiles to 59. The instrument is stable. The days are not.</p>
+  </div>
+  <div class="wrap carousel r">
+    <div class="track" id="track" role="group" aria-label="Four observed days. Use the left and right arrow keys to move between them." tabindex="0">
+      <figure>
+      <img src="img/state_001.png" alt="Rendered field of 600 colours, 1 January 2026." width="3087" height="2057" loading="lazy">
+      <figcaption>1 January 2026</figcaption>
+      <div class="dist">
+        <p class="dh">Primary state, of 600 tiles</p>
+        <ul aria-label="Primary emotional states on 1 January 2026, tiles out of 600">
+        <li><span class="dl">Uncertainty</span><span class="db" aria-hidden="true"><span style="width:23.3%;background:#616D94"></span></span><span class="dn">28</span></li>
+        <li><span class="dl">Concern</span><span class="db" aria-hidden="true"><span style="width:52.5%;background:#C68853"></span></span><span class="dn">63</span></li>
+        <li><span class="dl">Hope</span><span class="db" aria-hidden="true"><span style="width:47.5%;background:#6CB289"></span></span><span class="dn">57</span></li>
+        <li><span class="dl">Resolve</span><span class="db" aria-hidden="true"><span style="width:86.7%;background:#2D5580"></span></span><span class="dn">104</span></li>
+        </ul>
+      </div>
+      </figure>
+      <figure>
+      <img src="img/state_002.png" alt="Rendered field of 600 colours, 2 January 2026." width="3087" height="2057" loading="lazy">
+      <figcaption>2 January 2026</figcaption>
+      <div class="dist">
+        <p class="dh">Primary state, of 600 tiles</p>
+        <ul aria-label="Primary emotional states on 2 January 2026, tiles out of 600">
+        <li><span class="dl">Uncertainty</span><span class="db" aria-hidden="true"><span style="width:26.7%;background:#616D94"></span></span><span class="dn">32</span></li>
+        <li><span class="dl">Concern</span><span class="db" aria-hidden="true"><span style="width:67.5%;background:#C68853"></span></span><span class="dn">81</span></li>
+        <li><span class="dl">Hope</span><span class="db" aria-hidden="true"><span style="width:39.2%;background:#6CB289"></span></span><span class="dn">47</span></li>
+        <li><span class="dl">Resolve</span><span class="db" aria-hidden="true"><span style="width:92.5%;background:#2D5580"></span></span><span class="dn">111</span></li>
+        </ul>
+      </div>
+      </figure>
+      <figure>
+      <img src="img/state_003.png" alt="Rendered field of 600 colours, 3 January 2026." width="3087" height="2057" loading="lazy">
+      <figcaption>3 January 2026</figcaption>
+      <div class="dist">
+        <p class="dh">Primary state, of 600 tiles</p>
+        <ul aria-label="Primary emotional states on 3 January 2026, tiles out of 600">
+        <li><span class="dl">Uncertainty</span><span class="db" aria-hidden="true"><span style="width:34.2%;background:#616D94"></span></span><span class="dn">41</span></li>
+        <li><span class="dl">Concern</span><span class="db" aria-hidden="true"><span style="width:73.3%;background:#C68853"></span></span><span class="dn">88</span></li>
+        <li><span class="dl">Hope</span><span class="db" aria-hidden="true"><span style="width:29.2%;background:#6CB289"></span></span><span class="dn">35</span></li>
+        <li><span class="dl">Resolve</span><span class="db" aria-hidden="true"><span style="width:84.2%;background:#2D5580"></span></span><span class="dn">101</span></li>
+        </ul>
+      </div>
+      </figure>
+      <figure>
+      <img src="img/state_004.png" alt="Rendered field of 600 colours, 4 January 2026." width="3087" height="2057" loading="lazy">
+      <figcaption>4 January 2026</figcaption>
+      <div class="dist">
+        <p class="dh">Primary state, of 600 tiles</p>
+        <ul aria-label="Primary emotional states on 4 January 2026, tiles out of 600">
+        <li><span class="dl">Uncertainty</span><span class="db" aria-hidden="true"><span style="width:49.2%;background:#616D94"></span></span><span class="dn">59</span></li>
+        <li><span class="dl">Concern</span><span class="db" aria-hidden="true"><span style="width:58.3%;background:#C68853"></span></span><span class="dn">70</span></li>
+        <li><span class="dl">Hope</span><span class="db" aria-hidden="true"><span style="width:36.7%;background:#6CB289"></span></span><span class="dn">44</span></li>
+        <li><span class="dl">Resolve</span><span class="db" aria-hidden="true"><span style="width:78.3%;background:#2D5580"></span></span><span class="dn">94</span></li>
+        </ul>
+      </div>
+      </figure>
+    </div>
+    <div class="cnav">
+      <button class="cbtn" type="button" data-dir="-1" aria-controls="track" aria-label="Previous day">&#8592;</button>
+      <button class="cbtn" type="button" data-dir="1" aria-controls="track" aria-label="Next day">&#8594;</button>
+    </div>
+  </div>
+</section>
+
+<section class="stmt">
+  <div class="wrap">
+    <h2 class="sr">Measured agreement</h2>
+    <p class="r">Of <b>600</b> observations, <b>502</b> read identically in all three passes, <b>94</b> agreed two of three, and <span class="hl">4</span> never agreed at all.</p>
+    <p class="r stmt-note">Measured on a calibration day. The canonical series begins 1 December 2026.</p>
+  </div>
+</section>
+
+<section class="scarce" id="first">
+  <div class="wrap">
+    <p class="n r" data-to="334">334</p>
+    <p class="sub r">days of 2026 will never be a State. The 335th will.</p>
+    <div class="grid3">
+      <div class="r"><span id="untilBig">26</span><p>days left before the first State is observed. After that, the calendar does the counting.</p></div>
+      <div class="r"><span>1</span><p>State per UTC day. A date happens once; its State is produced once. There can be another January 1. There can never be another January 1, 2026.</p></div>
+      <div class="r"><span>0</span><p>second drafts. A day cannot be redesigned after it happens. Neither can a State.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="proof" id="proof">
+  <div class="wrap">
+    <h2 class="r">What is frozen<span>before day one</span></h2>
+    <table>
+      <thead><tr><th>Version</th><th>What it governs</th><th>How it is held</th><th>Terms</th></tr></thead>
+      <tbody>
+        <tr class="r"><td>v1.0</td><td>Observation Day Rule</td><td>Frozen document, SHA-256 published</td><td>CC0</td></tr>
+        <tr class="r"><td>v0.4</td><td>Colour Protocol, Golden Master</td><td>Reproduces 3&thinsp;600 of 3&thinsp;600 known tiles</td><td>MIT</td></tr>
+        <tr class="r"><td>v1.0</td><td>Emotion Classification Protocol</td><td>Sixteen states, one fixed vocabulary</td><td>CC0</td></tr>
+        <tr class="r"><td>v1.0</td><td>Grid Specification</td><td>30 × 20, chronological, no exceptions</td><td>CC0</td></tr>
+        <tr class="r"><td></td><td>Consensus over three passes</td><td>Rebuilt field by field from the raw passes</td><td>MIT</td></tr>
+        <tr class="r"><td></td><td>Selection, story cap, regional quotas</td><td>42 tests. A rule that cannot stop a run is not a rule</td><td>MIT</td></tr>
+        <tr class="r"><td></td><td>The daily manifest</td><td>Hash published the same day in a public repository</td><td>CC0</td></tr>
+        <tr class="r"><td></td><td>The rendered States</td><td>Reproducible from manifest and instrument</td><td>All rights reserved</td></tr>
+      </tbody>
+    </table>
+    <p class="cap r">The proof is not that we kept a copy. The proof is that we could not have made it later. Commit dates can be set to anything; only a push is witnessed. The instrument went public before the series began, and every day&#39;s hash is pushed on the day it is observed.</p>
+  </div>
+</section>
+
+<section class="faq">
+  <div class="head"><h2 class="r">Before you ask</h2></div>
+  <div class="q r">
+    <h3>Does this measure how the world felt?</h3>
+    <p>No, and it never claims to. 600 STATES interprets the emotional state of the world's news through the same transparent protocol every day. It does not measure human feeling, and it is not sentiment analysis of headlines: every observation is first reduced to a neutral factual representation, so the model reads the event rather than the publisher's rhetoric.</p>
+  </div>
+  <div class="q r">
+    <h3>Does an AI make the picture?</h3>
+    <p>AI interprets. Mathematics translates. Code renders. The model classifies emotion and judges material novelty. It never sees a colour, never sees the image, and never chooses what looks good. Fetching and hashing happen in code, with no model involved at all.</p>
+  </div>
+  <div class="q r">
+    <h3>Why read every day three times?</h3>
+    <p>Because a single pass would make "one irreversible visual state" false. Run the day again and roughly one tile in six lands somewhere else. The image would be irreversible only because nobody ran it twice.</p>
+    <p>Consensus does not smooth the measurement; it is the difference between reading a thermometer once and reading it three times. And the hesitation is recorded, not hidden: every tile publishes whether its reading was 3/3 or 2/3. One pass hides something. Three passes show everything.</p>
+  </div>
+  <div class="q r">
+    <h3>What are the days shown on this page?</h3>
+    <p>Calibration days. The first ten days were produced by an earlier generation of the instrument and used to test it, and they surfaced real method defects, which are documented. They carry a retrospective evidence basis, not evidence captured at the moment of observation, and they are not canonical works.</p>
+    <p>States produced from 1 December 2026 capture and hash their source at selection time. That distinction is published rather than hidden, because it is the only version that survives a critic.</p>
+    <p>These ten days are also known to be defective: the candidate pool was built from an earlier version of the source registry than the manifests declare. The defect is documented, and the days will be rebuilt before the series opens. The figures on this page come from that defective generation and are shown as instrument behaviour, not as results.</p>
+  </div>
+  <div class="q r">
+    <h3>What exactly can be collected?</h3>
+    <p>One day: its image, its manifest, and the evidence trail behind all 600 tiles. The image is the Proof of State. The manifest is the Proof of Work. Beautiful enough to collect, rigorous enough to audit.</p>
+    <p>The collection is finite because the calendar is finite. Write to <a href="mailto:archive@600states.com">archive@600states.com</a> to be told before the first State is observed.</p>
+  </div>
+  <div class="q r">
+    <h3>What happens on a boring day?</h3>
+    <p>A boring day gets a boring State, and a boring post with it. Inventing a narrative for a flat day is the textual equivalent of beautifying the image. Same rule, same reason. We do not correct an ugly State. We correct a faulty instrument, and then we observe again.</p>
+  </div>
+</section>
+
+<section class="cta">
+  <h2 class="r">Own a day in history</h2>
+  <div class="row r">
+    <p>The first State, 2026/335, is observed on 1 December 2026 and can never be observed again. Ask to be told before it happens.</p>
+    <div></div>
+    <a class="btn" href="mailto:archive@600states.com?subject=600%20STATES%20%E2%80%94%20notify%20me%20before%20the%20first%20State&amp;body=Please%20tell%20me%20before%20the%20series%20opens%20on%201%20December%202026.%0A%0AName%3A%0AInterest%20(collector%2C%20press%2C%20research)%3A">Get the opening notice</a>
+  </div>
+</section>
+
+<footer class="foot">
+  <div class="cols4">
+    <ul class="r">
+      <li>600 STATES</li>
+      <li>600states.com</li>
+      <li><a href="mailto:archive@600states.com">archive@600states.com</a></li>
+      <li>Rights held by Myolc AB</li>
+    </ul>
+    <ul class="r">
+      <li>The page</li>
+      <li><a href="#about">About</a></li>
+      <li><a href="#method">Method</a></li>
+      <li><a href="#field">The field</a></li>
+      <li><a href="#proof">Proof</a></li>
+    </ul>
+    <ul class="r">
+      <li>Licensing</li>
+      <li>Instrument, MIT</li>
+      <li>Evidence, CC0 1.0</li>
+      <li>Artwork, all rights reserved</li>
+    </ul>
+    <ul class="r">
+      <li>The series</li>
+      <li>Opens 1 December 2026</li>
+      <li>One State per UTC day</li>
+      <li>30 × 20, 600 tiles</li>
+    </ul>
+  </div>
+  <div></div>
+  <div>
+    <p class="mark r">600 STATES</p>
+    <p class="legal">Images on this page are rendered calibration States, the instrument's own output. The tile data shown is the consensus manifest of the first calibration day. It is released CC0 when the evidence repository opens. © Myolc AB.</p>
+  </div>
+</footer>
+
+<script src="data.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  var START = Date.UTC(2026,11,1);
+  var now = new Date();
+  var today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  var left = Math.max(0, Math.round((START - today) / 86400000));
+  function countUp(el, to){
+    if(!el) return;
+    if(matchMedia('(prefers-reduced-motion: reduce)').matches){ el.textContent = to; return; }
+    var t0 = 0;
+    requestAnimationFrame(function step(ts){
+      if(!t0) t0 = ts;
+      var k = Math.min(1, (ts - t0) / 900);
+      el.textContent = Math.round(to * (1 - Math.pow(1 - k, 3)));
+      if(k < 1) requestAnimationFrame(step);
+    });
+  }
+  var cd = document.getElementById('countdown');
+  var ub = document.getElementById('untilBig');
+  if(cd){ cd.textContent = left; countUp(cd, left); }
+  if(ub){ ub.textContent = left; ub.setAttribute('data-to', left); }
+  var seen = new IntersectionObserver(function(es){
+    es.forEach(function(e){
+      if(e.isIntersecting){
+        countUp(e.target, +e.target.getAttribute('data-to'));
+        seen.unobserve(e.target);
+      }
+    });
+  }, {threshold:0.4});
+  Array.prototype.forEach.call(document.querySelectorAll('[data-to]'), function(el){ seen.observe(el); });
+
+  var EVIDENCE = {P: 'Publisher headline', S: 'URL text', U: 'Page title, unverified'};
+  var data = window.STATE001;
+  var keys = document.getElementById('grid');
+  var cv   = document.getElementById('fieldcv');
+  var ro   = document.getElementById('readout');
+
+  if(data && keys && cv && ro && cv.getContext){
+    var cur = -1, tilePx = 1, gapPx = 1, dpr = 1, mq = null, pending = false, locked = false;
+    var box = cv.parentElement;
+    var ctx = cv.getContext('2d');
+
+    // the keyboard and screen-reader layer: 600 real buttons, visually hidden, driving the same show()
+    var frag = document.createDocumentFragment();
+    for(var i = 0; i < data.tiles.length; i++){
+      var t0 = data.tiles[i];
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.setAttribute('tabindex', '-1');
+      b.setAttribute('aria-pressed', 'false');
+      b.setAttribute('aria-label', 'Tile ' + (i + 1) + ': ' + t0[2] + '. ' + t0[1]);
+      frag.appendChild(b);
+    }
+    keys.appendChild(frag);
+    var btns = keys.children;
+
+    var idx  = ro.querySelector('.idx'),
+        sw   = ro.querySelector('.swatch'),
+        tx   = ro.querySelector('.txt'),
+        lockNote = ro.querySelector('.lock'),
+        dds  = ro.querySelectorAll('dd'),
+        note = null;
+
+    function onDpr(){ paint(0); }
+    function watchDpr(d){
+      // the query carries the ratio it was built with, so it is rebuilt whenever the ratio moves
+      if(mq && mq.removeEventListener) mq.removeEventListener('change', onDpr);
+      mq = matchMedia('(resolution: ' + d + 'dppx)');
+      if(mq.addEventListener) mq.addEventListener('change', onDpr);
+    }
+
+    // No arrangement of CSS pixels holds whole device pixels across 30 columns: Chromium stores
+    // layout in 1/64 px and the error accumulates until gridlines fall either side of a device
+    // pixel. The canvas is sized and painted in device pixels, so every coordinate here is an integer.
+    function paint(availPx){
+      pending = false;
+      dpr = window.devicePixelRatio || 1;
+      var avail = (availPx > 0) ? availPx : Math.floor(box.clientWidth * dpr);
+      if(avail <= 0) return;
+      gapPx = Math.max(1, Math.round(dpr));
+      tilePx = Math.floor((avail - 29 * gapPx) / 30);
+      if(tilePx < 1) tilePx = 1;
+      var wPx = 30 * tilePx + 29 * gapPx, hPx = 20 * tilePx + 19 * gapPx;
+      cv.width = wPx;
+      cv.height = hPx;
+      cv.style.width = (wPx / dpr) + 'px';
+      cv.style.height = (hPx / dpr) + 'px';
+      ctx.fillStyle = '#0B0E12';
+      ctx.fillRect(0, 0, wPx, hPx);
+      var step = tilePx + gapPx;
+      for(var j = 0; j < 600; j++){
+        ctx.fillStyle = data.tiles[j][0];
+        ctx.fillRect((j % 30) * step, ((j / 30) | 0) * step, tilePx, tilePx);
+      }
+      if(cur >= 0) mark(cur);
+      watchDpr(dpr);
+    }
+
+    // the marker is a band in the separator colour OUTSIDE the tile, so the observation's own colour is never covered
+    function mark(i){
+      var step = tilePx + gapPx, x = (i % 30) * step, y = ((i / 30) | 0) * step, t = gapPx * (locked ? 4 : 2);
+      ctx.fillStyle = '#0B0E12';
+      ctx.fillRect(x - t, y - t, tilePx + 2 * t, t);
+      ctx.fillRect(x - t, y + tilePx, tilePx + 2 * t, t);
+      ctx.fillRect(x - t, y, t, tilePx);
+      ctx.fillRect(x + tilePx, y, t, tilePx);
+    }
+
+    function show(i){
+      if(i < 0 || i >= data.tiles.length || i === cur) return;
+      if(cur >= 0) btns[cur].setAttribute('aria-pressed', 'false');
+      cur = i;
+      btns[i].setAttribute('aria-pressed', 'true');
+      paint();
+      var t = data.tiles[i];
+      idx.textContent = 'Tile ' + (i + 1) + ' of 600 \u00b7 ' + t[0];
+      sw.style.background = t[0];
+      tx.textContent = t[1];
+      dds[0].textContent = t[2];
+      dds[1].textContent = t[3];
+      dds[2].textContent = t[5].toFixed(2);
+      dds[3].textContent = t[6].toFixed(2);
+      dds[4].textContent = t[4] + (t[4] === '3/3' ? ' read the same way every time' : ' a judgement call');
+      // the link is built through the DOM and the scheme is checked: the href is data, not markup
+      dds[5].textContent = '';
+      if(/^https?:\/\//i.test(t[8])){
+        var a = document.createElement('a');
+        a.href = t[8];
+        a.target = '_blank';
+        a.rel = 'noopener';
+        a.textContent = t[9];
+        dds[5].appendChild(a);
+      } else {
+        dds[5].textContent = t[9];
+      }
+      dds[6].textContent = t[10] + ' UTC';
+      dds[7].textContent = EVIDENCE[t[11]] || t[11];
+      dds[8].textContent = t[12];
+      if(!note){ note = document.createElement('p'); note.className = 'note'; ro.appendChild(note); }
+      note.textContent = t[7];
+    }
+
+    function hit(e){
+      var step = tilePx + gapPx;
+      var x = Math.floor(e.offsetX * dpr), y = Math.floor(e.offsetY * dpr);
+      var c = Math.floor(x / step), r = Math.floor(y / step);
+      if(c < 0 || c > 29 || r < 0 || r > 19) return -1;
+      if(x - c * step >= tilePx || y - r * step >= tilePx) return -1;   // the point is on a separator
+      return c + r * 30;
+    }
+    function hold(on){
+      locked = on;
+      lockNote.hidden = !on;
+      cv.style.cursor = on ? 'default' : 'pointer';
+      paint();
+    }
+    cv.addEventListener('mousemove', function(e){
+      if(locked) return;
+      var i = hit(e);
+      if(i >= 0) show(i);
+    });
+    cv.addEventListener('click', function(e){
+      var i = hit(e);
+      if(i < 0) return;
+      if(locked && i === cur){ hold(false); return; }
+      show(i);
+      hold(true);
+    });
+    addEventListener('keydown', function(e){ if(e.key === 'Escape' && locked) hold(false); });
+
+    keys.addEventListener('focus', function(){ if(cur < 0) show(0); });
+    keys.addEventListener('keydown', function(e){
+      var step = {ArrowRight: 1, ArrowLeft: -1, ArrowDown: 30, ArrowUp: -30}[e.key];
+      if(step === undefined) return;
+      e.preventDefault();
+      show(Math.min(599, Math.max(0, (cur < 0 ? 0 : cur) + step)));
+      if(!locked) hold(true);
+    });
+
+    paint();
+    var queue = function(){ if(!pending){ pending = true; requestAnimationFrame(function(){ paint(); }); } };
+    if(window.ResizeObserver){
+      // device-pixel-content-box also reports a devicePixelRatio change that leaves the CSS size alone:
+      // a stale canvas at a new ratio puts every gridline on a fractional pixel
+      var ro2 = new ResizeObserver(function(entries){
+        var e0 = entries[0], dp = e0 && e0.devicePixelContentBoxSize && e0.devicePixelContentBoxSize[0];
+        paint(dp ? dp.inlineSize : 0);
+      });
+      try { ro2.observe(box, {box: 'device-pixel-content-box'}); }
+      catch(err){ ro2.observe(box); }
+    }
+    addEventListener('resize', queue);
+  }
+
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if(en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); }
+    });
+  }, {threshold: 0.1, rootMargin: '0px 0px -6% 0px'});
+  var early = 0;
+  Array.prototype.forEach.call(document.querySelectorAll('.r'), function(el, i){
+    var top = el.getBoundingClientRect().top;
+    if(top < innerHeight * 2.2){
+      // already near the opening: stagger these at load instead of waiting for a scroll
+      el.style.animationDelay = (0.45 + (early++) * 0.09).toFixed(2) + 's';
+      el.classList.add('in');
+    } else {
+      el.style.animationDelay = (Math.min(i % 4, 3) * 0.075) + 's';
+      io.observe(el);
+    }
+  });
+
+
+  var track = document.getElementById('track');
+  if(track){
+    var go = function(dir){
+      var f = track.querySelector('figure');
+      if(!f) return;
+      track.scrollBy({
+        left: dir * (f.getBoundingClientRect().width + 8),
+        behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+      });
+    };
+    Array.prototype.forEach.call(document.querySelectorAll('.cbtn'), function(b){
+      b.addEventListener('click', function(){ go(+b.getAttribute('data-dir')); });
+    });
+    track.addEventListener('keydown', function(e){
+      if(e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      e.preventDefault();
+      go(e.key === 'ArrowRight' ? 1 : -1);
+    });
+  }
+
+  var sh = document.getElementById('shutter');
+  if(sh){ requestAnimationFrame(function(){ setTimeout(function(){ sh.classList.add('in'); }, 140); }); }
+})();
+</script>
+</body>
+</html>
