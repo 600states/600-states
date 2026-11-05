@@ -10,3 +10,6 @@ out/
 # sidans innehall genereras ur arkivet, se site/README.md
 site/data.js
 site/img/
+
+# granskningsverktygets skarmbilder, hor inte hemma i repot
+.taste-skill/
