@@ -12,6 +12,10 @@ from config import DATA
 
 REF = DATA / "08_V3_STATES/STATE_001/600_STATES_2026_001_EMOTION_COLOR_MANIFEST_v3.0_CONSENSUS.csv"
 
+import pytest
+pytestmark = pytest.mark.skipif(not REF.exists(),
+    reason="dataarkivet saknas - satt STATES_DATA (se README)")
+
 def test_vokabular_ar_sexton():
     assert len(VOCAB) == 16 and set(VOCAB) == set(ANCHORS)
 

@@ -10,6 +10,10 @@ from src.evidence_hash import row_hash
 from config import REMEDIATION
 
 PKG = REMEDIATION / "600_STATES_2026_002_010_FROZEN_PRE_EMOTION_PACKAGE_v2.2_SEMANTIC_MATERIALITY_STRICT.zip"
+
+import pytest
+pytestmark = pytest.mark.skipif(not PKG.exists(),
+    reason="dataarkivet saknas - satt STATES_DATA (se README)")
 FIELD = "evidence_row_sha256"
 
 def _manifests():

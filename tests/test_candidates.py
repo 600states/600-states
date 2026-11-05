@@ -12,6 +12,10 @@ from config import RAW_GDELT, REMEDIATION
 
 PKG = REMEDIATION / "600_STATES_2026_002_010_FROZEN_PRE_EMOTION_PACKAGE_v2.2_SEMANTIC_MATERIALITY_STRICT.zip"
 
+import pytest
+pytestmark = pytest.mark.skipif(not PKG.exists(),
+    reason="dataarkivet saknas - satt STATES_DATA (se README)")
+
 def _hist(state):
     with zipfile.ZipFile(PKG) as z:
         n = next(x for x in z.namelist() if f"2026_{state}_FROZEN" in x and x.endswith(".csv"))

@@ -13,6 +13,9 @@ def test_samma_som_fargprotokollet():
 
 def test_samma_som_fryst_protokoll():
     p = FROZEN / "600_STATES_Emotion_Classification_Protocol_v1.0_FROZEN.json"
+    if not p.exists():
+        import pytest
+        pytest.skip("dataarkivet saknas - satt STATES_DATA (se README)")
     assert json.loads(p.read_text(encoding="utf-8"))["emotion_states"] == EMOTION_STATES
 
 def test_ordningen_ar_skiljedomare():
