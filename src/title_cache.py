@@ -11,7 +11,7 @@ from fetch_evidence import fetch_many, load_registry
 from config import DATA
 
 CACHE = DATA / "07_EVIDENCE" / "title_cache.jsonl"
-REGISTRY = DATA / "00_CANONICAL_PROJECT_DOCS/01_FROZEN_PROTOCOL_LIBRARY_v1.0/600_STATES_Source_Registry_State_2026_001_v1.1_STRICT.csv"
+from config import REGISTRY_FILE as REGISTRY   # se config.py - enda definitionen
 
 def load():
     out = {}

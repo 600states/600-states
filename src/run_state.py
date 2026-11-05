@@ -1,39 +1,42 @@
-"""Kor hela kedjan for ett dygn. Ett kommando, grindar mellan varje steg.
+"""Urval och klassificeringsinput for ett dygn. SEPARAT PROGRAM.
 
-    python3 src/run_state.py 20260101 001 [--stage NAMN] [--budget N]
+    python3 src/run_state.py 20261201 [--stage NAMN] [--budget N]
+
+Dygnet ar enda indata. Ingen kod har laser systemklockan: daglig korning och
+efterhandskorning av en aldre dag gar genom exakt samma kodvag, annars ar
+dagarna inte jamforbara.
+
+DETTA PROGRAM NAR ALDRIG FARGEN. Det importerar inte color_protocol och far
+aldrig gora det. Farg och rendering ligger i run_color.py, som kors forst nar
+emotionsmanifestet ar fryst. Separationen ar funktionen, inte stadning.
 
 Steg, i ordning:
-    candidates  GDELT -> kandidatlista            grind: dygn, mention_rows
-    pool        bevisfangst pa topp 1500          grind: rubriktackning
+    candidates  GDELT -> kandidatlista            grind: dygn, mention_rows, register
+    pool        bevisfangst pa hela poolen        grind: rubriktackning
     select      600 valda bland lasbara           grind: 600, regionkvoter, cap
     input       klassificerarens input            grind: varje rad har text
-    --- klassificeringen kors utanfor och lagger emotion-manifestet pa plats ---
+    --- klassificeringen kors har och lagger passen pa plats ---
     emotion     kontroll av emotionsmanifestet    grind: ID-mangd, vokabular, spridning
-    color       hex ur protokollet                grind: varje hex reproduceras
-    render      PNG + hashar
+
+    --- darefter: python3 src/run_color.py <dygn> ---
 
 Avbryter med felkod nar en grind stoppar. En regel som inte kan stoppa en
 korning ar inte en regel.
 """
-import csv, hashlib, json, sys
+import csv, json, sys
 from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE)); sys.path.insert(0, str(HERE.parent))
-from config import DATA
+import statepaths as sp
+from atomic import atomic_write, write_text
+from config import DATA, RAW_GDELT, REGISTRY_FILE as REGISTRY, registry_version
 import candidates, ranking, select_day, pool_evidence, gates
-from color_protocol import hex_of_row, VOCAB
+from vocab import EMOTION_STATES
 from build_classifier_input import claim_of, readable, is_digest
 
-from config import REGISTRY_FILE as REGISTRY, registry_version
-STAGES = ["candidates", "pool", "select", "input", "emotion", "color", "render"]
+STAGES = ["candidates", "pool", "select", "input", "emotion"]
 
-def outdir(state): return DATA / "08_V3_STATES" / f"STATE_{state}"
-def work(state):
-    d = outdir(state) / "_work"; d.mkdir(parents=True, exist_ok=True); return d
-
-def sha(p): return hashlib.sha256(Path(p).read_bytes()).hexdigest()
-
-def step_candidates(day, state, mentions):
+def step_candidates(day, mentions):
     print(f"\n[candidates] {day}")
     cands = candidates.build(day, mentions)
     gates.gate_candidates(cands, day)
@@ -42,43 +45,50 @@ def step_candidates(day, state, mentions):
     # regionkvoter och publisher cap bland kandidater som har bevis; en avhuggen
     # pool ger for fa lasbara i de tunna regionerna och kedjan stannar pa 579.
     pool = ranking.rank(cands)
-    for c in pool: c["event_ids"] = sorted(c["event_ids"]) if isinstance(c["event_ids"], set) else c["event_ids"]
-    (work(state) / "pool.json").write_text(json.dumps(pool, ensure_ascii=False), encoding="utf-8")
-    print(f"        {len(cands)} kandidater, poolen ar topp {len(pool)}")
+    for c in pool:
+        c["event_ids"] = sorted(c["event_ids"]) if isinstance(c["event_ids"], set) else c["event_ids"]
+    write_text(sp.workdir(DATA, day) / "pool.json", json.dumps(pool, ensure_ascii=False))
+    print(f"        {len(cands)} kandidater i poolen")
     return pool
 
-def step_pool(state, budget):
+def step_pool(day, budget):
     print("\n[pool] bevisfangst fore urval")
-    pool = json.loads((work(state) / "pool.json").read_text(encoding="utf-8"))
+    pj = sp.workdir(DATA, day) / "pool.json"
+    pool = json.loads(pj.read_text(encoding="utf-8"))
     new, left = pool_evidence.capture(pool, REGISTRY, budget=budget)
     print(f"        hamtade {new}, kvar {left}")
     if left:
         print("        POOLEN AR INTE FARDIG - kor steget igen"); sys.exit(2)
     pool_evidence.attach(pool)
     gates.gate_pool_evidence(pool)
-    (work(state) / "pool.json").write_text(json.dumps(pool, ensure_ascii=False), encoding="utf-8")
+    write_text(pj, json.dumps(pool, ensure_ascii=False))
     return pool
 
-def step_select(state, day):
+def step_select(day):
     print("\n[select]")
-    pool = json.loads((work(state) / "pool.json").read_text(encoding="utf-8"))
+    pool = json.loads((sp.workdir(DATA, day) / "pool.json").read_text(encoding="utf-8"))
     pool_evidence.attach(pool)
     ok, dig = [], 0
     for c in pool:
         claim = claim_of(c.get("page_title"), c["domain"], c["url"])[0]
-        if not readable(claim): continue
-        if is_digest(claim): dig += 1; continue
+        if not readable(claim):
+            continue
+        if is_digest(claim):
+            dig += 1; continue
         ok.append(c)
     print(f"        {len(ok)}/{len(pool)} kandidater har lasbar text ({dig} sammanfattningar bortsorterade)")
-    chosen, report, near = select_day.select(ok, f"2026-{state}")
-    gates.gate_selection(chosen, report, select_day.REGIONS, select_day.PER_REGION, select_day.PUBLISHER_CAP)
-    (work(state) / "chosen.json").write_text(json.dumps(chosen, ensure_ascii=False), encoding="utf-8")
-    cols = ["state_id","tile_index","grid_row","grid_column","observation_id","family_key",
-            "first_mention_utc","representative_url","representative_domain","source_tier",
-            "selection_layer","review_region","action_geo_country","mention_rows",
-            "registry_version","evidence_http_status","evidence_sha256"]
-    pre = outdir(state) / f"600_STATES_2026_{state}_PRE_EMOTION_MANIFEST_v3.1.csv"
-    with open(pre, "w", encoding="utf-8", newline="") as fh:
+
+    chosen, report, near = select_day.select(ok, sp.state_id(day))
+    gates.gate_selection(chosen, report, select_day.REGIONS,
+                         select_day.PER_REGION, select_day.PUBLISHER_CAP)
+    write_text(sp.workdir(DATA, day) / "chosen.json", json.dumps(chosen, ensure_ascii=False))
+
+    cols = ["state_id", "tile_index", "grid_row", "grid_column", "observation_id", "family_key",
+            "first_mention_utc", "representative_url", "representative_domain", "source_tier",
+            "selection_layer", "review_region", "action_geo_country", "mention_rows",
+            "registry_version", "evidence_http_status", "evidence_sha256"]
+    pre = sp.pre_manifest(DATA, day)
+    with atomic_write(pre) as fh:
         w = csv.DictWriter(fh, fieldnames=cols); w.writeheader()
         for c in chosen:
             w.writerow({"state_id": c["state_id"], "tile_index": c["tile_index"],
@@ -91,21 +101,22 @@ def step_select(state, day):
                         "mention_rows": c["mention_rows"], "registry_version": c["registry_version"],
                         "evidence_http_status": c.get("http_status") or "",
                         "evidence_sha256": c.get("content_sha256") or ""})
-    print(f"        pre-emotion manifest: {pre.name}")
-    nd = outdir(state) / f"600_STATES_2026_{state}_NEAR_DUPLICATE_OBSERVED_v3.1.csv"
-    with open(nd, "w", encoding="utf-8", newline="") as fh:
+    print(f"        {pre.name}")
+
+    nd = sp.near_duplicate(DATA, day)
+    with atomic_write(nd) as fh:
         w = csv.writer(fh); w.writerow(["url_a", "url_b", "jaccard"])
         for row in near:
             w.writerow(list(row) if isinstance(row, (list, tuple)) else [row])
-    print(f"        near-duplicate log: {nd.name} ({len(near)} rader)")
-    (outdir(state) / f"600_STATES_2026_{state}_SELECTION_REPORT_v3.1.json").write_text(
-        json.dumps(report, ensure_ascii=False, indent=1), encoding="utf-8")
+    print(f"        {nd.name} ({len(near)} rader)")
+
+    write_text(sp.selection_report(DATA, day), json.dumps(report, ensure_ascii=False, indent=1))
     print("       ", {k: report[k] for k in ("kandidater", "efter_storytak", "valda")})
     return chosen
 
-def step_input(state):
+def step_input(day):
     print("\n[input]")
-    chosen = json.loads((work(state) / "chosen.json").read_text(encoding="utf-8"))
+    chosen = json.loads((sp.workdir(DATA, day) / "chosen.json").read_text(encoding="utf-8"))
     items = []
     for c in chosen:
         claim, src = claim_of(c.get("page_title"), c["domain"], c["url"])
@@ -115,63 +126,47 @@ def step_input(state):
                       "review_region": c["review_region"], "selection_layer": c["selection_layer"],
                       "source_tier": c["source_tier"], "representative_domain": c["domain"]})
     gates.gate_claims(items, readable, is_digest)
-    d = outdir(state) / "classifier_input"; d.mkdir(parents=True, exist_ok=True)
+    d = sp.classifier_input(DATA, day); d.mkdir(parents=True, exist_ok=True)
     for k in range(0, len(items), 60):
-        (d / f"batch_{k//60+1:02d}.json").write_text(
-            json.dumps(items[k:k+60], ensure_ascii=False, indent=1), encoding="utf-8")
+        write_text(d / f"batch_{k//60+1:02d}.json",
+                   json.dumps(items[k:k+60], ensure_ascii=False, indent=1))
     print(f"        {len(items)} observationer -> {d.name}/")
     return items
 
-def _load_emotion(state):
-    p = outdir(state) / f"600_STATES_2026_{state}_EMOTION_COLOR_MANIFEST_v3.1_CONSENSUS.csv"
-    if not p.exists():
-        print(f"        emotionsmanifestet saknas: {p.name}"); sys.exit(3)
-    return p, list(csv.DictReader(open(p, encoding="utf-8")))
-
-def step_emotion(state):
+def step_emotion(day):
     print("\n[emotion]")
     items = []
-    for f in sorted((outdir(state) / "classifier_input").glob("batch_*.json")):
+    for f in sorted(sp.classifier_input(DATA, day).glob("batch_*.json")):
         items += json.loads(f.read_text(encoding="utf-8"))
-    _, rows = _load_emotion(state)
-    gates.gate_emotion(items, rows, set(VOCAB))
+    p = sp.emotion_manifest(DATA, day)
+    if not p.exists():
+        print(f"        emotionsmanifestet saknas: {p.name}"); sys.exit(3)
+    rows = list(csv.DictReader(open(p, encoding="utf-8")))
+    gates.gate_emotion(items, rows, set(EMOTION_STATES))
+    print(f"        {p.name} godkant — kor nu: python3 src/run_color.py {day}")
     return rows
-
-def step_color(state):
-    print("\n[color]")
-    p, rows = _load_emotion(state)
-    gates.gate_color(rows, hex_of_row)
-    print(f"        manifest sha256 {sha(p)}")
-    return rows
-
-def step_render(state):
-    print("\n[render]")
-    from render import render_state
-    png = render_state(state)
-    print(f"        {Path(png).name}  sha256 {sha(png)}")
-    from build_site import build as build_site
-    out, _ = build_site(state)
-    print(f"        sajtens datafil: {out.name}")
 
 def main():
-    day, state = sys.argv[1], sys.argv[2]
-    args = sys.argv[3:]
+    if len(sys.argv) < 2:
+        sys.exit(__doc__)
+    day = sys.argv[1]
+    sp.state_id(day)                      # validerar formatet, kastar vid fel
+    args = sys.argv[2:]
     start = args[args.index("--stage") + 1] if "--stage" in args else "candidates"
     budget = int(args[args.index("--budget") + 1]) if "--budget" in args else None
-    raw = DATA / "01_RAW_GDELT_2026_001_010"
-    hits = sorted(raw.glob(f"*{day}*MENTIONS.zip")) or sorted(raw.glob(f"*2026_{state}_GDELT2_MENTIONS.zip"))
+
+    hits = sorted(RAW_GDELT.glob(f"*{day}*MENTIONS.zip"))
     if not hits:
-        print(f"hittar ingen mentions-zip for {day} i {raw.name}"); sys.exit(4)
-    mentions = hits[0]
+        print(f"hittar ingen mentions-zip for {day} i {RAW_GDELT.name}"); sys.exit(4)
+
     todo = STAGES[STAGES.index(start):]
+    print(f"=== {sp.state_id(day)} — urval och klassificeringsinput ===")
     try:
-        if "candidates" in todo: step_candidates(day, state, mentions)
-        if "pool" in todo: step_pool(state, budget)
-        if "select" in todo: step_select(state, day)
-        if "input" in todo: step_input(state)
-        if "emotion" in todo: step_emotion(state)
-        if "color" in todo: step_color(state)
-        if "render" in todo: step_render(state)
+        if "candidates" in todo: step_candidates(day, hits[0])
+        if "pool" in todo: step_pool(day, budget)
+        if "select" in todo: step_select(day)
+        if "input" in todo: step_input(day)
+        if "emotion" in todo: step_emotion(day)
     except gates.GateFailure as e:
         print(f"\nKEDJAN STOPPAD: {e}"); sys.exit(1)
     print("\nKlart.")

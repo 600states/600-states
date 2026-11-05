@@ -7,17 +7,18 @@ import csv, hashlib, json, re, sys
 from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE)); sys.path.insert(0, str(HERE.parent))
+import statepaths as sp
 from config import DATA
 from color_protocol import hex_of_row
 
 def sha(p): return hashlib.sha256(Path(p).read_bytes()).hexdigest()
 
-def audit(state):
-    D = DATA / "08_V3_STATES" / f"STATE_{state}"
-    pre = list(csv.DictReader(open(D / f"600_STATES_2026_{state}_PRE_EMOTION_MANIFEST_v3.1.csv", encoding="utf-8")))
-    emo = list(csv.DictReader(open(D / f"600_STATES_2026_{state}_EMOTION_COLOR_MANIFEST_v3.1_CONSENSUS.csv", encoding="utf-8")))
+def audit(day, data=DATA):
+    D = sp.outdir(data, day)
+    pre = list(csv.DictReader(open(sp.pre_manifest(data, day), encoding="utf-8")))
+    emo = list(csv.DictReader(open(sp.color_manifest(data, day), encoding="utf-8")))
     inp = {}
-    for f in sorted((D / "classifier_input").glob("batch_*.json")):
+    for f in sorted(sp.classifier_input(data, day).glob("batch_*.json")):
         for it in json.loads(f.read_text(encoding="utf-8")): inp[it["observation_id"]] = it
     ev = {}
     p = DATA / "07_EVIDENCE" / "pool_titles.jsonl"
@@ -57,7 +58,9 @@ def audit(state):
     withhash = sum(1 for r in pre if ev.get(r["representative_url"], {}).get("content_sha256"))
     chk("bevispost med innehallshash", True, f"{withhash}/600 (ovriga ar 403/404/betalvagg)")
 
-    ts = [r["tile_index"] for r in pre if not r["first_mention_utc"].startswith(f"2026010{int(state)}"[:8])]
+    from datetime import date
+    dd = date(int(day[:4]), int(day[4:6]), int(day[6:8])).strftime("%Y%m%d")
+    ts = [r["tile_index"] for r in pre if not r["first_mention_utc"].startswith(dd)]
     chk("alla tidsstamplar i ratt dygn", not ts, f"{len(ts)} utanfor")
     order = [r["first_mention_utc"] for r in sorted(pre, key=lambda r: int(r["tile_index"]))]
     chk("kronologisk ordning", order == sorted(order), "")
@@ -67,12 +70,12 @@ def audit(state):
     chk("publisher cap <= 10", max(caps.values()) <= 10, f"max {max(caps.values())}, {len(caps)} publicister")
 
     files = {
-        "pre-emotion": D / f"600_STATES_2026_{state}_PRE_EMOTION_MANIFEST_v3.1.csv",
-        "emotion+farg": D / f"600_STATES_2026_{state}_EMOTION_COLOR_MANIFEST_v3.1_CONSENSUS.csv",
-        "near-duplicate": D / f"600_STATES_2026_{state}_NEAR_DUPLICATE_OBSERVED_v3.1.csv",
-        "PNG": D / f"600_STATES_2026_{state}_v3.1_CONSENSUS.png",
+        "pre-emotion": sp.pre_manifest(data, day),
+        "emotion+farg": sp.color_manifest(data, day),
+        "near-duplicate": sp.near_duplicate(data, day),
+        "PNG": sp.png(data, day),
     }
-    site = json.loads((D / f"site_{state}.json").read_text(encoding="utf-8"))
+    site = json.loads(sp.site_json(data, day).read_text(encoding="utf-8"))
     m = site["meta"]
     chk("sajtens preHash = filen", m["preHash"] == sha(files["pre-emotion"]), "")
     chk("sajtens emoHash = filen", m["emoHash"] == sha(files["emotion+farg"]), "")
@@ -82,7 +85,7 @@ def audit(state):
     chk("sajtens url = manifestet",
         [t["u"] for t in site["tiles"]] == [r["representative_url"] for r in sorted(pre, key=lambda r: int(r["tile_index"]))], "")
 
-    print(f"\n=== STATE 2026/{state} ===")
+    print(f"\n=== STATE {sp.state_id(day)} ===")
     for ok, name, detail in out:
         print(("  OK   " if ok else "  FEL  ") + f"{name}" + (f": {detail}" if detail else ""))
     print("  hashar:")

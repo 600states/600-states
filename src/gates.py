@@ -65,11 +65,6 @@ def gate_emotion(inputs, rows, vocab):
     _say("varden ar inte konstanta", n_i > 5 and n_c > 5,
          f"{n_i} unika intensity, {n_c} unika confidence")
 
-def gate_color(rows, hex_of_row):
-    bad = [r for r in rows if hex_of_row(r).upper() != str(r["hex"]).upper()]
-    _say("varje hex reproduceras av protokollet", not bad,
-         f"{len(rows)-len(bad)}/{len(rows)}" + (f", forsta fel ruta {bad[0]['tile_index']}" if bad else ""))
-
 def gate_registry(cands, registry_path, version, allowed):
     """Manifestet far aldrig pasta en annan registerversion an den som anvandes.
 

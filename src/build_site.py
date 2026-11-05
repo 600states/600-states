@@ -7,20 +7,21 @@ import collections, csv, hashlib, json, sys
 from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE)); sys.path.insert(0, str(HERE.parent))
+import statepaths as sp
+from atomic import write_text
 from config import DATA
 
 MONTHS = ["JANUARY","FEBRUARY","MARCH","APRIL","MAY","JUNE","JULY",
           "AUGUST","SEPTEMBER","OCTOBER","NOVEMBER","DECEMBER"]
 SRC = {"LIVE_FETCH": "P", "ARCHIVE_SNAPSHOT": "A", "URL_SLUG": "S", "PAGE_TITLE_UNVERIFIED": "U"}
 
-def build(state):
-    D = DATA / "08_V3_STATES" / f"STATE_{state}"
+def build(day, data=DATA):
+    D = sp.outdir(data, day)
     pre = {int(r["tile_index"]): r for r in csv.DictReader(
-        open(D / f"600_STATES_2026_{state}_PRE_EMOTION_MANIFEST_v3.1.csv", encoding="utf-8"))}
-    emo = list(csv.DictReader(open(
-        D / f"600_STATES_2026_{state}_EMOTION_COLOR_MANIFEST_v3.1_CONSENSUS.csv", encoding="utf-8")))
+        open(sp.pre_manifest(data, day), encoding="utf-8"))}
+    emo = list(csv.DictReader(open(sp.color_manifest(data, day), encoding="utf-8")))
     inp = {}
-    for f in sorted((D / "classifier_input").glob("batch_*.json")):
+    for f in sorted(sp.classifier_input(data, day).glob("batch_*.json")):
         for it in json.loads(f.read_text(encoding="utf-8")): inp[it["tile_index"]] = it
 
     tiles = []
@@ -38,20 +39,20 @@ def build(state):
     cs = collections.Counter(r["claim_source"] for r in emo)
     day = next(iter(pre.values()))["first_mention_utc"]
     sha = lambda f: hashlib.sha256((D / f).read_bytes()).hexdigest()
-    nd = f"600_STATES_2026_{state}_NEAR_DUPLICATE_OBSERVED_v3.1.csv"
-    meta = {"id": f"2026 / {state}",
+    nd = sp.near_duplicate(data, day).name
+    meta = {"id": sp.state_id(day).replace("/", " / "),
             "date": f"{int(day[6:8])} {MONTHS[int(day[4:6])-1]} {day[:4]}",
             "agree3": ag["3/3"], "agree2": ag["2/3"], "agree1": ag["1/3"],
             "colours": len({r["hex"] for r in emo}),
             "pub": cs["LIVE_FETCH"], "arch": cs["ARCHIVE_SNAPSHOT"],
             "slug": cs["URL_SLUG"], "unver": cs["PAGE_TITLE_UNVERIFIED"],
             "pubs": len({p["representative_domain"] for p in pre.values()}),
-            "preHash": sha(f"600_STATES_2026_{state}_PRE_EMOTION_MANIFEST_v3.1.csv"),
-            "emoHash": sha(f"600_STATES_2026_{state}_EMOTION_COLOR_MANIFEST_v3.1_CONSENSUS.csv"),
+            "preHash": sha(sp.pre_manifest(data, day).name),
+            "emoHash": sha(sp.color_manifest(data, day).name),
             "ndRows": sum(1 for _ in open(D / nd, encoding="utf-8")) - 1, "ndHash": sha(nd)}
-    out = D / f"site_{state}.json"
-    out.write_text(json.dumps({"meta": meta, "tiles": tiles}, ensure_ascii=False,
-                              separators=(",", ":")), encoding="utf-8")
+    out = write_text(sp.site_json(data, day),
+                     json.dumps({"meta": meta, "tiles": tiles}, ensure_ascii=False,
+                                separators=(",", ":")))
     return out, meta
 
 if __name__ == "__main__":
