@@ -307,11 +307,12 @@ def run(day, only_pass=None, budget=None, model=DEFAULT_MODEL, dry=False):
     rec = {"state_id": sp.state_id(day), "model": model, "thinking_disabled": True,
            "prompt_sha256": sha(PROMPT_FILE), "spec_sha256": sha(SPEC_FILE),
            "batch_size": len(bs[0][1]), "calls": []}
-    gjorda = 0
+    gjorda = parse_fel_totalt = 0
     for p, n, items in todo:
         if budget is not None and gjorda >= budget:
             print(f"\n  budget {budget} nadd, {len(todo) - gjorda} anrop kvar — kor steget igen")
             return 2
+        parse_fel = 0
         for attempt in range(1, MAX_TRIES + 1):
             t0 = time.time()
             msg = None
@@ -333,6 +334,15 @@ def run(day, only_pass=None, budget=None, model=DEFAULT_MODEL, dry=False):
                 # lyckas. Forut skrevs bara undantagets klassnamn, och rasvaret -
                 # det enda som kan saga varfor - kastades. Da ser ett avhugget
                 # svar ut som ett trasigt svar.
+                # Trasig JSON mitt i ett komplett svar raknas for sig. Ett fall
+                # av tre forsok matt 2026-11-05: modellen stakade sig och skrev
+                # halva faltet tva ganger. Haller den andelen i sig blir det ett
+                # tiotal omkorningar om dygnet. Andelen ska matas over flera
+                # dygn innan formatkravet ror sig - darfor en raknare, ingen
+                # atgard.
+                if isinstance(e, json.JSONDecodeError):
+                    parse_fel += 1
+                    parse_fel_totalt += 1
                 print(f"  pass{p} batch{n:02d} forsok {attempt}: {type(e).__name__}: {e}")
                 spara_misslyckat(d, p, n, attempt, msg)
                 time.sleep(2 * attempt); continue
@@ -361,7 +371,8 @@ def run(day, only_pass=None, budget=None, model=DEFAULT_MODEL, dry=False):
                                  "cache_read": getattr(usage, "cache_read_input_tokens", 0),
                                  "cache_write": getattr(usage, "cache_creation_input_tokens", 0),
                                  "block_types": block_types(msg),
-                                 "emission_artifacts": artefakter, **dg})
+                                 "emission_artifacts": artefakter,
+                                 "parse_failures": parse_fel, **dg})
             print(f"  pass{p} batch{n:02d}  {len(rows)} rader  "
                   f"{dg['authored_scores_median']:.0f}/16 egna poang  "
                   f"cache {getattr(usage,'cache_read_input_tokens',0):,}")
@@ -371,11 +382,15 @@ def run(day, only_pass=None, budget=None, model=DEFAULT_MODEL, dry=False):
             break
         gjorda += 1
 
-    if rec["calls"]:
+    # Ocksa nar ingen batch gick igenom: en korning dar allt foll pa trasig JSON
+    # ar just den matning andelen ska bygga pa, och den far inte vara den enda
+    # som inte lamnar nagon journal.
+    if rec["calls"] or parse_fel_totalt:
         c = rec["calls"]
         rec["totals"] = {"calls": len(c), "input": sum(x["input_tokens"] for x in c),
                          "output": sum(x["output_tokens"] for x in c),
-                         "cache_read": sum(x["cache_read"] for x in c)}
+                         "cache_read": sum(x["cache_read"] for x in c),
+                         "parse_failures": parse_fel_totalt}
         write_text(sp.outdir(DATA, day) / f"600_STATES_{sp.state_key(day)}_CLASSIFIER_RUN.json",
                    json.dumps(rec, ensure_ascii=False, indent=1))
         print(f"\n  {rec['totals']}")

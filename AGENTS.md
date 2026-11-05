@@ -92,6 +92,16 @@ not content: the frozen protocol specifies what each row must contain, never
 how it is laid out, so the rule lives in `src/classify.py` and not in the
 frozen prompt whose sha256 the gate checks.
 
+**Do not touch the compact-JSON rule until the rate is measured.** One attempt
+in three on 2026-11-05 came back as broken JSON in the middle of an otherwise
+complete response — the model stuttered and wrote half a field twice
+(`"primary_emotion":"Joy":0.00},"primary_emotion":"Joy"`). The compact format
+may be what provokes it. If that rate holds it means roughly ten re-runs a day
+and about $5 extra, which is worth knowing but not worth guessing about. The
+run record counts it per batch as `parse_failures`, and per run under `totals`
+so a run where every attempt failed still leaves the number. Collect it over
+several days first.
+
 Anthropic's own documentation warns that Opus 5 with thinking off sometimes
 leaks internal XML tags into the visible output. `parse()` is strict and
 `validate()` checks every row, so such a response fails rather than being
