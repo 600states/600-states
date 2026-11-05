@@ -58,6 +58,24 @@ manifest: all manifest writes go through `src/atomic.py`.
 If a proposal could change output bit-for-bit, do not put it forward.
 Embeddings lost to lexical clustering for this reason, and were rejected.
 
+## An ugly day is a valid result
+
+Output that looks bad is not a bug to fix. Nothing may be made prettier by
+hand, no tile substituted, no composition rebalanced. If a State looks dull or
+muddy, that is what the day's news flow produced under a method that was fixed
+before the day began — and it is the strongest evidence the method is real.
+
+Never propose a change whose justification is that the image would look better.
+
+## The chain of traceability may never be shortened
+
+news item -> observation -> emotion -> colour
+
+Every link must stay walkable in the manifests: the URL behind a tile, the
+evidence capture behind the URL, the three classifier passes behind the
+consensus, the frozen formula behind the hex. Do not collapse a step, cache
+away an intermediate, or drop a column because nothing reads it yet.
+
 ## This repository is public
 
 Never commit, in code, comments, documentation, test fixtures or commit
