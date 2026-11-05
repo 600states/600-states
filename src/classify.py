@@ -133,8 +133,14 @@ def call(client, model, prompt, items):
     41-42 kompletta rader av 60 i alla tre forsoken — matt 2026-11-05 pa
     batch 01, alltsa 387 output-tokens per rad. Sextio rader kraver 23 250.
     32000 ar den matta storheten plus marginal, inte ett runt tal.
+
+    STROEMMAT. SDK:n vagrar ett vanligt anrop med sa hogt max_tokens — den
+    kastar ValueError lokalt, innan begaran skickas, for att svaret kan ta
+    langre tid an tiominutersgransen. Stroemning har ingen sadan grans.
+    get_final_message() ger samma Message-objekt som create() gav, sa
+    raw_text(), parse(), usage och stop_reason ar oforandrade.
     """
-    return client.messages.create(
+    with client.messages.stream(
         model=model, max_tokens=32000,
         thinking={"type": "disabled"},
         system=[{"type": "text", "text": prompt, "cache_control": {"type": "ephemeral"}},
@@ -144,7 +150,8 @@ def call(client, model, prompt, items):
                                  "neutral_source_claim", "review_region", "selection_layer",
                                  "source_tier", "representative_domain") if k in it} for it in items],
             ensure_ascii=False)}],
-    )
+    ) as s:
+        return s.get_final_message()
 
 def raw_text(msg):
     """Svarets text, oforandrad. Separat fran parse sa att den gar att spara
@@ -226,7 +233,16 @@ def run(day, only_pass=None, budget=None, model=DEFAULT_MODEL, dry=False):
                 msg = call(client, model, prompt, items)
                 rows = parse(msg)
                 usage = msg.usage
-            except Exception as e:
+            except (anthropic.APIError, json.JSONDecodeError) as e:
+                # Bara fel som uppstod efter att begaran gick ivag far ett nytt
+                # forsok. Ett fel fore dess ar ett konfigurationsfel - fel
+                # parameter, fel modellnamn, saknad nyckel - och det kan aldrig
+                # lyckas vid forsok tva. Tre omforsok med sleep emellan doljer
+                # da signalen i en obevakad daglig korning och kostar tid utan
+                # att nagot anrop gors. JSONDecodeError hor till denna sida:
+                # svaret kom fram men gick inte att lasa, och nasta forsok kan
+                # ge ett annat svar.
+                #
                 # Ett anrop som misslyckas ska lamna lika mycket spar som ett som
                 # lyckas. Forut skrevs bara undantagets klassnamn, och rasvaret -
                 # det enda som kan saga varfor - kastades. Da ser ett avhugget
