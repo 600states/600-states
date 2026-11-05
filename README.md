@@ -1,194 +1,119 @@
-# 600 STATES — pipeline v3.0
+# 600 STATES
 
-Kod ar sanningen. Prosabeskrivningar i checkpoint-dokument ar det inte —
-se FYND 001, dar den dokumenterade hashformeln visade sig vara fel.
+One artwork per UTC day. 600 tiles, 600 news observations, one irreversible
+visual state.
 
-## Uppdelning kod / data
+> The artwork is the Proof of State. The manifest is the Proof of Work.
 
-| | Var | Varfor |
-|---|---|---|
-| **Kod** (detta repo) | `C:\dev\600-states` | git, kort sokvag, ingen molnsynk |
-| **Data** | OneDrive, `600 STATES` | stor, binar, andras sallan; git ar dalig pa sadant |
+This repository is the **instrument**: the code that selects the 600
+observations, prepares them for classification, and turns the classified
+result into colour. It is not the artwork and it does not contain the data.
 
-`config.py` ar enda stallet dar sokvagen till datan bor. Satt `STATES_DATA`
-for att peka nagon annanstans.
+## Why the code is public
 
-**Lagg aldrig repot i OneDrive.** Git skriver manga sma filer snabbt; synken
-lagger tillbaka aldre versioner och skapar konfliktkopior. Projektet har redan
-tre `(1)`-filer och fyra misslyckade kopieringar av den orsaken.
+600 STATES claims that nothing in a finished State is composed, tuned or
+corrected to look better. An ugly day is a valid result, not a bug.
 
-## Kor
+That claim cannot be demonstrated after the fact. Commit dates can be set to
+anything; only a push is witnessed. So the instrument is published **before**
+the series begins, and every frozen constant in it is a commitment made before
+the data existed.
 
-    python tests/test_evidence_hash.py                  # regressionsskydd, FYND 001
-    python src/join_check.py <manifest.csv> <raw.zip>   # finns valda rader i raflodet?
+Anyone can check the colour model against a published manifest and get the
+same 600 colours. If they do not match, the manifest is wrong — not the
+formula.
 
-## Verifierat 2026-09-07
+## Status
 
-| Kontroll | Resultat |
+**Not yet in operation.** Sharp start is planned for 1 December 2026
+(`2026/335`). What exists and what does not:
+
+| | |
 |---|---|
-| `evidence_row_sha256`, v2.2 #002–#010 | 5 400 / 5 400 |
-| `evidence_row_sha256`, v2.3 #002–#010 | 0 / 5 400 — FYND 001 |
-| `evidence_row_sha256`, v1.4 #001 | 0 / 600 — tredje okant schema |
-| URL aterfinns i raflodet, #001–#010 | 6 000 / 6 000 |
-| Tidsstampel matchar raflodet | 6 000 / 6 000 |
+| Colour protocol v0.4, frozen | complete, reproduces 3 600 / 3 600 known tiles |
+| Consensus over three classifier passes | complete, reproduces the frozen pilot manifest field for field |
+| Selection engine, story cap, quotas | complete |
+| Gates between every stage | complete |
+| Acquisition of new days from GDELT | **not built** |
+| Calling the classifier | **not built** — passes are produced outside the chain today |
+| Public view | **not built** |
 
-Referensgeneration: **v2.2**. v2.3 anvands inte som sanning.
+States `001`–`010` under the pilot naming are **validation artefacts from an
+earlier generation**, not canonical works. They were used to test the
+instrument and they surfaced real method defects, which are documented in
+`docs/MATNINGAR.md`.
 
-## Kanonisering, `evidence_row_sha256` (v2.2)
+## Architecture
 
-    SHA256( "|".join(alla kolumner utom evidence_row_sha256, i CSV-kolumnordning) )
+Three rules shape the code. None of them is tidiness.
 
-## Nasta steg
+**Selection and colour are separate programs.** `run_state.py` selects and
+prepares; `run_color.py` colours and renders. Neither imports the other.
+Observation Day Rule v1.0 states that the colour model is inaccessible until
+the 600-observation manifest is frozen — a chain that *can* reach colour at any
+point cannot show that it did not. `tests/test_separation.py` imports each
+program in its own interpreter and fails if either pulls in the other side.
 
-Urvalsmotorn. Malet ar INTE att reproducera v2.2:s exakta 600 rader — det vore
-att aterimplementera odokumenterade heuristiker (`priority_score`, `signature_v2`).
-Malet ar ett giltigt 600-radersurval som uppfyller samtliga frysta villkor,
-byggt fran raflodet.
+**The day is always a parameter.** No code reads the system clock in
+computation logic. A daily run and a run of an older day take exactly the same
+path, or the days are not comparable. There is no separate backfill script and
+there never will be.
 
-## Events-data (löst 2026-09-07)
+**Determinism outranks performance.** Embeddings lost to lexical clustering on
+headlines by three percentage points and were rejected: a model whose behaviour
+drifts between versions cannot be re-run identically in ten years. Every
+threshold in the code has a measurement behind it, recorded in
+`docs/MATNINGAR.md`.
 
-Events-filerna finns nu i `01_RAW_GDELT_2026_001_010` — **GDELT 1.0 dagsfiler**
-(`YYYYMMDD.export.CSV.zip`, 58 falt, en fil per dygn), inte GDELT 2.0:s
-15-minutersfiler. Fungerar lika bra och ar enklare: 1 fil per dygn i stallet for 96.
+## Layout
 
-Faltindex som anvands: `GLOBALEVENTID` 0, `ActionGeo_CountryCode` 51,
-`ActionGeo_FullName` 50, `SOURCEURL` 57.
+    src/
+      statepaths.py    the day's identity and every filename, in one place
+      candidates.py    GDELT -> candidate pool (no materiality decisions)
+      ranking.py       mention volume as the funnelling signal
+      story_cap.py     one information state, one tile
+      select_day.py    quota engine -> exactly 600 frozen observations
+      consensus.py     three classifier passes -> one emotion manifest
+      color_protocol.py  v0.4 GOLDEN MASTER, frozen
+      render.py        manifest -> PNG
+      gates.py         a rule that cannot stop a run is not a rule
+      run_state.py     selection side
+      run_color.py     colour side
+    tests/             42 tests
+    docs/MATNINGAR.md  the measurement log behind every decision (Swedish)
 
-Verifierat mot #002 (2026-01-02): 73 887 events, 600/600 av manifestets
-`representative_event_ids` aterfinns.
+## Verifying a State
 
-### Regel for review_region
+    pip install pytest pillow
+    python3 -m pytest -q
 
-Geografin ligger pa de *lankade* eventen, inte pa ett enskilt. Traffsakerhet mot
-den frusna `action_geo_country`:
+The two tests that matter most to an outside reader:
 
-| Regel | Traff |
-|---|---|
-| forsta event-id | 81,6 % |
-| URL-matchad event | 67,7 % |
-| **vanligaste bland event-ids (majoritet)** | **97,4 %** |
-| nagon av event-ids | 100 % |
+- `test_color_protocol.py` — the colour model must reproduce a frozen manifest
+  exactly. If a constant in `color_protocol.py` is touched, it fails.
+- `test_consensus.py` — consensus is rebuilt from the three raw classifier
+  passes and compared field by field against the frozen manifest.
 
-v3.0 anvander **majoritetsregeln**: vanligaste `ActionGeo_CountryCode` bland
-klustrets lankade events. Deterministisk och reproducerar den historiska
-tilldelningen till 97,4 %.
+Both need the data archive, which is not in this repository. Point
+`STATES_DATA` at it.
 
-## KVARSTAENDE BLOCKERING — natverk for nya dygn
+## Frozen protocols
 
-Pilotdygnen ar losta med lokal data. For **nya** dygn kravs fortfarande utgaende
-natverk, som ar blockerat i bada miljoerna:
+The instrument is governed by documents that are frozen and hashed:
+Observation Day Rule v1.0, Colour Protocol v0.4 GOLDEN MASTER, Emotion
+Classification Protocol v1.0, Grid Specification v1.0. The code reads the
+colour anchors from the protocol file rather than restating them.
 
-| Mal | Behovs for | Resultat |
-|---|---|---|
-| `data.gdeltproject.org` | Mentions + Events for nya dygn | HTTP 403 |
-| `web.archive.org` | arkivlank per observation (bevisfangst) | ingen anslutning |
+A known discrepancy: the protocol's formula list does not state which emotion
+belongs to which lightness branch. That mapping exists only in code, and an
+earlier handover document stated it incorrectly for `Uncertainty`. Every
+rendered State follows the code. The documentation is being corrected to match
+the instrument, not the other way round.
 
-Utan allowlist kan pipelinen aldrig kora automatiskt pa nya dygn.
+## Licensing
 
-## Bevisfangst — matning 2026-09-07 (natverk oppnat)
+Code MIT, evidence CC0, artwork all rights reserved. See `COPYRIGHT.md`.
 
-Stickprov: 120 slumpvis valda av #002:s 600 URL:er.
+## Contact
 
-| Utfall | Antal | Andel |
-|---|---|---|
-| 200 OK direkt | 95 | 79,2 % |
-| HTTP 403 (botspärr) | 20 | 16,7 % |
-| timeout / 308 / 406 | 5 | 4,2 % |
-| **404 eller 410 (dod lank)** | **0** | **0 %** |
-
-**Noll doda lankar.** Artiklarna finns kvar; misslyckandena ar sajter som
-blockerar var hamtare, inte forsvunnet innehall.
-
-Av de 25 misslyckade fanns 23 i Wayback. **Total tackning 118/120 = 98,3 %.**
-
-### Foljd for evidence_basis
-
-Wayback-traffarna ar daterade 2026-01-02/03 — allts fran sjalva
-observationsdygnet, inte fran idag. For de raderna ar beviset *samtida*, inte
-retrospektivt. v0.2 var for pessimistisk. Tre nivaer galler:
-
-| Varde | Betydelse |
-|---|---|
-| `OBSERVED_AT_CAPTURE` | hamtad under observationsdygnet (nya dygn) |
-| `CONTEMPORANEOUS_ARCHIVE` | arkivkopia fran observationsdygnet (manga pilotrader) |
-| `RETROSPECTIVE` | hamtad i efterhand, manader senare |
-
-Wayback ar fortfarande inte kritisk vag och far aldrig blockera ett dygn — men
-for pilotdagarna ar den mer varde an v0.2 antog.
-
-### Domanspärr
-
-`fetch_evidence.py` slapper bara igenom domaner ur det frusna kallregistret
-(75 st), oavsett att plattformens egress ar oppen. Plattformen ar oppen,
-programmet ar last.
-
-## Lager 2a — kandidathamtning, matt recall (2026-09-07)
-
-Facit: 34 bekraftade dubblettgrupper i #002 fran den historiska re-auditen, 177 par.
-Bada URL:erna finns i kandidatpoolen for samtliga 177.
-
-| Trosklar | Recall | Grupper | Par att bedoma |
-|---|---|---|---|
-| jac 0,50 / ev 0,25 | 68,9 % | 205 | 734 |
-| jac 0,45 / ev 0,20 | 76,3 % | 209 | 862 |
-| **jac 0,40 / ev 0,20** | **79,7 %** | 218 | 1004 |
-| jac 0,35 / ev 0,15 | 79,7 % | 238 | 1225 |
-
-**Recall planar pa ~80 %.** Lagre trosklar ger fler par men inte fler traffar.
-
-### Diagnos
-
-De sista 20 % ar dubbletter som URL-slugen omojligt kan fanga: olika redaktioner
-skriver genuint olika slugar for samma handelse. Det ar exakt samma tak som gav
-upphov till ursprungsdefekten (FYND 002) — man kan inte deduplicera information
-genom att titta pa adresser.
-
-### Foljd: pipelineordningen andras
-
-Retrieval maste kora pa **artikelrubrik**, inte pa URL-slug. Rubriken finns i
-bevisfangsten, som darmed maste ske FORE klustringen.
-
-    tidigare:  kandidater -> klustra -> valj 600 -> bevisfangst
-    ratt:      kandidater -> rangordna -> bevisfangst -> klustra pa rubrik
-               -> materialitetsbedomning -> valj 600
-
-Kostnad: bevisfangst pa fler an 600 dokument per dygn. Motmedel: rangordna forst
-och fanga bevis for en delmangd med marginal (storleksordning 1200 av 2880),
-i stallet for hela poolen.
-
-### Event-ID far aldrig sla samman transitivt
-
-Forsta implementationen slog ihop pa delat GDELT-event-ID och producerade tva
-jattekluster pa 339 respektive 318 dokument med helt orelaterade nyheter kedjade
-samman. GDELT overmergear event (PE-004). Delat event-ID ar nu ett parsignal som
-alltid kraver lexikaliskt stod. Storsta gruppen darefter: 19 dokument.
-
-## Klustringsmetod — avgjord genom matning (2026-09-07)
-
-### Mattet var fel forst
-
-Recall mattes forst **per par**. Det ar fel matt: facitgrupperna ar transitiva
-(en grupp pa 11 ger 55 par, men klustringen behover bara en sammanhangande kedja).
-Ratt matt ar **hur manga grupper som halls ihop**.
-
-Med ratt matt, pa 34 bekraftade dubblettgrupper i #002:
-
-| Metod | Troskel | Grupper helt fangade | Extra par att bedoma |
-|---|---|---|---|
-| Lexikalisk pa rubrik | 0,20 | **30/34 (88,2 %)** | **275** |
-| Lexikalisk pa rubrik | 0,25 | 28/34 (82,4 %) | 154 |
-| Embeddings (MiniLM) | 0,45 | 31/34 (91,2 %) | 873 |
-| Embeddings (MiniLM) | 0,50 | 31/34 (91,2 %) | 619 |
-
-### Beslut: lexikalisk pa rubrik, Jaccard 0,20. Inga embeddings.
-
-Embeddings vinner tre procentenheter — en enda grupp av 34 — till tre ganger
-bedomningskostnaden, och kraver torch plus en nedladdad modell vars beteende
-andras mellan versioner. I ett instrument som ska kunna koras om identiskt om tio
-ar ar det fel avvagning. Determinism vager tyngre an tre procentenheter.
-
-### Nasta forbattring ar inte metoden, det ar tackningen
-
-Grupperna som fallerar innehaller rader dar rubriken saknas och slugen anvands som
-reserv. Rubriktackning i testet: 494 av 600. Battre hamtning (andra headers, omforsok,
-Wayback-reserv for rubrik) ar billigare an embeddings och traffar samma problem.
+archive@600states.com
