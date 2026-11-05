@@ -12,11 +12,23 @@ def rad(oid, pri, sec):
     s[pri], s[sec] = 0.90, 0.60
     return {"observation_id": oid, "neutral_event_representation": "x", "scores": s,
             "primary_emotion": pri, "secondary_emotion": sec,
+            "stated_primary": pri, "stated_secondary": sec,
             "intensity": 0.5, "confidence": 0.7, "classification_note": "n"}
 
 INP = [{"observation_id": "OBS-A"}, {"observation_id": "OBS-B"}]
 OK = [rad("OBS-A", "Joy", "Hope"), rad("OBS-B", "Grief", "Concern")]
 def kopia(): return json.loads(json.dumps(OK))
+
+class _Blk:
+    type = "text"
+    def __init__(self, t): self.text = t
+
+class _Msg:
+    def __init__(self, rows): self.content = [_Blk(json.dumps(rows))]
+
+def parsa(rows):
+    """parse() tar ett Message; testerna behover bara dess text."""
+    return classify.parse(_Msg(rows))
 
 def test_giltig_batch_godkanns():
     assert classify.validate(OK, INP) == []
@@ -40,13 +52,51 @@ def test_felet_namner_vilken_nyckel_som_ar_over():
     assert any("Joie" in f for f in fel)
     assert all("Joie" not in str(r["scores"].keys()) for r in OK)  # originalet orort
 
-def test_primary_maste_vara_hogsta():
-    b = kopia(); b[0]["primary_emotion"] = "Fear"
-    assert any("hogsta" in f for f in classify.validate(b, INP))
+def test_primary_och_secondary_harleds_ur_scores():
+    """Specen definierar falten som harledda: primary_must_rank_first,
+    secondary_must_rank_second. Modellens etikett ar en bedomning vid sidan."""
+    s = {e: 0.1 for e in EMOTION_STATES}; s["Tension"], s["Fear"] = 0.9, 0.8
+    rows, _ = parsa([{"scores": s, "primary_emotion": "Hope",
+                      "secondary_emotion": "Surprise"}])
+    assert (rows[0]["primary_emotion"], rows[0]["secondary_emotion"]) == ("Tension", "Fear")
+    assert (rows[0]["stated_primary"], rows[0]["stated_secondary"]) == ("Hope", "Surprise")
 
-def test_secondary_maste_vara_nast_hogsta():
-    b = kopia(); b[0]["secondary_emotion"] = "Fear"
-    assert any("nast hogsta" in f for f in classify.validate(b, INP))
+def test_lika_poang_avgors_av_den_frysta_ordningen():
+    """Samma skiljedomarregel som vocab.arbitrate(): lagsta index vinner."""
+    s = {e: 0.1 for e in EMOTION_STATES}
+    s["Fear"] = s["Hope"] = 0.9                      # lika hogst, Hope lagre index
+    assert classify.derive(s) == ("Hope", "Fear")
+    s2 = {e: 0.1 for e in EMOTION_STATES}
+    s2["Tension"] = 0.9
+    s2["Anger"] = s2["Relief"] = 0.8                 # lika tvaa, Relief lagre index
+    assert classify.derive(s2) == ("Tension", "Relief")
+
+def test_harledningen_ar_oberoende_av_nyckelordningen():
+    """Vore JSON-ordningen med i sorteringen vore faltet inte reproducerbart."""
+    s = {e: 0.1 for e in EMOTION_STATES}; s["Tension"], s["Fear"] = 0.9, 0.8
+    bakvant = {e: s[e] for e in reversed(EMOTION_STATES)}
+    assert classify.derive(s) == classify.derive(bakvant) == ("Tension", "Fear")
+
+def test_tomnamnad_nyckel_stryks_och_raknas():
+    """Ett emissionsfel i kompakt JSON, inte en sextonde-nyckel-overtradelse."""
+    s = {e: 0.1 for e in EMOTION_STATES}; s[""] = 0
+    rows, artefakter = parsa([{"scores": s, "primary_emotion": "Joy",
+                               "secondary_emotion": "Hope"}])
+    assert artefakter == 1 and "" not in rows[0]["scores"]
+    assert len(rows[0]["scores"]) == 16
+
+def test_felstavad_emotion_stryks_aldrig():
+    """"Joie" ar en helt annan sak an ett emissionsfel och far inte smyga igenom."""
+    b = kopia(); b[0]["scores"]["Joie"] = 0.1
+    rows, artefakter = parsa(b)
+    assert artefakter == 0 and "Joie" in rows[0]["scores"]
+    assert any("Joie" in f for f in classify.validate(rows, INP))
+
+def test_modellens_egen_bedomning_maste_finnas():
+    """Vi slutar krava att den stammer, inte att den finns."""
+    for falt in ("stated_primary", "stated_secondary"):
+        b = kopia(); b[0][falt] = None
+        assert any(falt in f for f in classify.validate(b, INP))
 
 def test_varden_utanfor_intervallet_stoppas():
     for falt in ("intensity", "confidence"):

@@ -99,6 +99,49 @@ saved — and the raw response is written to
 `classifier_passes/FAILED_*.txt`. If it happens, it is a measurement: record
 it, do not make the parser more forgiving.
 
+## The two things `parse()` settles before `validate()` sees a row
+
+Both were measured on batch 01 of 2026/308 on 2026-11-05, and both are decided
+in `src/classify.py` before validation — never by softening validation.
+
+**An empty-named score key is struck out and counted.** One row in 60 came back
+with a seventeenth score key whose name was the empty string —
+`"Fatigue":0.28,"":0` — with all sixteen real keys correct. That is an emission
+artefact of compact JSON, not a protocol violation. **Only the exact empty
+string is removed.** Every other extra key still fails validation: a misspelt
+emotion such as `Joie` is a different thing entirely and must never slip
+through. The count goes into the run record per batch as `emission_artifacts`.
+The defect is not hidden; it is counted.
+
+**`primary_emotion` and `secondary_emotion` are derived from `scores`.** The
+spec says `primary_must_rank_first` and `secondary_must_rank_second`, so it
+already defines these fields as derived — computing them is the strictest
+reading of that rule, not a relaxation of it. The model's own labels are kept
+as `stated_primary` and `stated_secondary`, and the model is still required to
+deliver them: we stop requiring that they agree, not that they exist.
+
+Ties go to the lowest index in the frozen `EMOTION_STATES` order, the same
+arbitration `vocab.arbitrate()` uses for consensus — `derive()` sorts by
+`(-score, ORDER[emotion])`. The derivation must stay a pure function of the
+values and never of the key order in the model's JSON, or the field is not
+reproducible.
+
+Why it was needed: the model names as `secondary_emotion` what it judges to be
+the event's second character, not the arithmetic runner-up. Four measured
+cases, none of them ties — Hope 0.36 while Tension had 0.38; Surprise 0.52
+while Tension had 0.58; Surprise 0.50 while Tension had 0.54; Hope 0.46 while
+Concern had 0.50. At two rows in 60 per attempt, nearly every batch failed
+all three attempts and no day could finish.
+
+`diagnostics()` reports `stated_primary_differs` and `stated_secondary_differs`
+per batch, so the calibration battery gets the number without an extra call. A
+model whose narrative and whose numbers drift apart often is measurably worse,
+whatever it costs. Replaying the three saved responses of 2026/308 through the
+new code: primary diverged **0** times, secondary 3 and 1.
+
+`src/consensus.py` is untouched. It reads `primary_emotion` and
+`secondary_emotion` from the pass files and now always gets derived values.
+
 ## An ugly day is a valid result
 
 Output that looks bad is not a bug to fix. Nothing may be made prettier by

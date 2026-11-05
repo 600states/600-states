@@ -30,7 +30,7 @@ sys.path.insert(0, str(HERE)); sys.path.insert(0, str(HERE.parent))
 import statepaths as sp
 import gates
 from atomic import write_text
-from vocab import EMOTION_STATES
+from vocab import EMOTION_STATES, ORDER
 from config import DATA, FROZEN
 
 PROMPT_FILE = FROZEN / "600_STATES_Emotion_Classification_Execution_Prompt_v2.1_FROZEN.txt"
@@ -104,17 +104,13 @@ def validate(rows, inp):
               if not isinstance(v, (int, float)) or not 0 <= v <= 1}
         if ut:
             fel.append(f"{oid}: poang utanfor 0-1: {ut}")
-        rank = sorted(s, key=lambda e: -s[e])
-        if r.get("primary_emotion") != rank[0]:
-            fel.append(f"{oid}: primary ar {r.get('primary_emotion')!r}, hogsta "
-                       f"poang har {rank[0]!r} ({s[rank[0]]}); "
-                       f"{r.get('primary_emotion')!r} har "
-                       f"{s.get(r.get('primary_emotion'))}")
-        if r.get("secondary_emotion") != rank[1]:
-            fel.append(f"{oid}: secondary ar {r.get('secondary_emotion')!r}, nast "
-                       f"hogsta poang har {rank[1]!r} ({s[rank[1]]}); "
-                       f"{r.get('secondary_emotion')!r} har "
-                       f"{s.get(r.get('secondary_emotion'))}")
+        # Rankkontrollerna mot primary och secondary ar borta: falten harleds nu
+        # ur scores i parse(), sa en kontroll av dem vore en kontroll av var egen
+        # aritmetik. Kvar star kravet att modellen LEVERERAR sin egen bedomning.
+        # Vi slutar krava att den stammer, inte att den finns.
+        for k in ("stated_primary", "stated_secondary"):
+            if not str(r.get(k) or "").strip():
+                fel.append(f"{oid}: {k} saknas i svaret")
         if r.get("primary_emotion") == r.get("secondary_emotion"):
             fel.append(f"{oid}: primary och secondary lika")
         for k in ("intensity", "confidence"):
@@ -126,12 +122,21 @@ def validate(rows, inp):
     return fel
 
 def diagnostics(rows):
-    """Specen kraver att gleshet och numerisk upplosning rapporteras."""
+    """Specen kraver att gleshet och numerisk upplosning rapporteras.
+
+    Dartill hur ofta modellens egen etikett skiljer sig fran den harledda. En
+    modell vars narrativ och siffror drar isar ofta ar matbart samre, oavsett
+    pris, och siffran ar gratis har - kalibreringsbatteriet far den utan eget
+    anrop."""
     nz = [sum(1 for v in r["scores"].values() if v > 0) for r in rows]
     return {"authored_scores_median": statistics.median(nz),
             "rows_with_two_or_fewer": sum(1 for n in nz if n <= 2),
             "unique_intensity": len({r["intensity"] for r in rows}),
-            "unique_confidence": len({r["confidence"] for r in rows})}
+            "unique_confidence": len({r["confidence"] for r in rows}),
+            "stated_primary_differs":
+                sum(1 for r in rows if r.get("stated_primary") != r.get("primary_emotion")),
+            "stated_secondary_differs":
+                sum(1 for r in rows if r.get("stated_secondary") != r.get("secondary_emotion"))}
 
 def call(client, model, prompt, items):
     """Ett anrop. Prefixet cachas, batchen ar det enda som varierar.
@@ -213,10 +218,55 @@ def spara_misslyckat(d, p, n, attempt, msg, fel=None):
     print(f"    rasvar sparat: {fil.name}" + (f" + {fil.stem}.fel.txt" if fel else ""))
     return fil
 
+def derive(s):
+    """primary och secondary ur poangen.
+
+    Specen sager primary_must_rank_first och secondary_must_rank_second. Den
+    definierar alltsa faltet som harlett, och att rakna fram det ar den
+    strangaste tillampningen av regeln - inte en uppmjukning av den.
+
+    REN FUNKTION AV VARDENA. Vid lika poang vinner lagsta index i den frysta
+    EMOTION_STATES-ordningen, samma skiljedomarregel som vocab.arbitrate()
+    anvander vid konsensus. Nyckelordningen i modellens JSON far aldrig paverka
+    resultatet - vore den med i sorteringen vore faltet inte reproducerbart."""
+    rank = sorted(s, key=lambda e: (-s[e], ORDER[e]))
+    return rank[0], rank[1]
+
 def parse(msg):
-    """Text till rader. Samma regel som forut - ingen forlatande parsning."""
+    """Text till rader, plus antalet strukna emissionsartefakter.
+
+    Ingen forlatande parsning: JSON-regeln ar oforandrad. Darefter tva steg som
+    bada ar protokollets egna, fore validate():
+
+    TOMNAMNAD NYCKEL STRYKS OCH RAKNAS. Matt 2026-11-05 pa batch 01: en rad av
+    60 fick en sjuttonde poangnyckel med tomt namn, "Fatigue":0.28,"":0 — alla
+    sexton riktiga nycklar ratta, plus ett emissionsfel i kompakt JSON. Bara
+    exakt den tomma strangen stryks. VARJE annan extra nyckel faller
+    valideringen som forut: en felstavad emotion som "Joie" ar en helt annan
+    sak an ett emissionsfel och far aldrig smyga igenom. Defekten doljs inte,
+    den raknas - antalet gar till korjournalen som emission_artifacts.
+
+    PRIMARY OCH SECONDARY HARLEDS. Modellens egna varden behalls som
+    stated_primary och stated_secondary; faltens varden kommer ur scores. Se
+    derive()."""
     txt = re.sub(r"^```(?:json)?|```$", "", raw_text(msg).strip(), flags=re.M).strip()
-    return json.loads(txt)
+    rows = json.loads(txt)
+    V, artefakter = set(EMOTION_STATES), 0
+    for r in rows:
+        if not isinstance(r, dict):
+            continue
+        s = r.get("scores")
+        if isinstance(s, dict) and "" in s:
+            del s[""]
+            artefakter += 1
+        r["stated_primary"] = r.get("primary_emotion")
+        r["stated_secondary"] = r.get("secondary_emotion")
+        # Harled bara nar poangen gar att harleda ur. Ar de trasiga lamnas
+        # falten som modellen gav dem och validate() rapporterar poangfelet.
+        if (isinstance(s, dict) and set(s) == V
+                and all(isinstance(v, (int, float)) for v in s.values())):
+            r["primary_emotion"], r["secondary_emotion"] = derive(s)
+    return rows, artefakter
 
 def run(day, only_pass=None, budget=None, model=DEFAULT_MODEL, dry=False):
     sp.state_id(day)
@@ -267,7 +317,7 @@ def run(day, only_pass=None, budget=None, model=DEFAULT_MODEL, dry=False):
             msg = None
             try:
                 msg = call(client, model, prompt, items)
-                rows = parse(msg)
+                rows, artefakter = parse(msg)
                 usage = msg.usage
             except (anthropic.APIError, json.JSONDecodeError) as e:
                 # Bara fel som uppstod efter att begaran gick ivag far ett nytt
@@ -310,10 +360,14 @@ def run(day, only_pass=None, budget=None, model=DEFAULT_MODEL, dry=False):
                                  "output_tokens": usage.output_tokens,
                                  "cache_read": getattr(usage, "cache_read_input_tokens", 0),
                                  "cache_write": getattr(usage, "cache_creation_input_tokens", 0),
-                                 "block_types": block_types(msg), **dg})
+                                 "block_types": block_types(msg),
+                                 "emission_artifacts": artefakter, **dg})
             print(f"  pass{p} batch{n:02d}  {len(rows)} rader  "
                   f"{dg['authored_scores_median']:.0f}/16 egna poang  "
                   f"cache {getattr(usage,'cache_read_input_tokens',0):,}")
+            print(f"    uttalat mot harlett: primary {dg['stated_primary_differs']}, "
+                  f"secondary {dg['stated_secondary_differs']}  "
+                  f"emissionsartefakter {artefakter}")
             break
         gjorda += 1
 
