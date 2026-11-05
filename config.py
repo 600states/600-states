@@ -29,7 +29,12 @@ def require_data() -> Path:
     return d
 
 DATA = data_root()
-RAW_GDELT = DATA / "01_RAW_GDELT_2026_001_010"
+RAW_GDELT = DATA / "01_RAW_GDELT_2026_001_010"      # pilotdygnen 001-010, historiska
+RAW_ROOT  = DATA / "01_RAW_GDELT"                   # nya dygn, ett ar per underkatalog
+
+def raw_day_dir(day: str) -> Path:
+    """Katalogen for ett dygns rasnapshot. Aret harleds ur dygnet, aldrig ur klockan."""
+    return RAW_ROOT / day[:4]
 FROZEN = DATA / "00_CANONICAL_PROJECT_DOCS" / "01_FROZEN_PROTOCOL_LIBRARY_v1.0"
 REMEDIATION = DATA / "03_VALIDATION_REMEDIATION"
 

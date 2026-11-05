@@ -6,7 +6,7 @@ Tar INGA materialitetsbeslut; det ar lager 2 (se FYND 002).
 import csv, io, json, re, sys, zipfile, collections
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from config import DATA, RAW_GDELT, REGISTRY_FILE
+from config import DATA, RAW_GDELT, REGISTRY_FILE, raw_day_dir
 from gdelt import iter_mentions
 
 REGISTRY = REGISTRY_FILE     # se config.py - enda definitionen
@@ -19,9 +19,16 @@ def load_registry():
     with open(REGISTRY, encoding="utf-8") as fh:
         return {r["domain"].strip().lower(): r["source_tier"].strip() for r in csv.DictReader(fh)}
 
+def events_zip(day):
+    """Nya dygn ligger i arssnapshotet, pilotdygnen i den gamla mappen."""
+    for p in (raw_day_dir(day) / f"{day}.export.CSV.zip", RAW_GDELT / f"{day}.export.CSV.zip"):
+        if p.exists():
+            return p
+    raise SystemExit(f"hittar ingen events-fil for {day}")
+
 def load_events(day):
     """eventid -> ActionGeo_CountryCode"""
-    z = zipfile.ZipFile(RAW_GDELT / f"{day}.export.CSV.zip")
+    z = zipfile.ZipFile(events_zip(day))
     geo = {}
     with z.open(z.namelist()[0]) as fh:
         for line in io.TextIOWrapper(fh, encoding="utf-8", errors="replace"):

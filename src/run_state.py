@@ -29,7 +29,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE)); sys.path.insert(0, str(HERE.parent))
 import statepaths as sp
 from atomic import atomic_write, write_text
-from config import DATA, RAW_GDELT, REGISTRY_FILE as REGISTRY, registry_version
+from config import DATA, RAW_GDELT, REGISTRY_FILE as REGISTRY, registry_version, raw_day_dir
 import candidates, ranking, select_day, pool_evidence, gates
 from vocab import EMOTION_STATES
 from build_classifier_input import claim_of, readable, is_digest
@@ -155,9 +155,11 @@ def main():
     start = args[args.index("--stage") + 1] if "--stage" in args else "candidates"
     budget = int(args[args.index("--budget") + 1]) if "--budget" in args else None
 
-    hits = sorted(RAW_GDELT.glob(f"*{day}*MENTIONS.zip"))
+    hits = (sorted(raw_day_dir(day).glob(f"*{day}*MENTIONS.zip"))
+            or sorted(RAW_GDELT.glob(f"*{day}*MENTIONS.zip")))
     if not hits:
-        print(f"hittar ingen mentions-zip for {day} i {RAW_GDELT.name}"); sys.exit(4)
+        print(f"hittar inget rasnapshot for {day} — kor forst: python3 src/acquire.py {day}")
+        sys.exit(4)
 
     todo = STAGES[STAGES.index(start):]
     print(f"=== {sp.state_id(day)} — urval och klassificeringsinput ===")
