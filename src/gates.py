@@ -69,3 +69,16 @@ def gate_color(rows, hex_of_row):
     bad = [r for r in rows if hex_of_row(r).upper() != str(r["hex"]).upper()]
     _say("varje hex reproduceras av protokollet", not bad,
          f"{len(rows)-len(bad)}/{len(rows)}" + (f", forsta fel ruta {bad[0]['tile_index']}" if bad else ""))
+
+def gate_registry(cands, registry_path, version, allowed):
+    """Manifestet far aldrig pasta en annan registerversion an den som anvandes.
+
+    FYND 004: kandidatbyggaren laste v1.1 STRICT (75 domaner) medan manifestet
+    skrev v2.0 (107). De 32 tillagda domanerna kunde aldrig valjas.
+    """
+    _say("kallregistret ar det manifestet anger", version in registry_path.name,
+         f"{registry_path.name} -> {version}")
+    doms = {c["domain"] for c in cands}
+    bad = doms - set(allowed)
+    _say("varje kandidat ligger i registret", not bad, f"{len(bad)} utanfor")
+    print(f"        registret har {len(allowed)} domaner, {len(doms)} av dem forekommer i dygnet")

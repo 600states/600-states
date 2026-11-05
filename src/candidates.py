@@ -6,10 +6,10 @@ Tar INGA materialitetsbeslut; det ar lager 2 (se FYND 002).
 import csv, io, json, re, sys, zipfile, collections
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from config import DATA, RAW_GDELT
+from config import DATA, RAW_GDELT, REGISTRY_FILE
 from gdelt import iter_mentions
 
-REGISTRY = DATA / "00_CANONICAL_PROJECT_DOCS/01_FROZEN_PROTOCOL_LIBRARY_v1.0/600_STATES_Source_Registry_State_2026_001_v1.1_STRICT.csv"
+REGISTRY = REGISTRY_FILE     # se config.py - enda definitionen
 REGION_MAP = json.loads((Path(__file__).resolve().parents[1] / "data/region_map.json").read_text())
 
 # GDELT 1.0 Events, 58 falt

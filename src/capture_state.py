@@ -16,7 +16,7 @@ from fetch_evidence import fetch_one, load_registry, UA
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from config import DATA
 
-REGISTRY = DATA / "00_CANONICAL_PROJECT_DOCS/01_FROZEN_PROTOCOL_LIBRARY_v1.0/600_STATES_Source_Registry_v2.0_FROZEN.csv"
+from config import REGISTRY_FILE as REGISTRY
 
 def wayback(url, day):
     api = f"https://archive.org/wayback/available?url={urllib.request.quote(url, safe='')}&timestamp={day}"

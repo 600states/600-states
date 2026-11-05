@@ -24,7 +24,7 @@ import candidates, ranking, select_day, pool_evidence, gates
 from color_protocol import hex_of_row, VOCAB
 from build_classifier_input import claim_of, readable, is_digest
 
-REGISTRY = DATA / "00_CANONICAL_PROJECT_DOCS/01_FROZEN_PROTOCOL_LIBRARY_v1.0/600_STATES_Source_Registry_v2.0_FROZEN.csv"
+from config import REGISTRY_FILE as REGISTRY, registry_version
 STAGES = ["candidates", "pool", "select", "input", "emotion", "color", "render"]
 
 def outdir(state): return DATA / "08_V3_STATES" / f"STATE_{state}"
@@ -37,6 +37,7 @@ def step_candidates(day, state, mentions):
     print(f"\n[candidates] {day}")
     cands = candidates.build(day, mentions)
     gates.gate_candidates(cands, day)
+    gates.gate_registry(cands, REGISTRY, registry_version(), candidates.load_registry())
     # Poolen ar HELA kandidatlistan, inte topp 1500. Urvalet maste kunna uppfylla
     # regionkvoter och publisher cap bland kandidater som har bevis; en avhuggen
     # pool ger for fa lasbara i de tunna regionerna och kedjan stannar pa 579.

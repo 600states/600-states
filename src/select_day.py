@@ -24,7 +24,8 @@ REGIONS = ["Africa", "East & Southeast Asia", "Europe", "Latin America & Caribbe
 N_TOTAL, N_GLOBAL, N_REGIONAL, N_DISCOVERY = 600, 300, 240, 60
 PER_REGION = N_REGIONAL // len(REGIONS)          # 30
 PUBLISHER_CAP = 10
-REGISTRY_VERSION = "v2.0"
+from config import registry_version
+REGISTRY_VERSION = registry_version()
 
 def _rank(c):
     return (-c["mention_rows"], c["first_mention_utc"], c["url"])
