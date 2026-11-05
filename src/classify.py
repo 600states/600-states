@@ -91,8 +91,9 @@ def validate(rows, inp):
     """Returnerar lista med fel. Tom lista = godkant. Foljer specens validation_policy."""
     fel = []
     if len(rows) != len(inp):
+        # Ingen tidig retur: antalet ensamt sager inte vilka rader som fattas,
+        # och id-diagnosen nedan ar det som gor felet atgardbart.
         fel.append(f"{len(rows)} rader mot {len(inp)} observationer")
-        return fel
     # Felet ska namna skillnaden. "stammer inte mot indata" kravde att nagon
     # lade sig i rasvaret for att forstas - tredje stallet i rad med den luckan.
     want = {i["observation_id"] for i in inp}
@@ -249,19 +250,33 @@ def derive(s):
     rank = sorted(s, key=lambda e: (-s[e], ORDER[e]))
     return rank[0], rank[1]
 
-def parse(msg):
+def parse(msg, inp=None):
     """Text till rader, plus antalet strukna emissionsartefakter.
 
-    Ingen forlatande parsning: JSON-regeln ar oforandrad. Darefter tva steg som
-    bada ar protokollets egna, fore validate():
+    Ingen forlatande parsning: JSON-regeln ar oforandrad. Darefter tre steg som
+    alla ar protokollets egna, fore validate():
 
-    TOMNAMNAD NYCKEL STRYKS OCH RAKNAS. Matt 2026-11-05 pa batch 01: en rad av
-    60 fick en sjuttonde poangnyckel med tomt namn, "Fatigue":0.28,"":0 — alla
-    sexton riktiga nycklar ratta, plus ett emissionsfel i kompakt JSON. Bara
-    exakt den tomma strangen stryks. VARJE annan extra nyckel faller
-    valideringen som forut: en felstavad emotion som "Joie" ar en helt annan
-    sak an ett emissionsfel och far aldrig smyga igenom. Defekten doljs inte,
-    den raknas - antalet gar till korjournalen som emission_artifacts.
+    OVERSKOTT KASTAS OCH RAKNAS. UNDERSKOTT FALLER.
+
+    Uppmatt 2026-11-05 pa 2026/308, fem fall over tva batchar och fyra forsok:
+    modellen lagger till, den tar aldrig bort. Extranycklarna var "", Surprise2,
+    Surprise_dup, Fear_dup och Fear_note - alltid ett riktigt kanslonamn plus
+    ett suffix, och alltid med alla sexton riktiga nycklar pa plats. Extraraden
+    hette OBS-...-DUP respektive OBS-..._DUP_GUARD och var tom: tom text, alla
+    sexton poang noll, noten "placeholder". Observationen den hangdes pa hade
+    ingen nara dubblett - hogsta jaccard i batchen var 0,06 - sa det ar ingen
+    deduplicering utan en defensiv markering.
+
+    Sakerheten ligger i villkoret: overskott kastas BARA nar ingenting saknas.
+    Saknas en nyckel kan den extra vara en felstavning av den - "Joie" dar
+    "Joy" saknas - och da faller batchen som forut. Samma for rader: saknas en
+    observation, eller forekommer nagon tva ganger, faller batchen, for da gar
+    det inte att veta vilken klassificering som galler.
+
+    Det kastade bar ingen information protokollet kraver, och ingenting
+    rekonstrueras eller gissas. Allt kastat raknas och gar till korjournalen
+    som emission_artifacts - nycklar och rader i samma tal. Att dela upp dem
+    vore battre for kalibreringsbatteriet och ar en kvarstaende forbattring.
 
     PRIMARY OCH SECONDARY HARLEDS. Modellens egna varden behalls som
     stated_primary och stated_secondary; faltens varden kommer ur scores. Se
@@ -273,9 +288,11 @@ def parse(msg):
         if not isinstance(r, dict):
             continue
         s = r.get("scores")
-        if isinstance(s, dict) and "" in s:
-            del s[""]
-            artefakter += 1
+        # Overskottsnycklar kastas bara nar alla sexton finns.
+        if isinstance(s, dict) and V <= set(s):
+            for k in [k for k in s if k not in V]:
+                del s[k]
+                artefakter += 1
         r["stated_primary"] = r.get("primary_emotion")
         r["stated_secondary"] = r.get("secondary_emotion")
         # Harled bara nar poangen gar att harleda ur. Ar de trasiga lamnas
@@ -283,6 +300,17 @@ def parse(msg):
         if (isinstance(s, dict) and set(s) == V
                 and all(isinstance(v, (int, float)) for v in s.values())):
             r["primary_emotion"], r["secondary_emotion"] = derive(s)
+
+    # Overskottsrader kastas bara nar varje begard observation finns exakt en
+    # gang. Annars lamnas raderna ororda och validate() rapporterar bristen.
+    if inp is not None:
+        want = {i["observation_id"] for i in inp}
+        ids = [r.get("observation_id") for r in rows if isinstance(r, dict)]
+        if want <= set(ids) and all(ids.count(w) == 1 for w in want):
+            behall = [r for r in rows if isinstance(r, dict)
+                      and r.get("observation_id") in want]
+            artefakter += len(rows) - len(behall)
+            rows = behall
     return rows, artefakter
 
 JOURNAL_FALT = ("model", "prompt_sha256", "spec_sha256")
@@ -411,7 +439,7 @@ def run(day, only_pass=None, budget=None, model=DEFAULT_MODEL, dry=False):
                 msg = None
                 try:
                     msg = call(client, model, prompt, items)
-                    rows, artefakter = parse(msg)
+                    rows, artefakter = parse(msg, items)
                     usage = msg.usage
                 except (anthropic.APIError, json.JSONDecodeError) as e:
                     # Bara fel som uppstod efter att begaran gick ivag far ett nytt

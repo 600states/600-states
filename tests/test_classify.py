@@ -26,9 +26,9 @@ class _Blk:
 class _Msg:
     def __init__(self, rows): self.content = [_Blk(json.dumps(rows))]
 
-def parsa(rows):
+def parsa(rows, inp=None):
     """parse() tar ett Message; testerna behover bara dess text."""
-    return classify.parse(_Msg(rows))
+    return classify.parse(_Msg(rows), inp)
 
 def test_giltig_batch_godkanns():
     assert classify.validate(OK, INP) == []
@@ -85,12 +85,58 @@ def test_tomnamnad_nyckel_stryks_och_raknas():
     assert artefakter == 1 and "" not in rows[0]["scores"]
     assert len(rows[0]["scores"]) == 16
 
-def test_felstavad_emotion_stryks_aldrig():
-    """"Joie" ar en helt annan sak an ett emissionsfel och far inte smyga igenom."""
-    b = kopia(); b[0]["scores"]["Joie"] = 0.1
+def test_overskottsnyckel_stryks_nar_alla_sexton_finns():
+    """Overskott kastas och raknas. Uppmatt 2026-11-05: "", Surprise2,
+    Surprise_dup, Fear_dup, Fear_note - alltid med alla sexton pa plats."""
+    for extra in ("Surprise2", "Surprise_dup", "Fear_note", "Joie"):
+        b = kopia(); b[0]["scores"][extra] = 0.1
+        rows, artefakter = parsa(b)
+        assert artefakter == 1, extra
+        assert extra not in rows[0]["scores"] and len(rows[0]["scores"]) == 16
+        assert classify.validate(rows, INP) == []
+
+def test_felstavad_emotion_faller_nar_den_riktiga_saknas():
+    """Sakerhetsvillkoret. Saknas "Joy" kan "Joie" vara en felstavning av den,
+    och da far ingenting kastas - batchen ska falla som forut."""
+    b = kopia()
+    del b[0]["scores"]["Joy"]
+    b[0]["scores"]["Joie"] = 0.9
     rows, artefakter = parsa(b)
     assert artefakter == 0 and "Joie" in rows[0]["scores"]
-    assert any("Joie" in f for f in classify.validate(rows, INP))
+    fel = classify.validate(rows, INP)
+    assert any("Joie" in f and "Joy" in f for f in fel)
+
+def test_overskottsrad_kastas_nar_alla_begarda_finns():
+    """Modellen lade till en tom vaktrad, OBS-..._DUP_GUARD, bredvid alla
+    femtio riktiga. Den bar ingenting protokollet kraver."""
+    b = kopia()
+    vakt = json.loads(json.dumps(b[0]))
+    vakt["observation_id"] = "OBS-A_DUP_GUARD"
+    vakt["classification_note"] = "placeholder"
+    b.append(vakt)
+    rows, artefakter = parsa(b, INP)
+    assert artefakter == 1 and len(rows) == 2
+    assert {r["observation_id"] for r in rows} == {"OBS-A", "OBS-B"}
+    assert classify.validate(rows, INP) == []
+
+def test_overskottsrad_kastas_inte_nar_en_begard_saknas():
+    """Underskott faller. Saknas OBS-B gar det inte att veta om extraraden ar
+    den - ingenting kastas, och felet namner bade saknat och overflodigt."""
+    b = kopia()
+    b[1]["observation_id"] = "OBS-B_DUP_GUARD"
+    rows, artefakter = parsa(b, INP)
+    assert artefakter == 0 and len(rows) == 2
+    fel = classify.validate(rows, INP)
+    assert any("OBS-B" in f and "OBS-B_DUP_GUARD" in f for f in fel)
+
+def test_dubblerad_begard_rad_kastas_aldrig():
+    """Forekommer ett begart id tva ganger gar det inte att veta vilken
+    klassificering som galler. Ingenting kastas."""
+    b = kopia()
+    b.append(json.loads(json.dumps(b[0])))
+    rows, artefakter = parsa(b, INP)
+    assert artefakter == 0 and len(rows) == 3
+    assert any("dubbletter" in f for f in classify.validate(rows, INP))
 
 def test_modellens_egen_bedomning_maste_finnas():
     """Vi slutar krava att den stammer, inte att den finns."""
