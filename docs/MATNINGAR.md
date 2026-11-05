@@ -7,13 +7,13 @@ se FYND 001, dar den dokumenterade hashformeln visade sig vara fel.
 
 | | Var | Varfor |
 |---|---|---|
-| **Kod** (detta repo) | `C:\dev\600-states` | git, kort sokvag, ingen molnsynk |
-| **Data** | OneDrive, `600 STATES` | stor, binar, andras sallan; git ar dalig pa sadant |
+| **Kod** (detta repo) | en lokal mapp utanfor molnsynken | git, kort sokvag, ingen molnsynk |
+| **Data** | utanfor repot, pekas ut av `STATES_DATA` | stor, binar, andras sallan; git ar dalig pa sadant |
 
-`config.py` ar enda stallet dar sokvagen till datan bor. Satt `STATES_DATA`
-for att peka nagon annanstans.
+`config.py` ar enda stallet dar sokvagen till datan bor, och den hardkodar
+ingen: `STATES_DATA` pekar ut arkivet.
 
-**Lagg aldrig repot i OneDrive.** Git skriver manga sma filer snabbt; synken
+**Lagg aldrig repot i en molnsynkad mapp.** Git skriver manga sma filer snabbt; synken
 lagger tillbaka aldre versioner och skapar konfliktkopior. Projektet har redan
 tre `(1)`-filer och fyra misslyckade kopieringar av den orsaken.
 
