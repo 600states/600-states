@@ -47,7 +47,12 @@ OUTPUT_RULE = (
     "each independently authored. Do not zero-fill. primary_emotion is the highest "
     "score, secondary_emotion the second highest and different from it. "
     "intensity and confidence are numbers between 0 and 1 with two decimals. "
-    "No prose before or after the array."
+    "No prose before or after the array.\n"
+    # Formatering, inte innehall: protokollet specificerar vad raderna ska
+    # innehalla, inte hur de ska se ut. Indraget svar kostade 1 134 rader for
+    # 41 objekt, och blanksteg debiteras som output.
+    "Return compact JSON: no indentation, no line breaks between objects, "
+    "no spaces after separators."
 )
 
 def sha(p): return hashlib.sha256(Path(p).read_bytes()).hexdigest()
@@ -123,9 +128,14 @@ def call(client, model, prompt, items):
     ar ett resonemangssteg utan harledning i ett instrument vars hela ansprak
     ar granskbarhet. Ett verk klassificerat med taenkande ar inte samma
     instrument som ett utan.
+
+    TAKET AR MAETT, INTE VALT. Med taenkandet av gav 16000 output-tokens
+    41-42 kompletta rader av 60 i alla tre forsoken — matt 2026-11-05 pa
+    batch 01, alltsa 387 output-tokens per rad. Sextio rader kraver 23 250.
+    32000 ar den matta storheten plus marginal, inte ett runt tal.
     """
     return client.messages.create(
-        model=model, max_tokens=16000,
+        model=model, max_tokens=32000,
         thinking={"type": "disabled"},
         system=[{"type": "text", "text": prompt, "cache_control": {"type": "ephemeral"}},
                 {"type": "text", "text": OUTPUT_RULE, "cache_control": {"type": "ephemeral"}}],

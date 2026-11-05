@@ -74,8 +74,23 @@ be audited.
 Measured 2026-11-05, the failure that found this: Opus 5 thinks adaptively by
 default, those tokens count against `max_tokens`, and the first call returned
 `stop_reason=max_tokens` with 16000 output tokens and **zero characters** of
-text. The answer was not cut off. It never started. `max_tokens` is unchanged
-at 16000; raising it was not the fix.
+text. The answer was not cut off. It never started. Raising `max_tokens` would
+not have fixed that — the ceiling is a separate question, settled below.
+
+## The classifier's output ceiling and output format
+
+`max_tokens` is 32000, and that number is measured. With thinking off, 16000
+output tokens produced 41-42 complete rows out of 60 on all three attempts
+(2026-11-05, batch 01): **387 output tokens per row**. Sixty rows need 23 250.
+A ceiling has to be a measured quantity, not a round number — re-measure it if
+the row format ever changes.
+
+`OUTPUT_RULE` also asks for compact JSON: no indentation, no line breaks
+between objects. The truncated response came back indented — 1 134 lines for
+41 objects — and whitespace is billed as output tokens. This is formatting,
+not content: the frozen protocol specifies what each row must contain, never
+how it is laid out, so the rule lives in `src/classify.py` and not in the
+frozen prompt whose sha256 the gate checks.
 
 Anthropic's own documentation warns that Opus 5 with thinking off sometimes
 leaks internal XML tags into the visible output. `parse()` is strict and
