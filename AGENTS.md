@@ -94,7 +94,7 @@ and search spelling variants rather than only the obvious words.
 
 ## Where documentation and code disagree, code wins — and say so
 
-One open divergence and one resolved. Do not "fix" the code to match the documents:
+One open divergence and two resolved. Do not "fix" the code to match the documents:
 
 - **`Uncertainty` lightness branch.** The frozen formula list does not state
   which emotion belongs to which branch, and an earlier handover stated it
@@ -106,8 +106,16 @@ One open divergence and one resolved. Do not "fix" the code to match the documen
   was corrected, the three constitutive values stand. `render.py` already does
   this; nothing was re-rendered. See the Grid Specification Addendum A. Do not
   "fix" render.py to 3000x2000.
+- ~~**Two different `v2.2`.**~~ Resolved 2026-11-05. The Execution Spec exists
+  only as v2.1, `600_STATES_Emotion_Classification_Execution_Spec_v2.1_FROZEN.json`.
+  A reference to "Execution Spec v2.2" is an error; it came from the parameter
+  registry, since corrected, and `src/consensus.py` said it until f80494a.
+  `FROZEN_PRE_EMOTION_PACKAGE_v2.2` is a different artefact and that version is
+  right. **Never search and replace on `v2.2`**: it would corrupt
+  `docs/MATNINGAR.md`, `tests/test_candidates.py` and `tests/test_evidence_hash.py`.
+  Read what the version belongs to before touching it.
 
-If you find a third, report it. Do not resolve it in a commit.
+If you find another, report it. Do not resolve it in a commit.
 
 ## May be reviewed and cut hard
 
