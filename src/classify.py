@@ -114,7 +114,7 @@ def diagnostics(rows):
 
 def call(client, model, prompt, items):
     """Ett anrop. Prefixet cachas, batchen ar det enda som varierar."""
-    msg = client.messages.create(
+    return client.messages.create(
         model=model, max_tokens=16000,
         system=[{"type": "text", "text": prompt, "cache_control": {"type": "ephemeral"}},
                 {"type": "text", "text": OUTPUT_RULE, "cache_control": {"type": "ephemeral"}}],
@@ -124,9 +124,16 @@ def call(client, model, prompt, items):
                                  "source_tier", "representative_domain") if k in it} for it in items],
             ensure_ascii=False)}],
     )
-    txt = "".join(b.text for b in msg.content if b.type == "text").strip()
-    txt = re.sub(r"^```(?:json)?|```$", "", txt, flags=re.M).strip()
-    return json.loads(txt), msg.usage
+
+def raw_text(msg):
+    """Svarets text, oforandrad. Separat fran parse sa att den gar att spara
+    aven nar parsningen faller."""
+    return "".join(b.text for b in msg.content if b.type == "text")
+
+def parse(msg):
+    """Text till rader. Samma regel som forut - ingen forlatande parsning."""
+    txt = re.sub(r"^```(?:json)?|```$", "", raw_text(msg).strip(), flags=re.M).strip()
+    return json.loads(txt)
 
 def run(day, only_pass=None, budget=None, model=DEFAULT_MODEL, dry=False):
     sp.state_id(day)
@@ -171,10 +178,24 @@ def run(day, only_pass=None, budget=None, model=DEFAULT_MODEL, dry=False):
             return 2
         for attempt in range(1, MAX_TRIES + 1):
             t0 = time.time()
+            msg = None
             try:
-                rows, usage = call(client, model, prompt, items)
+                msg = call(client, model, prompt, items)
+                rows = parse(msg)
+                usage = msg.usage
             except Exception as e:
-                print(f"  pass{p} batch{n:02d} forsok {attempt}: {type(e).__name__}")
+                # Ett anrop som misslyckas ska lamna lika mycket spar som ett som
+                # lyckas. Forut skrevs bara undantagets klassnamn, och rasvaret -
+                # det enda som kan saga varfor - kastades. Da ser ett avhugget
+                # svar ut som ett trasigt svar.
+                raw = raw_text(msg) if msg is not None else ""
+                sr = getattr(msg, "stop_reason", None)
+                ot = getattr(getattr(msg, "usage", None), "output_tokens", None)
+                fil = d / f"FAILED_pass{p}_batch_{n:02d}_forsok{attempt}.txt"
+                write_text(fil, raw)
+                print(f"  pass{p} batch{n:02d} forsok {attempt}: {type(e).__name__}: {e}")
+                print(f"    stop_reason={sr}  output_tokens={ot}  svar {len(raw):,} tecken")
+                print(f"    rasvar sparat: {fil.name}")
                 time.sleep(2 * attempt); continue
             fel = validate(rows, items)
             dg = diagnostics(rows)
