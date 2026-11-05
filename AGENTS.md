@@ -58,6 +58,32 @@ manifest: all manifest writes go through `src/atomic.py`.
 If a proposal could change output bit-for-bit, do not put it forward.
 Embeddings lost to lexical clustering for this reason, and were rejected.
 
+## The classifier's locked parameters
+
+Model id, prompt sha256, spec sha256, batch size — and **thinking is off**.
+`src/classify.py` sends `thinking={"type": "disabled"}` and writes
+`thinking_disabled: true` into the run record for every day, next to the model
+id and the hashes. A State classified with thinking is not the same instrument
+as one classified without, so the record has to say which.
+
+The reason is not cost. The model's thinking is never returned: the blocks come
+back empty by design. A reasoning step whose content cannot be read is a step
+without derivation, in an instrument whose whole claim is that every step can
+be audited.
+
+Measured 2026-11-05, the failure that found this: Opus 5 thinks adaptively by
+default, those tokens count against `max_tokens`, and the first call returned
+`stop_reason=max_tokens` with 16000 output tokens and **zero characters** of
+text. The answer was not cut off. It never started. `max_tokens` is unchanged
+at 16000; raising it was not the fix.
+
+Anthropic's own documentation warns that Opus 5 with thinking off sometimes
+leaks internal XML tags into the visible output. `parse()` is strict and
+`validate()` checks every row, so such a response fails rather than being
+saved — and the raw response is written to
+`classifier_passes/FAILED_*.txt`. If it happens, it is a measurement: record
+it, do not make the parser more forgiving.
+
 ## An ugly day is a valid result
 
 Output that looks bad is not a bug to fix. Nothing may be made prettier by

@@ -113,9 +113,20 @@ def diagnostics(rows):
             "unique_confidence": len({r["confidence"] for r in rows})}
 
 def call(client, model, prompt, items):
-    """Ett anrop. Prefixet cachas, batchen ar det enda som varierar."""
+    """Ett anrop. Prefixet cachas, batchen ar det enda som varierar.
+
+    TAENKANDET AR AVSTANGT, och det ar en instrumentparameter. Opus 5 taenker
+    adaptivt som standard; taenkandets tokens raknas mot max_tokens och kommer
+    tillbaka tomma. Forsta anropet matte stop_reason=max_tokens med 16000
+    output-tokens och noll tecken text — modellen taenkte upp hela budgeten
+    innan svaret boerjade. Taenkandets innehall returneras inte heller, sa det
+    ar ett resonemangssteg utan harledning i ett instrument vars hela ansprak
+    ar granskbarhet. Ett verk klassificerat med taenkande ar inte samma
+    instrument som ett utan.
+    """
     return client.messages.create(
         model=model, max_tokens=16000,
+        thinking={"type": "disabled"},
         system=[{"type": "text", "text": prompt, "cache_control": {"type": "ephemeral"}},
                 {"type": "text", "text": OUTPUT_RULE, "cache_control": {"type": "ephemeral"}}],
         messages=[{"role": "user", "content": json.dumps(
@@ -129,6 +140,25 @@ def raw_text(msg):
     """Svarets text, oforandrad. Separat fran parse sa att den gar att spara
     aven nar parsningen faller."""
     return "".join(b.text for b in msg.content if b.type == "text")
+
+def usage_fields(msg):
+    """Hela usage, inte de falt vi trodde oss behova. Sexton tusen tokens kunde
+    forsvinna utan ett tecken text, och det syntes ingenstans."""
+    u = getattr(msg, "usage", None)
+    if u is None:
+        return {}
+    try:
+        return u.to_dict()
+    except Exception:
+        return dict(vars(u))
+
+def block_types(msg):
+    """Vilka blocktyper svaret bestod av. Ett tomt textblock och ett uteblivet
+    svar ser likadana ut i texten, men inte har."""
+    try:
+        return [b.type for b in msg.content]
+    except Exception:
+        return []
 
 def parse(msg):
     """Text till rader. Samma regel som forut - ingen forlatande parsning."""
@@ -168,7 +198,10 @@ def run(day, only_pass=None, budget=None, model=DEFAULT_MODEL, dry=False):
 
     import anthropic
     client = anthropic.Anthropic(api_key=key)
-    rec = {"state_id": sp.state_id(day), "model": model,
+    # thinking_disabled star bredvid modell och prompthash for att det ar en
+    # instrumentparameter, inte en implementationsdetalj: ett verk klassificerat
+    # med taenkande ar inte samma instrument som ett utan.
+    rec = {"state_id": sp.state_id(day), "model": model, "thinking_disabled": True,
            "prompt_sha256": sha(PROMPT_FILE), "spec_sha256": sha(SPEC_FILE),
            "batch_size": len(bs[0][1]), "calls": []}
     gjorda = 0
@@ -190,11 +223,12 @@ def run(day, only_pass=None, budget=None, model=DEFAULT_MODEL, dry=False):
                 # svar ut som ett trasigt svar.
                 raw = raw_text(msg) if msg is not None else ""
                 sr = getattr(msg, "stop_reason", None)
-                ot = getattr(getattr(msg, "usage", None), "output_tokens", None)
                 fil = d / f"FAILED_pass{p}_batch_{n:02d}_forsok{attempt}.txt"
                 write_text(fil, raw)
                 print(f"  pass{p} batch{n:02d} forsok {attempt}: {type(e).__name__}: {e}")
-                print(f"    stop_reason={sr}  output_tokens={ot}  svar {len(raw):,} tecken")
+                print(f"    stop_reason={sr}  svar {len(raw):,} tecken  "
+                      f"block {block_types(msg)}")
+                print(f"    usage {usage_fields(msg)}")
                 print(f"    rasvar sparat: {fil.name}")
                 time.sleep(2 * attempt); continue
             fel = validate(rows, items)
@@ -220,7 +254,7 @@ def run(day, only_pass=None, budget=None, model=DEFAULT_MODEL, dry=False):
                                  "output_tokens": usage.output_tokens,
                                  "cache_read": getattr(usage, "cache_read_input_tokens", 0),
                                  "cache_write": getattr(usage, "cache_creation_input_tokens", 0),
-                                 **dg})
+                                 "block_types": block_types(msg), **dg})
             print(f"  pass{p} batch{n:02d}  {len(rows)} rader  "
                   f"{dg['authored_scores_median']:.0f}/16 egna poang  "
                   f"cache {getattr(usage,'cache_read_input_tokens',0):,}")
