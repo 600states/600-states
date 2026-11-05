@@ -94,16 +94,18 @@ and search spelling variants rather than only the obvious words.
 
 ## Where documentation and code disagree, code wins — and say so
 
-Two known divergences. Do not "fix" the code to match the documents:
+One open divergence and one resolved. Do not "fix" the code to match the documents:
 
 - **`Uncertainty` lightness branch.** The frozen formula list does not state
   which emotion belongs to which branch, and an earlier handover stated it
   incorrectly. Every rendered State treats `Uncertainty` as negative, and
   `color_protocol.py` does the same. Verified against 3 600 known tiles.
-- **Master dimensions.** The frozen grid specification gives cell 100 px,
-  separator 3 px, no external border, and master 3000x2000. Those four cannot
-  all hold: 30x100 + 29x3 = 3087. This is unresolved; do not silently pick a
-  side.
+- ~~**Master dimensions.**~~ Resolved 2026-11-05: the master is 3087x2057.
+  The frozen spec gave cell 100, separator 3, no external border and master
+  3000x2000, which cannot all hold (30x100 + 29x3 = 3087). The derived value
+  was corrected, the three constitutive values stand. `render.py` already does
+  this; nothing was re-rendered. See the Grid Specification Addendum A. Do not
+  "fix" render.py to 3000x2000.
 
 If you find a third, report it. Do not resolve it in a commit.
 
