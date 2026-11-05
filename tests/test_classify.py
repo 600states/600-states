@@ -127,8 +127,13 @@ def test_instrumentgrinden_kraver_ratt_prompt():
     assert classify.sha(classify.PROMPT_FILE) == spec["canonical_prompt_sha256"]
 
 def _journal(tmp_path, monkeypatch):
+    """Journalen OCH passkatalogen pekas om. passdir() skapar katalogen den
+    pekar pa, sa ett test som bara pekar om journalen lamnar en tom katalog i
+    dataarkivet."""
     fil = tmp_path / "RUN.json"
+    passar = tmp_path / "classifier_passes"; passar.mkdir(exist_ok=True)
     monkeypatch.setattr(classify, "journalfil", lambda day: fil)
+    monkeypatch.setattr(classify, "passdir", lambda day: passar)
     return fil
 
 BAS = {"model": "m", "prompt_sha256": "p", "spec_sha256": "s"}
@@ -160,3 +165,29 @@ def test_en_omgang_utan_anrop_skriver_ingenting(tmp_path, monkeypatch):
     fil = _journal(tmp_path, monkeypatch)
     classify.skriv_journal("20260101", {}, {**BAS, "calls": []}, 0)
     assert not fil.exists()
+
+def test_journalen_namner_passfiler_den_inte_tacker(tmp_path, monkeypatch):
+    """FYND 001: en journal som tiger om sina luckor ar ett tyst osant
+    pastaende. Luckan uppstar nar en batch klassificerades utan att anropet
+    hann skrivas, och usage gar inte att rekonstruera i efterhand."""
+    fil = _journal(tmp_path, monkeypatch)
+    passar = tmp_path / "classifier_passes"
+    (passar / "pass1_batch_01.json").write_text("[]", encoding="utf-8")
+    classify.skriv_journal("20260101", {}, {**BAS, "calls": [anrop(1, 1, 0)]}, 0)
+    ut = json.loads(fil.read_text(encoding="utf-8"))
+    assert ut["unrecorded"] == ["pass1_batch_01"]
+    assert "usage" in ut["unrecorded_note"]
+
+def test_lucklistan_raknas_om_och_arvs_inte(tmp_path, monkeypatch):
+    """Listan ar en matning av disken, inte ett pastaende som arvs."""
+    fil = _journal(tmp_path, monkeypatch)
+    passar = tmp_path / "classifier_passes"
+    (passar / "pass1_batch_01.json").write_text("[]", encoding="utf-8")
+    classify.skriv_journal("20260101", {}, {**BAS, "calls": [anrop(1, 1, 0)]}, 0)
+    gammal = classify.las_journal("20260101", BAS)
+    assert gammal["unrecorded"] == ["pass1_batch_01"]
+    # samma batch skrivs nu med ett anrop i journalen: luckan ar borta
+    classify.skriv_journal("20260101", gammal,
+                           {**BAS, "calls": [dict(anrop(1, 1, 0), **{"pass": 1, "batch": 1})]}, 0)
+    ut = json.loads(fil.read_text(encoding="utf-8"))
+    assert ut["unrecorded"] == [] and "unrecorded_note" not in ut

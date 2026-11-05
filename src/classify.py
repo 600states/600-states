@@ -297,7 +297,16 @@ def skriv_journal(day, gammal, rec, parse_fel):
     Korjournalen ar manifestets proveniensansprak. Den far inte beskriva den
     sista omgangen av tre utan hela dygnets arbete, sa omgangens anrop laggs
     till de befintliga och totals raknas om over allt. Skrivningen gar genom
-    atomic som alla manifestskrivningar."""
+    atomic som alla manifestskrivningar.
+
+    OCH DEN SAGER VAD DEN INTE TACKER. Passfilerna pa disk jamfors med
+    journalens anrop, och de som saknas skrivs som unrecorded. En journal som
+    tiger om sina luckor ar ett tyst osant pastaende - regeln star sedan
+    FYND 001. Luckan uppstar nar en batch klassificerades utan att anropet hann
+    skrivas, och usage gar inte att rekonstruera i efterhand. Listan raknas om
+    vid varje skrivning, aldrig fran en tidigare journal: den ar en matning av
+    disken, inte ett pastaende som arvs. En tom lista ar darfor ocksa ett
+    besked - kontrollen gjordes."""
     if not rec["calls"] and not parse_fel:
         return
     c = gammal.get("calls", []) + rec["calls"]
@@ -308,6 +317,16 @@ def skriv_journal(day, gammal, rec, parse_fel):
                     "cache_read": sum(x["cache_read"] for x in c),
                     "parse_failures":
                         gammal.get("totals", {}).get("parse_failures", 0) + parse_fel}
+    inspelade = {f"pass{x['pass']}_batch_{x['batch']:02d}" for x in c
+                 if "pass" in x and "batch" in x}
+    ut["unrecorded"] = sorted({f.stem for f in passdir(day).glob("pass*_batch_*.json")}
+                              - inspelade)
+    ut.pop("unrecorded_note", None)
+    if ut["unrecorded"]:
+        ut["unrecorded_note"] = ("klassificerad utan att anropet hann skrivas i "
+                                 "journalen; usage gar inte att rekonstruera i efterhand")
+        print(f"  NOTERA {len(ut['unrecorded'])} passfiler utanfor journalen, "
+              f"forst {ut['unrecorded'][0]}")
     write_text(journalfil(day), json.dumps(ut, ensure_ascii=False, indent=1))
     print(f"\n  {ut['totals']}")
 

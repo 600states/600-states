@@ -167,6 +167,16 @@ return before the write, so on most runs the token accounting for a call that
 had already been paid for existed nowhere. The record is the manifest's
 provenance claim; it may not describe one round out of three.
 
+**And it says what it does not cover.** On every write, the pass files on disk
+are compared with the calls in the record and the ones with no call are listed
+under `unrecorded`, with an `unrecorded_note` saying why they cannot be
+accounted for. A record that is silent about its gaps is a silent untruth —
+the rule has stood since FYND 001. The gap appears whenever a batch was
+classified without its call reaching the record, which an interruption can
+cause again at any time; it is not a one-off for 2026/308. The list is
+recomputed from disk at every write and never inherited from an earlier
+record, so an empty list is a statement too: the check ran.
+
 Before the first call, `las_journal()` checks `model`, `prompt_sha256` and
 `spec_sha256` against the existing record and stops the run if any of them
 differs — a different instrument half way through a day means the day cannot
