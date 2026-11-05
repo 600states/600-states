@@ -191,3 +191,26 @@ def test_lucklistan_raknas_om_och_arvs_inte(tmp_path, monkeypatch):
                            {**BAS, "calls": [dict(anrop(1, 1, 0), **{"pass": 1, "batch": 1})]}, 0)
     ut = json.loads(fil.read_text(encoding="utf-8"))
     assert ut["unrecorded"] == [] and "unrecorded_note" not in ut
+
+
+def test_id_felet_namner_skillnaden():
+    """Felet ska saga vilka id som saknas, ar over och ar dubbletter.
+
+    "observation_id stammer inte mot indata" kravde att nagon lade sig i
+    rasvaret for att forstas. Uppmatt 2026-11-05: modellen slappte ett riktigt
+    id och skrev ett pahittat med suffix i stallet - det gick inte att se ur
+    meddelandet.
+    """
+    rows = kopia()
+    rows[1]["observation_id"] = "OBS-B-DUP"          # slapper OBS-B, hittar pa ett
+    fel = classify.validate(rows, INP)
+    assert len(fel) == 1
+    m = fel[0]
+    assert "OBS-B" in m and "OBS-B-DUP" in m
+    assert "saknas" in m and "over" in m
+
+def test_id_felet_namner_dubbletter():
+    rows = kopia()
+    rows[1]["observation_id"] = "OBS-A"              # samma id tva ganger
+    fel = classify.validate(rows, INP)
+    assert any("dubbletter" in f and "OBS-A" in f for f in fel)

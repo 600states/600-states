@@ -51,3 +51,26 @@ def registry_version() -> str:
     import re
     m = re.search(r"_v(\d+\.\d+)", REGISTRY_FILE.name)
     return "v" + m.group(1) if m else "UNKNOWN"
+
+
+# Exekveringsspecen. EN definition, av samma skal som registret: ett varde som
+# beskriver instrumentet ska lasas ur instrumentet, aldrig skrivas for hand.
+SPEC_FILE = FROZEN / "600_STATES_Emotion_Classification_Execution_Spec_v2.1_FROZEN.json"
+
+def canonical_batch_size() -> int:
+    """Batchstorleken ur den frysta specen.
+
+    Stod tidigare hardkodad som 60 pa tva stallen - run_state.py och
+    build_classifier_input.py - medan specen angav 50. Tva definitioner av
+    samma sak, och ingen av dem specens.
+
+    Uppmatt 2026-11-05 pa 2026/308: vid 60 rader tappar modellen bort en
+    observation, marker att den bara har 59, och hittar pa en sextionde med
+    pahittat id och nollfyllda poang - "No content supplied for this slot".
+    Nollfyllningen ar den defekt som ogiltigforklarade pilotserien.
+
+    Vardet lases nu ur specen och kan inte driva isar igen. Se FYND 004: ett
+    falt som beskriver en resurs ska lasas ur resursen.
+    """
+    import json
+    return int(json.loads(SPEC_FILE.read_text(encoding="utf-8"))["canonical_batch_size"])

@@ -29,7 +29,8 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE)); sys.path.insert(0, str(HERE.parent))
 import statepaths as sp
 from atomic import atomic_write, write_text
-from config import DATA, RAW_GDELT, REGISTRY_FILE as REGISTRY, registry_version, raw_day_dir
+from config import (DATA, RAW_GDELT, REGISTRY_FILE as REGISTRY, registry_version,
+                    raw_day_dir, canonical_batch_size)
 import candidates, ranking, select_day, pool_evidence, gates
 from vocab import EMOTION_STATES
 from build_classifier_input import claim_of, readable, is_digest
@@ -127,9 +128,10 @@ def step_input(day):
                       "source_tier": c["source_tier"], "representative_domain": c["domain"]})
     gates.gate_claims(items, readable, is_digest)
     d = sp.classifier_input(DATA, day); d.mkdir(parents=True, exist_ok=True)
-    for k in range(0, len(items), 60):
-        write_text(d / f"batch_{k//60+1:02d}.json",
-                   json.dumps(items[k:k+60], ensure_ascii=False, indent=1))
+    bs = canonical_batch_size()          # ur specen, aldrig hardkodad
+    for k in range(0, len(items), bs):
+        write_text(d / f"batch_{k//bs+1:02d}.json",
+                   json.dumps(items[k:k+bs], ensure_ascii=False, indent=1))
     print(f"        {len(items)} observationer -> {d.name}/")
     return items
 

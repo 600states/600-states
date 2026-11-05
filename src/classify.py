@@ -31,10 +31,9 @@ import statepaths as sp
 import gates
 from atomic import write_text
 from vocab import EMOTION_STATES, ORDER
-from config import DATA, FROZEN
+from config import DATA, FROZEN, SPEC_FILE
 
 PROMPT_FILE = FROZEN / "600_STATES_Emotion_Classification_Execution_Prompt_v2.1_FROZEN.txt"
-SPEC_FILE   = FROZEN / "600_STATES_Emotion_Classification_Execution_Spec_v2.1_FROZEN.json"
 PASSES      = (1, 2, 3)
 MAX_TRIES   = 3
 DEFAULT_MODEL = os.environ.get("STATES_MODEL", "claude-opus-5")
@@ -52,7 +51,18 @@ OUTPUT_RULE = (
     # innehalla, inte hur de ska se ut. Indraget svar kostade 1 134 rader for
     # 41 objekt, och blanksteg debiteras som output.
     "Return compact JSON: no indentation, no line breaks between objects, "
-    "no spaces after separators."
+    "no spaces after separators.\n"
+    # Uppmatt 2026-11-05 pa 2026/308 batch 03-05: modellen tappade en
+    # observation, markte att antalet inte stamde, och hittade pa en rad med
+    # suffixat id ("...-DUP") och nollfyllda poang - "No content supplied for
+    # this slot". Fabricering for att uppfylla ett antal, och nollfyllningen ar
+    # defekten som ogiltigforklarade pilotserien.
+    "Echo observation_id exactly as supplied. Never modify, suffix or mark an "
+    "id, and never invent one. Classify every supplied observation and nothing "
+    "else. If you cannot produce a row for an input, omit that row rather than "
+    "substituting a placeholder: a missing row is a measurement, a fabricated "
+    "row is not. Two observations may carry near-identical text; that is "
+    "intended, and each is classified independently under its own id."
 )
 
 def sha(p): return hashlib.sha256(Path(p).read_bytes()).hexdigest()
@@ -83,9 +93,16 @@ def validate(rows, inp):
     if len(rows) != len(inp):
         fel.append(f"{len(rows)} rader mot {len(inp)} observationer")
         return fel
+    # Felet ska namna skillnaden. "stammer inte mot indata" kravde att nagon
+    # lade sig i rasvaret for att forstas - tredje stallet i rad med den luckan.
     want = {i["observation_id"] for i in inp}
-    if {r.get("observation_id") for r in rows} != want:
-        fel.append("observation_id stammer inte mot indata")
+    got = [r.get("observation_id") for r in rows]
+    saknas, over = sorted(want - set(got)), sorted(set(got) - want)
+    dubbletter = sorted({x for x in got if got.count(x) > 1})
+    if saknas or over or dubbletter:
+        fel.append(f"observation_id stammer inte mot indata — "
+                   f"saknas {saknas or 'inget'}, over {over or 'inget'}, "
+                   f"dubbletter {dubbletter or 'inga'}")
     V = set(EMOTION_STATES)
     for r in rows:
         oid = str(r.get("observation_id"))[:22]
@@ -366,7 +383,13 @@ def run(day, only_pass=None, budget=None, model=DEFAULT_MODEL, dry=False):
     # thinking_disabled star bredvid modell och prompthash for att det ar en
     # instrumentparameter, inte en implementationsdetalj: ett verk klassificerat
     # med taenkande ar inte samma instrument som ett utan.
+    # temperature star som null med en not, inte utelamnad. Korjournalen ar
+    # manifestets proveniensansprak; en samplingsparameter som ingen ager far
+    # inte saknas i den - en okand parameter ska sta som okand. Vardet satts
+    # forst nar kalibreringsbatteriet matt vad det gor med utfallet.
     rec = {"state_id": sp.state_id(day), "model": model, "thinking_disabled": True,
+           "temperature": None,
+           "temperature_note": "ej satt; leverantorens standardvarde galler; omatt",
            "prompt_sha256": sha(PROMPT_FILE), "spec_sha256": sha(SPEC_FILE),
            "batch_size": len(bs[0][1]), "calls": []}
     # Grinden gar fore anropen, inte efter: upptacks ett byte av instrument

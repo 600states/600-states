@@ -165,9 +165,11 @@ if __name__ == "__main__":
     manifest, evidence, state, outdir = sys.argv[1:5]
     items = build(manifest, evidence, state)
     d = Path(outdir); d.mkdir(parents=True, exist_ok=True)
-    for k in range(0, len(items), 60):
-        (d / f"classifier_input_batch_{k//60+1:02d}.json").write_text(
-            json.dumps(items[k:k+60], ensure_ascii=False, indent=1), encoding="utf-8")
+    from config import canonical_batch_size
+    bs = canonical_batch_size()          # ur specen, aldrig hardkodad
+    for k in range(0, len(items), bs):
+        (d / f"classifier_input_batch_{k//bs+1:02d}.json").write_text(
+            json.dumps(items[k:k+bs], ensure_ascii=False, indent=1), encoding="utf-8")
     import collections
     print(len(items), "observations ->", d)
     print(collections.Counter(i["claim_source"] for i in items))
