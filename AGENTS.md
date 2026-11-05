@@ -136,5 +136,12 @@ noticing.
 
 57 tests with the data archive present. Without it, 47 pass and 10 skip: a
 clone without the archive must skip, never crash, because the README promises
-an outside reader it can. A rule that cannot stop a run is not a rule: gates
+an outside reader it can.
+
+`requirements.txt` is a lock file, and that was verified rather than assumed on
+2026-11-05: a second environment built from it in an empty venv froze to an
+identical list, 23 packages, no differences, and ran 57 and 47/10. Installing
+it against an environment that already satisfies it proves only that the
+conditions hold, not that a restoration reproduces the instrument. Whoever
+restores this in a year has the file and nothing else. A rule that cannot stop a run is not a rule: gates
 live in `src/gates.py` and raise.
