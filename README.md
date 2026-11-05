@@ -84,8 +84,9 @@ threshold in the code has a measurement behind it, recorded in
 
 ## Verifying a State
 
-    pip install pytest pillow
-    python3 -m pytest -q
+    python -m venv .venv
+    .venv\Scripts\python -m pip install -r requirements.txt
+    .venv\Scripts\python -m pytest -q
 
 The two tests that matter most to an outside reader:
 

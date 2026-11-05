@@ -125,7 +125,16 @@ A comment explains why a rule exists, not what the line does.
 
 ## Tests
 
-    python3 -m pytest -q
+Dependencies live in a virtual environment inside the repository, with locked
+versions in `requirements.txt`. The daily run goes on for years on one machine,
+and a global install can be changed by any other installation without anyone
+noticing.
 
-42 tests with the data archive present, 33 without (the rest skip). A rule that
-cannot stop a run is not a rule: gates live in `src/gates.py` and raise.
+    python -m venv .venv
+    .venv\Scripts\python -m pip install -r requirements.txt
+    .venv\Scripts\python -m pytest -q
+
+57 tests with the data archive present. Without it, 47 pass and 10 skip: a
+clone without the archive must skip, never crash, because the README promises
+an outside reader it can. A rule that cannot stop a run is not a rule: gates
+live in `src/gates.py` and raise.
