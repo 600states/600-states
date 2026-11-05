@@ -8,8 +8,7 @@ out/
 08_V3_STATES/*/_work/
 
 # sidans innehall genereras ur arkivet, se site/README.md
-site/data.js
-site/img/
+site/dist/
 
 # granskningsverktygets skarmbilder, hor inte hemma i repot
 .taste-skill/

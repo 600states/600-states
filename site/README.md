@@ -19,12 +19,19 @@ genereras vid varje bygge ur dataarkivet, och ligger medvetet inte i git:
 
 Darfor star det kvar i `README.md` att detta repo inte innehaller datan.
 
-## Bygga
+## Bygga och rulla ut
 
-    python site/build.py <malmapp>
+    python site/build.py
 
 `STATES_DATA` maste peka pa dataarkivet, precis som for resten av koden.
-Malmappen blir exakt det som ska ligga i `public_html`:
+Bygget hamnar i `site/dist/`, och det ar darifran filerna laddas upp.
+Mappen ligger i repot men utanfor git: det som ska till servern far inte
+kunna bytas ut av en filsynk mellan bygge och uppladdning, och bevis och
+verk hor anda inte hemma i historiken.
+
+En annan malmapp gar att ange: `python site/build.py <malmapp>`.
+
+`site/dist/` blir exakt det som ska ligga i `public_html`:
 
     index.html
     data.js
@@ -35,6 +42,13 @@ Malmappen blir exakt det som ska ligga i `public_html`:
 
 Sex filer, cirka 416 KB. Ingenting annat. Mappen ar avsedd att speglas rakt
 upp, sa lagg aldrig nagot i den som inte ska vara publikt lasbart.
+
+### .htaccess ligger bara pa servern
+
+Den finns i webbroten men inte i bygget. Ladda upp genom att skriva over,
+och anvand aldrig en synk som raderar filer som saknas lokalt - da ryker
+den. Efter utrullning ska `/.htaccess` svara 403. Svarar den 404 ar den
+borta.
 
 ## Byggstampel
 

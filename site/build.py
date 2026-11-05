@@ -1,6 +1,7 @@
 """Bygger den publika sidan till en uppladdningsbar mapp.
 
-    python site/build.py <malmapp>
+    python site/build.py            -> site/dist
+    python site/build.py <malmapp>  -> dit du pekar
 
 Repot bar sidan, inte dess innehall. data.js och de fyra renderingarna
 genereras hit ur dataarkivet vid varje bygge, av samma skal som resten av
@@ -103,9 +104,11 @@ def build_stamp() -> str:
 
 
 def main(argv):
-    if len(argv) != 2:
-        raise SystemExit("anvandning: python site/build.py <malmapp>")
-    out = Path(argv[1]).resolve()
+    if len(argv) > 2:
+        raise SystemExit("anvandning: python site/build.py [malmapp]")
+    # dist ligger i repot men utanfor git: det som laddas upp ska inte kunna
+    # bytas ut av en filsynk mellan bygge och uppladdning
+    out = Path(argv[1]).resolve() if len(argv) == 2 else (HERE / "dist")
     data_root = config.require_data()
 
     out.mkdir(parents=True, exist_ok=True)
