@@ -268,6 +268,49 @@ def parse(msg):
             r["primary_emotion"], r["secondary_emotion"] = derive(s)
     return rows, artefakter
 
+JOURNAL_FALT = ("model", "prompt_sha256", "spec_sha256")
+
+def journalfil(day):
+    return sp.outdir(DATA, day) / f"600_STATES_{sp.state_key(day)}_CLASSIFIER_RUN.json"
+
+def las_journal(day, rec):
+    """Dygnets befintliga journal, och grinden mot instrumentbyte.
+
+    Ett dygns trettio anrop tas i flera omgangar. Ar modell, prompt eller spec
+    en annan an i de tidigare omgangarna ar det ett annat instrument mitt i ett
+    dygn, och dygnet kan inte bli ett verk. Grinden star fore anropen: upptacks
+    bytet forst vid skrivningen ar pengarna redan utlagda."""
+    fil = journalfil(day)
+    if not fil.exists():
+        return {}
+    gammal = json.loads(fil.read_text(encoding="utf-8"))
+    for f in JOURNAL_FALT:
+        if f in gammal and gammal[f] != rec[f]:
+            raise gates.GateFailure(
+                f"{f} skiljer sig fran dygnets journal: {gammal[f]!r} tidigare, "
+                f"{rec[f]!r} nu — ett annat instrument mitt i ett dygn")
+    return gammal
+
+def skriv_journal(day, gammal, rec, parse_fel):
+    """Journalen vaxer, den skrivs inte over.
+
+    Korjournalen ar manifestets proveniensansprak. Den far inte beskriva den
+    sista omgangen av tre utan hela dygnets arbete, sa omgangens anrop laggs
+    till de befintliga och totals raknas om over allt. Skrivningen gar genom
+    atomic som alla manifestskrivningar."""
+    if not rec["calls"] and not parse_fel:
+        return
+    c = gammal.get("calls", []) + rec["calls"]
+    ut = {**gammal, **rec, "calls": c}
+    ut["totals"] = {"calls": len(c),
+                    "input": sum(x["input_tokens"] for x in c),
+                    "output": sum(x["output_tokens"] for x in c),
+                    "cache_read": sum(x["cache_read"] for x in c),
+                    "parse_failures":
+                        gammal.get("totals", {}).get("parse_failures", 0) + parse_fel}
+    write_text(journalfil(day), json.dumps(ut, ensure_ascii=False, indent=1))
+    print(f"\n  {ut['totals']}")
+
 def run(day, only_pass=None, budget=None, model=DEFAULT_MODEL, dry=False):
     sp.state_id(day)
     print(f"=== {sp.state_id(day)} — klassificering ===")
@@ -307,93 +350,96 @@ def run(day, only_pass=None, budget=None, model=DEFAULT_MODEL, dry=False):
     rec = {"state_id": sp.state_id(day), "model": model, "thinking_disabled": True,
            "prompt_sha256": sha(PROMPT_FILE), "spec_sha256": sha(SPEC_FILE),
            "batch_size": len(bs[0][1]), "calls": []}
+    # Grinden gar fore anropen, inte efter: upptacks ett byte av instrument
+    # forst vid skrivningen ar pengarna redan utlagda pa ett dygn som anda inte
+    # kan bli ett verk.
+    gammal = las_journal(day, rec)
+    # En stampel per omgang. Ett dygns trettio anrop tas i flera omgangar, och
+    # utan stampel gar det inte att se vilka anrop som hor ihop.
+    omgang = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
     gjorda = parse_fel_totalt = 0
-    for p, n, items in todo:
-        if budget is not None and gjorda >= budget:
-            print(f"\n  budget {budget} nadd, {len(todo) - gjorda} anrop kvar — kor steget igen")
-            return 2
-        parse_fel = 0
-        for attempt in range(1, MAX_TRIES + 1):
-            t0 = time.time()
-            msg = None
-            try:
-                msg = call(client, model, prompt, items)
-                rows, artefakter = parse(msg)
-                usage = msg.usage
-            except (anthropic.APIError, json.JSONDecodeError) as e:
-                # Bara fel som uppstod efter att begaran gick ivag far ett nytt
-                # forsok. Ett fel fore dess ar ett konfigurationsfel - fel
-                # parameter, fel modellnamn, saknad nyckel - och det kan aldrig
-                # lyckas vid forsok tva. Tre omforsok med sleep emellan doljer
-                # da signalen i en obevakad daglig korning och kostar tid utan
-                # att nagot anrop gors. JSONDecodeError hor till denna sida:
-                # svaret kom fram men gick inte att lasa, och nasta forsok kan
-                # ge ett annat svar.
-                #
-                # Ett anrop som misslyckas ska lamna lika mycket spar som ett som
-                # lyckas. Forut skrevs bara undantagets klassnamn, och rasvaret -
-                # det enda som kan saga varfor - kastades. Da ser ett avhugget
-                # svar ut som ett trasigt svar.
-                # Trasig JSON mitt i ett komplett svar raknas for sig. Ett fall
-                # av tre forsok matt 2026-11-05: modellen stakade sig och skrev
-                # halva faltet tva ganger. Haller den andelen i sig blir det ett
-                # tiotal omkorningar om dygnet. Andelen ska matas over flera
-                # dygn innan formatkravet ror sig - darfor en raknare, ingen
-                # atgard.
-                if isinstance(e, json.JSONDecodeError):
-                    parse_fel += 1
-                    parse_fel_totalt += 1
-                print(f"  pass{p} batch{n:02d} forsok {attempt}: {type(e).__name__}: {e}")
-                spara_misslyckat(d, p, n, attempt, msg)
-                time.sleep(2 * attempt); continue
-            fel = validate(rows, items)
-            dg = diagnostics(rows)
-            # Nollfyllningsdefekten passerar validering men ar det fel som
-            # ogiltigforklarade pilotserien: fjorton av sexton poang mekaniskt
-            # satta till noll. Specen kallar det en diagnostisk varning; i drift
-            # kor vi om batchen i stallet for att spara den.
-            if not fel and dg["authored_scores_median"] <= 2:
-                fel = [f"glest poangvektor, median {dg['authored_scores_median']:.0f}/16 "
-                       f"egna poang — protokollet har inte foljts"]
-            if fel:
-                print(f"  pass{p} batch{n:02d} forsok {attempt}: {len(fel)} valideringsfel "
-                      f"pa {len(rows)} rader")
-                spara_misslyckat(d, p, n, attempt, msg, fel)
-                if attempt == MAX_TRIES:
-                    print("  GER UPP pa denna batch"); break
-                continue
-            write_text(d / f"pass{p}_batch_{n:02d}.json",
-                       json.dumps(rows, ensure_ascii=False, indent=1))
-            rec["calls"].append({"pass": p, "batch": n, "rows": len(rows),
-                                 "seconds": round(time.time() - t0, 1),
-                                 "input_tokens": usage.input_tokens,
-                                 "output_tokens": usage.output_tokens,
-                                 "cache_read": getattr(usage, "cache_read_input_tokens", 0),
-                                 "cache_write": getattr(usage, "cache_creation_input_tokens", 0),
-                                 "block_types": block_types(msg),
-                                 "emission_artifacts": artefakter,
-                                 "parse_failures": parse_fel, **dg})
-            print(f"  pass{p} batch{n:02d}  {len(rows)} rader  "
-                  f"{dg['authored_scores_median']:.0f}/16 egna poang  "
-                  f"cache {getattr(usage,'cache_read_input_tokens',0):,}")
-            print(f"    uttalat mot harlett: primary {dg['stated_primary_differs']}, "
-                  f"secondary {dg['stated_secondary_differs']}  "
-                  f"emissionsartefakter {artefakter}")
-            break
-        gjorda += 1
-
-    # Ocksa nar ingen batch gick igenom: en korning dar allt foll pa trasig JSON
-    # ar just den matning andelen ska bygga pa, och den far inte vara den enda
-    # som inte lamnar nagon journal.
-    if rec["calls"] or parse_fel_totalt:
-        c = rec["calls"]
-        rec["totals"] = {"calls": len(c), "input": sum(x["input_tokens"] for x in c),
-                         "output": sum(x["output_tokens"] for x in c),
-                         "cache_read": sum(x["cache_read"] for x in c),
-                         "parse_failures": parse_fel_totalt}
-        write_text(sp.outdir(DATA, day) / f"600_STATES_{sp.state_key(day)}_CLASSIFIER_RUN.json",
-                   json.dumps(rec, ensure_ascii=False, indent=1))
-        print(f"\n  {rec['totals']}")
+    try:
+        for p, n, items in todo:
+            if budget is not None and gjorda >= budget:
+                print(f"\n  budget {budget} nadd, {len(todo) - gjorda} anrop kvar — kor steget igen")
+                return 2
+            parse_fel = 0
+            for attempt in range(1, MAX_TRIES + 1):
+                t0 = time.time()
+                msg = None
+                try:
+                    msg = call(client, model, prompt, items)
+                    rows, artefakter = parse(msg)
+                    usage = msg.usage
+                except (anthropic.APIError, json.JSONDecodeError) as e:
+                    # Bara fel som uppstod efter att begaran gick ivag far ett nytt
+                    # forsok. Ett fel fore dess ar ett konfigurationsfel - fel
+                    # parameter, fel modellnamn, saknad nyckel - och det kan aldrig
+                    # lyckas vid forsok tva. Tre omforsok med sleep emellan doljer
+                    # da signalen i en obevakad daglig korning och kostar tid utan
+                    # att nagot anrop gors. JSONDecodeError hor till denna sida:
+                    # svaret kom fram men gick inte att lasa, och nasta forsok kan
+                    # ge ett annat svar.
+                    #
+                    # Ett anrop som misslyckas ska lamna lika mycket spar som ett som
+                    # lyckas. Forut skrevs bara undantagets klassnamn, och rasvaret -
+                    # det enda som kan saga varfor - kastades. Da ser ett avhugget
+                    # svar ut som ett trasigt svar.
+                    # Trasig JSON mitt i ett komplett svar raknas for sig. Ett fall
+                    # av tre forsok matt 2026-11-05: modellen stakade sig och skrev
+                    # halva faltet tva ganger. Haller den andelen i sig blir det ett
+                    # tiotal omkorningar om dygnet. Andelen ska matas over flera
+                    # dygn innan formatkravet ror sig - darfor en raknare, ingen
+                    # atgard.
+                    if isinstance(e, json.JSONDecodeError):
+                        parse_fel += 1
+                        parse_fel_totalt += 1
+                    print(f"  pass{p} batch{n:02d} forsok {attempt}: {type(e).__name__}: {e}")
+                    spara_misslyckat(d, p, n, attempt, msg)
+                    time.sleep(2 * attempt); continue
+                fel = validate(rows, items)
+                dg = diagnostics(rows)
+                # Nollfyllningsdefekten passerar validering men ar det fel som
+                # ogiltigforklarade pilotserien: fjorton av sexton poang mekaniskt
+                # satta till noll. Specen kallar det en diagnostisk varning; i drift
+                # kor vi om batchen i stallet for att spara den.
+                if not fel and dg["authored_scores_median"] <= 2:
+                    fel = [f"glest poangvektor, median {dg['authored_scores_median']:.0f}/16 "
+                           f"egna poang — protokollet har inte foljts"]
+                if fel:
+                    print(f"  pass{p} batch{n:02d} forsok {attempt}: {len(fel)} valideringsfel "
+                          f"pa {len(rows)} rader")
+                    spara_misslyckat(d, p, n, attempt, msg, fel)
+                    if attempt == MAX_TRIES:
+                        print("  GER UPP pa denna batch"); break
+                    continue
+                write_text(d / f"pass{p}_batch_{n:02d}.json",
+                           json.dumps(rows, ensure_ascii=False, indent=1))
+                rec["calls"].append({"run": omgang, "pass": p, "batch": n, "rows": len(rows),
+                                     "seconds": round(time.time() - t0, 1),
+                                     "input_tokens": usage.input_tokens,
+                                     "output_tokens": usage.output_tokens,
+                                     "cache_read": getattr(usage, "cache_read_input_tokens", 0),
+                                     "cache_write": getattr(usage, "cache_creation_input_tokens", 0),
+                                     "block_types": block_types(msg),
+                                     "emission_artifacts": artefakter,
+                                     "parse_failures": parse_fel, **dg})
+                print(f"  pass{p} batch{n:02d}  {len(rows)} rader  "
+                      f"{dg['authored_scores_median']:.0f}/16 egna poang  "
+                      f"cache {getattr(usage,'cache_read_input_tokens',0):,}")
+                print(f"    uttalat mot harlett: primary {dg['stated_primary_differs']}, "
+                      f"secondary {dg['stated_secondary_differs']}  "
+                      f"emissionsartefakter {artefakter}")
+                break
+            gjorda += 1
+    finally:
+        # Journalen skrivs pa VARJE utgang: budgettaket, ett grindfel, ett
+        # avbrott mitt i, normal avslutning. Samma regel som instrumenteringen
+        # i ovrigt - ett anrop som gjorts ska lamna spar, oavsett hur korningen
+        # slutar. Forut lag skrivningen efter loopen, och --budget (normallaget
+        # for en resumerbar korning) returnerade fore den: tokenrakningen for
+        # ett betalt anrop fanns da ingenstans.
+        skriv_journal(day, gammal, rec, parse_fel_totalt)
 
     kvar = [f"pass{p}_batch_{n:02d}" for p in PASSES for n, _ in bs
             if not (d / f"pass{p}_batch_{n:02d}.json").exists()]

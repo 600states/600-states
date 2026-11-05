@@ -125,3 +125,38 @@ def test_instrumentgrinden_kraver_ratt_prompt():
         pytest.skip("dataarkivet saknas - satt STATES_DATA (se README)")
     spec = json.loads(classify.SPEC_FILE.read_text(encoding="utf-8"))
     assert classify.sha(classify.PROMPT_FILE) == spec["canonical_prompt_sha256"]
+
+def _journal(tmp_path, monkeypatch):
+    fil = tmp_path / "RUN.json"
+    monkeypatch.setattr(classify, "journalfil", lambda day: fil)
+    return fil
+
+BAS = {"model": "m", "prompt_sha256": "p", "spec_sha256": "s"}
+def anrop(i, o, c): return {"input_tokens": i, "output_tokens": o, "cache_read": c}
+
+def test_journalen_vaxer_over_omgangar(tmp_path, monkeypatch):
+    """Ett dygns trettio anrop tas i flera omgangar. Journalen ar manifestets
+    proveniensansprak och far inte beskriva bara den sista."""
+    fil = _journal(tmp_path, monkeypatch)
+    classify.skriv_journal("20260101", {}, {**BAS, "calls": [anrop(10, 20, 0)]}, 1)
+    gammal = classify.las_journal("20260101", BAS)
+    classify.skriv_journal("20260101", gammal, {**BAS, "calls": [anrop(5, 7, 3)]}, 2)
+    ut = json.loads(fil.read_text(encoding="utf-8"))
+    assert len(ut["calls"]) == 2
+    assert ut["totals"] == {"calls": 2, "input": 15, "output": 27, "cache_read": 3,
+                            "parse_failures": 3}
+
+def test_byte_av_instrument_mitt_i_ett_dygn_stoppar(tmp_path, monkeypatch):
+    """Annan modell, prompt eller spec an i tidigare omgangar ar ett annat
+    instrument - grinden gar fore anropen, inte efter."""
+    _journal(tmp_path, monkeypatch)
+    classify.skriv_journal("20260101", {}, {**BAS, "calls": [anrop(1, 1, 0)]}, 0)
+    for falt in ("model", "prompt_sha256", "spec_sha256"):
+        with pytest.raises(classify.gates.GateFailure) as e:
+            classify.las_journal("20260101", {**BAS, falt: "annan"})
+        assert falt in str(e.value)
+
+def test_en_omgang_utan_anrop_skriver_ingenting(tmp_path, monkeypatch):
+    fil = _journal(tmp_path, monkeypatch)
+    classify.skriv_journal("20260101", {}, {**BAS, "calls": []}, 0)
+    assert not fil.exists()

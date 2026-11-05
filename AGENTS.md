@@ -152,6 +152,27 @@ new code: primary diverged **0** times, secondary 3 and 1.
 `src/consensus.py` is untouched. It reads `primary_emotion` and
 `secondary_emotion` from the pass files and now always gets derived values.
 
+## The run record grows; it is never overwritten
+
+A day's thirty calls are taken in several rounds — `--budget` is the normal
+mode for a resumable run — so the record is read, this round's calls are
+appended and `totals` is recomputed over all of them. Each call carries a
+`run` stamp (UTC, one per round) so it is visible which calls belong together.
+The write goes through `src/atomic.py` like every other manifest write.
+
+It is written on **every** exit from `run()`: the budget ceiling, a gate
+failure, an interruption, a normal finish. The `finally` around the batch loop
+is what guarantees that, and it is not decoration: the budget exit used to
+return before the write, so on most runs the token accounting for a call that
+had already been paid for existed nowhere. The record is the manifest's
+provenance claim; it may not describe one round out of three.
+
+Before the first call, `las_journal()` checks `model`, `prompt_sha256` and
+`spec_sha256` against the existing record and stops the run if any of them
+differs — a different instrument half way through a day means the day cannot
+become a work. The gate runs before the calls, not at the write: discovering
+the swap at the write means the money is already spent.
+
 ## An ugly day is a valid result
 
 Output that looks bad is not a bug to fix. Nothing may be made prettier by
