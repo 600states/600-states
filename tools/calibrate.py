@@ -35,7 +35,28 @@ Beslutsregeln ska sattas fore matningen, annars ar den efterhandsrationalisering
 modeller som faller pa grinden ar ute; bland dem som klarar den valjs den
 billigaste vars sjalvoverensstammelse ligger inom referensens band.
 
-    python3 tools/calibrate.py <modell>[,<modell>...] [--passes 3] [--dry-run]
+TEMPERATUREN AR EN EGEN DIMENSION, och den mats som en modell mats.
+  Temperaturen har statt osatt sedan projektets borjan: leverantorens
+  standardvarde har gallt, och ingen har matt vad det gor. Att satta den pa
+  kansla vore att hitta pa, och att lata den sta omatt genom en hel serie ar
+  att inte veta.
+
+  `--temperature` kor samma batteri en gang per varde. "default" utelamnar
+  parametern, alltsa exakt det instrumentet gjort hittills.
+
+  MATNINGEN KRAVER SIN EGEN NOLLPUNKT. Instrumentet reproducerar inte sig
+  sjalvt (FYND 006): tva korningar av samma dygn med identisk konfiguration
+  skiljer sig anda. En jamforelse mellan t=0 och standardvardet sager darfor
+  ingenting forran man vet hur stor skillnaden ar mellan tva korningar som
+  INTE skiljer sig i konfiguration. Kor darfor standardvardet igen i samma
+  omgang: skillnaden mot den tidigare korningen ar brus, och bara det som ar
+  storre an det bruset kan tillskrivas temperaturen.
+
+  Resultatnyckeln bar temperaturen, sa att en matning aldrig skriver over en
+  annan - samma skal som fick filen att slas samman i stallet for att ersattas.
+
+    python3 tools/calibrate.py <modell>[,<modell>...] [--passes 3]
+                               [--temperature default,0,1] [--dry-run]
 """
 import json, statistics, sys, time
 from pathlib import Path
@@ -195,7 +216,17 @@ def kvantiserad(varden, precision):
                     f"{n} olika varden pa {len(varden)} rader")
     return None
 
-def kor(modeller, passes=3, dry=False):
+def temp_av(txt):
+    """"default" ar inte 1.0. Det ar att inte skicka parametern alls."""
+    return None if txt.strip().lower() in ("default", "standard", "none") else float(txt)
+
+def etikett(model, t):
+    """Nyckeln bar temperaturen. Utan den skulle andra matningen av samma
+    modell radera den forsta - exakt det fel som 2026-11-06 kostade matningen
+    for sonnet och haiku."""
+    return model if t is None else f"{model}@t={t:g}"
+
+def kor(modeller, passes=3, dry=False, temperaturer=(None,)):
     prompt, spec = classify.gate_instrument()
     bat = json.loads(BATTERI.read_text(encoding="utf-8"))
     ref = json.loads(REFERENS.read_text(encoding="utf-8"))
@@ -208,10 +239,15 @@ def kor(modeller, passes=3, dry=False):
     if dry:
         tkn = len(json.dumps(obs)) // 4
         print(f"\n  TORRKORNING — inget anrop gors")
+        tot = 0.0
         for m in modeller:
-            i, u = PRIS.get(m, (0, 0))
-            kost = passes * ((tkn + len(prompt)//4) * i + 50 * 320 * u) / 1e6
-            print(f"    {m:<20} {passes} anrop, uppskattat ${kost:.2f}")
+            for t in temperaturer:
+                i, u = PRIS.get(m, (0, 0))
+                kost = passes * ((tkn + len(prompt)//4) * i + 50 * 320 * u) / 1e6
+                tot += kost
+                print(f"    {etikett(m, t):<28} {passes} anrop, uppskattat ${kost:.2f}")
+        print(f"    {'summa':<28} {passes*len(modeller)*len(temperaturer)} anrop, "
+              f"uppskattat ${tot:.2f}")
         return 0
 
     import anthropic, os
@@ -220,14 +256,15 @@ def kor(modeller, passes=3, dry=False):
     client = anthropic.Anthropic(api_key=key)
 
     resultat = {}
-    for m in modeller:
-        print(f"\n--- {m} ---")
+    for m, temp in [(m, t) for m in modeller for t in temperaturer]:
+        namn = etikett(m, temp)
+        print(f"\n--- {namn} ---")
         P, usage, fel_tot, art_tot = [], [], [], 0
         for p in range(1, passes + 1):
             for forsok in range(1, classify.MAX_TRIES + 1):
                 t0 = time.time()
                 try:
-                    msg = classify.call(client, m, prompt, obs)
+                    msg = classify.call(client, m, prompt, obs, temp)
                     rows, art = classify.parse(msg, obs)
                 except Exception as e:
                     print(f"    pass{p} forsok {forsok}: {type(e).__name__}: {e}")
@@ -243,16 +280,18 @@ def kor(modeller, passes=3, dry=False):
                     continue
                 rap = REMEDIATION / "kalibrering_rasvar"
                 rap.mkdir(parents=True, exist_ok=True)
-                write_text(rap / f"{m}_pass{p}.txt", classify.raw_text(msg))
+                write_text(rap / f"{namn.replace('@', '_').replace('=', '')}_pass{p}.txt",
+                           classify.raw_text(msg))
                 P.append({r["observation_id"]: r for r in rows})
                 usage.append(classify.usage_fields(msg)); fel_tot += fel; art_tot += art
                 print(f"    pass{p}  {len(rows)} rader  {dg['authored_scores_median']:.0f}/16 "
                       f"egna poang  id-rep {dg['stated_id_differs']}  {time.time()-t0:.0f}s")
                 break
         if len(P) != passes:
-            resultat[m] = {"grind": "FALLER", "skal": f"bara {len(P)} av {passes} pass",
-                           "tankande": classify.tankande_for(m),
-                           "forsta_felet": fel_tot[0] if fel_tot else None}
+            resultat[namn] = {"grind": "FALLER", "skal": f"bara {len(P)} av {passes} pass",
+                              "tankande": classify.tankande_for(m),
+                              "temperatur": temp,
+                              "forsta_felet": fel_tot[0] if fel_tot else None}
             print(f"    GRIND: FALLER — bara {len(P)} av {passes} pass"); continue
 
         kon = consensus.rows(P, inp)
@@ -266,10 +305,13 @@ def kor(modeller, passes=3, dry=False):
         pri_lika = sum(1 for r in kon if r["primary_emotion"] == refrad[r["observation_id"]]["primary_emotion"])
         med = [classify.diagnostics(list(p.values()))["authored_scores_median"] for p in P]
         grind, skal = grind_ur_spec(P, spec, fel_tot)
-        resultat[m] = {
+        resultat[namn] = {
             "grind": "KLARAR" if grind else "FALLER",
             "grindens_skal": skal,
             "tankande": classify.tankande_for(m),
+            "temperatur": temp,
+            "temperatur_not": ("ej skickad; leverantorens standardvarde" if temp is None
+                               else "utskriven i anropet"),
             "valideringsfel": len(fel_tot), "emissionsartefakter": art_tot,
             "egna_poang_median": med,
             "poang_over_0_05_median": [statistics.median(
@@ -286,7 +328,7 @@ def kor(modeller, passes=3, dry=False):
             "kostnad_usd_batteriet": round(kost, 4),
             "kostnad_usd_per_verk": round(kost * (1800 / (len(obs) * passes)), 2),
         }
-        r = resultat[m]
+        r = resultat[namn]
         print(f"    GRIND: {r['grind']}   sjalv-primary {sjalv['primary_emotion']:.1%}   "
               f"lika referensen {r['primary_lika_referensen']}   "
               f"MAD egna {r['mad_over_passen'].get('mad_poang_egna')}   "
@@ -327,4 +369,6 @@ if __name__ == "__main__":
     a = sys.argv[2:]
     sys.exit(kor(sys.argv[1].split(","),
                  int(a[a.index("--passes") + 1]) if "--passes" in a else 3,
-                 "--dry-run" in a))
+                 "--dry-run" in a,
+                 tuple(temp_av(x) for x in a[a.index("--temperature") + 1].split(","))
+                 if "--temperature" in a else (None,)))
