@@ -92,7 +92,12 @@ section[id]{scroll-margin-top:76px}
 .t-name h1{font-size:var(--step-huge);line-height:0.82}
 .t-sub{font-size:clamp(1.125rem,1.1vw,1.3125rem);line-height:1.3;letter-spacing:-0.015em;color:var(--paper-muted);max-width:34ch;margin-top:20px}
 .t-pic{background:#0B0E12}
-.t-pic img{width:100%;height:100%;object-fit:contain}
+/* height:auto, aldrig height:100%. I ett rutnat dar rutans hojd kommer ur
+   radsparet kan Safari inte losa procenten och satter hojden till noll:
+   bilden forsvinner och rutans bakgrund blir kvar som en lucka. Verket ar
+   3:2, ett fruset forhallande, sa rutan matas ur bilden. */
+.t-pic{aspect-ratio:3/2}
+.t-pic img{width:100%;height:auto}
 .t-split{display:grid;gap:var(--gap);grid-template-columns:1fr 1fr}
 .t-say{background:var(--surface);padding:24px;font-size:clamp(1.05rem,1.4vw,1.5rem);line-height:1.25;letter-spacing:-0.02em}
 .t-count{background:var(--accent);color:var(--accent-ink);padding:24px;display:flex;flex-direction:column;justify-content:space-between;gap:16px}
@@ -231,11 +236,12 @@ h2{font-size:var(--step-head)}
      fruset forhallande, sa bildrutan far det i stallet - da kan ingen
      webblasare rakna annorlunda. */
   .grid2{grid-template-columns:1fr;grid-template-rows:auto auto auto}
-  .t-pic{aspect-ratio:3/2}
   .t-name{padding:20px}
   .t-sub{margin-top:14px;font-size:1.125rem}
   .grid2 .second{display:none}
-  .t-name h1{font-size:clamp(3rem,20vw,7rem)}
+  /* Verket ar produkten. Rubriken far stiga at sidan sa att bilden tar
+     storre del av forsta skarmen an namnet gor. */
+  .t-name h1{font-size:clamp(2.5rem,16vw,5.5rem)}
   .cols{grid-template-columns:1fr 1fr;gap:28px 20px;margin-top:40px}
   .bar{flex-direction:column;height:auto;min-height:0;gap:6px}
   .seg{flex:0 0 auto;min-width:0;min-height:0;padding:18px;gap:10px}
@@ -278,7 +284,7 @@ h2{font-size:var(--step-head)}
       <p class="t-sub">A daily data artwork. One UTC day, 600 news observations, one irreversible field of colour.</p>
     </div>
     <div class="tile t-pic shutter lift" id="shutter">
-      <img src="img/state_002.png" alt="A rendered 600 STATES field: 600 solid colour squares in a 30 by 20 grid." width="3087" height="2057">
+      <img fetchpriority="high" src="img/state_002.png" alt="A rendered 600 STATES field: 600 solid colour squares in a 30 by 20 grid." width="3087" height="2057">
     </div>
     <div class="tile t-pic second lift">
       <img src="img/state_003.png" alt="A second rendered field of 600 colours from another observed day." width="3087" height="2057" loading="lazy">
@@ -327,7 +333,7 @@ h2{font-size:var(--step-head)}
       <div>
         <div class="field-keys" id="grid" role="group" aria-label="600 tiles. Use the arrow keys to move between tiles." tabindex="0"></div>
         <canvas id="fieldcv" aria-hidden="true"></canvas>
-        <noscript><img src="img/state_001.png" alt="The rendered field of 600 colours for the first calibration day." width="3087" height="2057"></noscript>
+        <noscript><img src="img/state_001.png" alt="The rendered field of 600 colours for the first calibration day." width="3087" height="2057" loading="lazy"></noscript>
         <p class="field-cap r">Chronological order, left to right, top to bottom. Nothing has been moved. This field carries 527 distinct colours.</p>
       </div>
       <aside class="readout" id="readout" aria-live="polite">
