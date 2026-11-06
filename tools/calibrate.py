@@ -137,7 +137,13 @@ def grind_ur_spec(P, spec, fel):
     RAPPORTERAS, inte falla en korning:
       two_sparse_batch_is_diagnostic_warning_not_automatic_semantic_failure
       batch_sparsity_and_numeric_resolution_must_be_reported
-    De star darfor bland de rapporterade matten och inte i grinden."""
+    De star darfor bland de rapporterade matten och inte i grinden.
+
+    KVANTISERINGSFORBUDET SAKNADES I GRINDEN till 2026-11-06. Specen satter
+    intensity_confidence_template_quantization_prohibited och prompten sager
+    det i klartext: "Do not quantize intensity to a small preferred set of
+    values" och samma mening for confidence. Ingenting provade det, sa regeln
+    var ett onskemal. Se kvantiserad() for hur den provas utan trosklar."""
     skal = []
     if fel:
         skal.append(f"{len(fel)} valideringsfel, forst: {fel[0][:70]}")
@@ -146,7 +152,48 @@ def grind_ur_spec(P, spec, fel):
         if glesa:
             skal.append(f"{glesa} rader med hogst tva egna poang "
                         f"(mechanical_zero_fill_prohibited)")
+    if spec.get("intensity_confidence_template_quantization_prohibited"):
+        for f in ("intensity", "confidence"):
+            k = kvantiserad([float(r[f]) for pa in P for r in pa.values()],
+                            classify.spec_precision())
+            if k:
+                skal.append(f"{f} {k} "
+                            f"(intensity_confidence_template_quantization_prohibited)")
     return (not skal), (skal or ["uppfyller specens obligatoriska falt"])
+
+
+def kvantiserad(varden, precision):
+    """Har modellen anvant den upplosning specen ger den? Ja eller nej.
+
+    INGEN TROSKEL, och det ar hela poangen. Forra gangen jag byggde en grind
+    har satte jag ett band ur en observation och uteslot en modell pa fel
+    grund. Det har mattet har ingen siffra att valja.
+
+    Specen ger tva decimaler, alltsa 101 varden i [0,1]. Ett varde ligger pa
+    ett grovre rutnat om det ar en multipel av ett storre steg. Fragan grinden
+    staller ar inte "hur manga" utan "nagot alls": anvander modellen den givna
+    upplosningen overhuvudtaget, eller ligger VARTENDA varde pa ett grovre
+    rutnat? Det forsta ar efterlevnad, det andra ar en preferensmangd.
+
+    Uppmatt 2026-11-06, 150 varden per modell och falt:
+      opus-5      intensity 13% pa 0,05-rutnatet, confidence 20%
+      sonnet-5-5  intensity 51%, confidence 30%
+      haiku-5-5   intensity 100%, confidence 100% - sju olika varden pa 150
+                  rader: 0.55 0.60 0.70 0.75 0.80 0.85 0.90
+    Slumpen ger omkring 21% vid tva decimaler. 150 av 150 ar inte slump.
+
+    Grinden tar bara det fullstandiga fallet. En modell som ligger pa rutnatet
+    i 95 procent av fallen slipper igenom, och det ar en kand begransning:
+    mattet skiljer efterlevnad fran total mall, inte goda vanor fran daliga."""
+    if len(varden) < 20:
+        return None
+    steg = 10 ** -precision
+    for grovre in (5, 10, 25, 50):        # 0,05  0,10  0,25  0,50 vid tva decimaler
+        if all(round(v / steg) % grovre == 0 for v in varden):
+            n = len({round(v, precision) for v in varden})
+            return (f"ligger till 100% pa {grovre * steg:g}-rutnatet, "
+                    f"{n} olika varden pa {len(varden)} rader")
+    return None
 
 def kor(modeller, passes=3, dry=False):
     prompt, spec = classify.gate_instrument()
