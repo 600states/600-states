@@ -49,10 +49,47 @@ TANKANDE = {
     "claude-opus-5":     {"type": "disabled"},
     "claude-haiku-5-5":  {"type": "disabled"},
     "claude-sonnet-5-5": {"type": "between_tools"},   # modellen taenker inte fore svaret
+    # claude-opus-5-5 star med avsikt INTE har. Den accepterar bara "adaptive":
+    # tankandet gar inte att stanga av. Tankandets innehall returneras inte, sa
+    # det vore ett resonemangssteg utan harledning i ett instrument vars hela
+    # anspraak ar granskbarhet. Beslutet 2026-11-05 galler, och det ar modellen
+    # som faller pa det, inte tvartom. Priset ar lagre ($4/$20 mot $5/$25) och
+    # saknar betydelse. Faller den bort ur tabellen av misstag ger anropet 400.
+}
+
+# EFFORT SKRIVS UT, DEN ARVS INTE.
+#
+# Det har ar INGEN parameterandring. Varje varde nedan ar modellens egna
+# API-standardvarde per 2026-11-06, sa utfallet blir identiskt med alla
+# korningar hittills - inklusive kalibreringen och 2026/308. Det som andras ar
+# att vardet star i instrumentet i stallet for hos leverantoren.
+#
+# Tva skal, bada konkreta:
+#   1. Standardvardena skiljer sig redan at mellan modeller - high pa opus-5 och
+#      sonnet-5-5, medium pa haiku-5-5. Ett blankt "high" over alla hade andrat
+#      haikus beteende och gjort dess kalibreringssiffror oreproducerbara.
+#   2. "disabled" och "between_tools" accepteras BARA vid effort high eller
+#      lagre; vid xhigh eller max svarar API:et 400. Hojs leverantorens
+#      standardvarde nagon gang slutar klassificeraren fungera mitt i serien,
+#      utan att en rad i var kod har andrats. Ett utskrivet varde kan det inte.
+#
+# Skillnaden mot temperaturen, som star kvar osatt: temperaturen ar ingen mater
+# och ingen har beslutat, sa att satta den vore att hitta pa. Det har ar att
+# skriva ned det som redan galler. Man far skriva ned det som ar sant. Man far
+# inte hitta pa det ingen mätt.
+EFFORT = {
+    "claude-opus-5":     "high",
+    "claude-sonnet-5-5": "high",
+    "claude-haiku-5-5":  "medium",
 }
 
 def tankande_for(model):
     return TANKANDE.get(model, {"type": "disabled"})
+
+def effort_for(model):
+    """Modellens utskrivna effort. Saknas modellen hojs inget tyst: high ar det
+    hogsta varde dar tankandet gar att stanga av alls."""
+    return EFFORT.get(model, "high")
 
 def ska_forsoka_igen(e):
     """Bara fel som kan bli ratt vid nasta forsok.
@@ -247,6 +284,7 @@ def call(client, model, prompt, items):
     with client.messages.stream(
         model=model, max_tokens=32000,
         thinking=tankande_for(model),
+        output_config={"effort": effort_for(model)},
         system=[{"type": "text", "text": prompt, "cache_control": {"type": "ephemeral"}},
                 {"type": "text", "text": OUTPUT_RULE, "cache_control": {"type": "ephemeral"}}],
         messages=[{"role": "user", "content": json.dumps(
@@ -527,6 +565,8 @@ def run(day, only_pass=None, budget=None, model=DEFAULT_MODEL, dry=False):
     # forst nar kalibreringsbatteriet matt vad det gor med utfallet.
     rec = {"state_id": sp.state_id(day), "model": model,
            "thinking": tankande_for(model),
+           "effort": effort_for(model),
+           "effort_note": "utskriven; lika modellens API-standardvarde 2026-11-06",
            "temperature": None,
            "temperature_note": "ej satt; leverantorens standardvarde galler; omatt",
            "prompt_sha256": sha(PROMPT_FILE), "spec_sha256": sha(SPEC_FILE),
