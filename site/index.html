@@ -211,11 +211,28 @@ h2{font-size:var(--step-head)}
 
 @media (max-width:900px){
   :root{--axis:0px}
-  .t-nav{display:none}
-  .board{grid-template-rows:56px auto}
-  .topbar{grid-template-columns:56px 1fr}
-  .grid2{grid-template-columns:1fr;grid-template-rows:auto 34svh auto}
-  .t-name{min-height:30svh;padding:20px}
+  /* Ingen paatvingad viewport-hojd pa mobil heller: det ar den som blir
+     tomrum nar iOS raknar om hojden medan verktygsfaltet glider. */
+  .board{grid-template-rows:auto auto;min-height:0}
+  /* Menyn doldes pa mobil, och da gick labs.html inte att na fran en telefon
+     alls. Den ligger nu som en egen rad under raden med logotyp och knapp:
+     brickor med mellanrum, samma formsprak som resten, ingen hamburgare och
+     inget overlagg. Den klistrade raden blir tva rader pa mobil. */
+  .topbar{grid-template-columns:56px 1fr;grid-template-rows:56px auto;height:auto}
+  .t-logo{grid-area:1/1/2/2}
+  .t-act{grid-area:1/2/2/3}
+  .t-nav{grid-area:2/1/3/3;background:none;display:flex;flex-wrap:wrap;
+    gap:var(--gap);padding:0}
+  .t-nav a{background:var(--surface);flex:1 1 auto;display:grid;place-items:center;
+    min-height:44px;padding:0 10px;text-align:center}
+  /* Inga viewport-enheter i hjalten. iOS Safari raknar svh mot ett annat
+     varde an Chromium och faller in och ut verktygsfaltet medan sidan ligger
+     still, vilket gav tomrum och bortklippt rubrik dar. Verket ar 3:2, ett
+     fruset forhallande, sa bildrutan far det i stallet - da kan ingen
+     webblasare rakna annorlunda. */
+  .grid2{grid-template-columns:1fr;grid-template-rows:auto auto auto}
+  .t-pic{aspect-ratio:3/2}
+  .t-name{padding:20px}
   .t-sub{margin-top:14px;font-size:1.125rem}
   .grid2 .second{display:none}
   .t-name h1{font-size:clamp(3rem,20vw,7rem)}
