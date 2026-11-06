@@ -35,28 +35,24 @@ Beslutsregeln ska sattas fore matningen, annars ar den efterhandsrationalisering
 modeller som faller pa grinden ar ute; bland dem som klarar den valjs den
 billigaste vars sjalvoverensstammelse ligger inom referensens band.
 
-TEMPERATUREN AR EN EGEN DIMENSION, och den mats som en modell mats.
-  Temperaturen har statt osatt sedan projektets borjan: leverantorens
-  standardvarde har gallt, och ingen har matt vad det gor. Att satta den pa
-  kansla vore att hitta pa, och att lata den sta omatt genom en hel serie ar
-  att inte veta.
+TEMPERATUREN GAR INTE ATT MATA, OCH DET AR SVARET. Uppmatt 2026-11-06.
+  Batteriet byggdes ut med --temperature for att mata projektets sista osatta
+  parameter. Anropet foll pa TypeError innan det lamnade maskinen: varken
+  temperature eller top_p finns i API:ets kropp for den har
+  modellgenerationen. Flaggan ar borttagen igen - en flagga som bara kan ge
+  TypeError ar samre an ingen flagga. Se noten vid classify.TEMPERATUR.
 
-  `--temperature` kor samma batteri en gang per varde. "default" utelamnar
-  parametern, alltsa exakt det instrumentet gjort hittills.
+EN MATNING FAR ALDRIG RADERA EN ANNAN, och det galler aven samma modell.
+  Filen slogs ihop per modell, sa tva korningar av SAMMA modell samma dag
+  skrev over varandra anda - rasvaren likasa, de bar bara modell och pass i
+  namnet. Morgonens matning av opus-5 gick forlorad den vag den 6 november,
+  samma dag som ett liknande fel kostade matningen for sonnet och haiku.
+  Nu bar rasvaren korningens stampel, och en modell som redan star i filen far
+  en egen nyckel (claude-opus-5#kor2) i stallet for att ersatta den.
+  Tva korningar av samma konfiguration ar inte en dubblett - skillnaden mellan
+  dem ar brusgolvet (FYND 006), och den gar bara att rakna om bada finns kvar.
 
-  MATNINGEN KRAVER SIN EGEN NOLLPUNKT. Instrumentet reproducerar inte sig
-  sjalvt (FYND 006): tva korningar av samma dygn med identisk konfiguration
-  skiljer sig anda. En jamforelse mellan t=0 och standardvardet sager darfor
-  ingenting forran man vet hur stor skillnaden ar mellan tva korningar som
-  INTE skiljer sig i konfiguration. Kor darfor standardvardet igen i samma
-  omgang: skillnaden mot den tidigare korningen ar brus, och bara det som ar
-  storre an det bruset kan tillskrivas temperaturen.
-
-  Resultatnyckeln bar temperaturen, sa att en matning aldrig skriver over en
-  annan - samma skal som fick filen att slas samman i stallet for att ersattas.
-
-    python3 tools/calibrate.py <modell>[,<modell>...] [--passes 3]
-                               [--temperature default,0,1] [--dry-run]
+    python3 tools/calibrate.py <modell>[,<modell>...] [--passes 3] [--dry-run]
 """
 import json, statistics, sys, time
 from pathlib import Path
@@ -216,17 +212,22 @@ def kvantiserad(varden, precision):
                     f"{n} olika varden pa {len(varden)} rader")
     return None
 
-def temp_av(txt):
-    """"default" ar inte 1.0. Det ar att inte skicka parametern alls."""
-    return None if txt.strip().lower() in ("default", "standard", "none") else float(txt)
+def ledig_nyckel(namn, upptagna):
+    """En modell som redan star i filen ersatts inte - den far en egen nyckel.
 
-def etikett(model, t):
-    """Nyckeln bar temperaturen. Utan den skulle andra matningen av samma
-    modell radera den forsta - exakt det fel som 2026-11-06 kostade matningen
-    for sonnet och haiku."""
-    return model if t is None else f"{model}@t={t:g}"
+    Grinden mot overskrivning satt tidigare pa batteriet och antalet pass, och
+    slapp darfor igenom det vanligaste fallet av alla: samma modell, samma
+    batteri, kord en gang till. Den andra korningen tog den forstas plats utan
+    ett ord. Skillnaden mellan tva korningar av samma konfiguration ar
+    brusgolvet, och det matet forsvann med den forsta korningen."""
+    if namn not in upptagna:
+        return namn
+    n = 2
+    while f"{namn}#kor{n}" in upptagna:
+        n += 1
+    return f"{namn}#kor{n}"
 
-def kor(modeller, passes=3, dry=False, temperaturer=(None,)):
+def kor(modeller, passes=3, dry=False):
     prompt, spec = classify.gate_instrument()
     bat = json.loads(BATTERI.read_text(encoding="utf-8"))
     ref = json.loads(REFERENS.read_text(encoding="utf-8"))
@@ -239,15 +240,10 @@ def kor(modeller, passes=3, dry=False, temperaturer=(None,)):
     if dry:
         tkn = len(json.dumps(obs)) // 4
         print(f"\n  TORRKORNING — inget anrop gors")
-        tot = 0.0
         for m in modeller:
-            for t in temperaturer:
-                i, u = PRIS.get(m, (0, 0))
-                kost = passes * ((tkn + len(prompt)//4) * i + 50 * 320 * u) / 1e6
-                tot += kost
-                print(f"    {etikett(m, t):<28} {passes} anrop, uppskattat ${kost:.2f}")
-        print(f"    {'summa':<28} {passes*len(modeller)*len(temperaturer)} anrop, "
-              f"uppskattat ${tot:.2f}")
+            i, u = PRIS.get(m, (0, 0))
+            kost = passes * ((tkn + len(prompt)//4) * i + 50 * 320 * u) / 1e6
+            print(f"    {m:<20} {passes} anrop, uppskattat ${kost:.2f}")
         return 0
 
     import anthropic, os
@@ -255,16 +251,18 @@ def kor(modeller, passes=3, dry=False, temperaturer=(None,)):
     if not key: print("\n  ANTHROPIC_API_KEY saknas."); return 4
     client = anthropic.Anthropic(api_key=key)
 
+    # En stampel per omgang, i rasvarens namn. Utan den skriver nasta korning
+    # av samma modell over svaren, och da gar matningen inte att rakna om.
+    stampel = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
     resultat = {}
-    for m, temp in [(m, t) for m in modeller for t in temperaturer]:
-        namn = etikett(m, temp)
-        print(f"\n--- {namn} ---")
+    for m in modeller:
+        print(f"\n--- {m} ---")
         P, usage, fel_tot, art_tot = [], [], [], 0
         for p in range(1, passes + 1):
             for forsok in range(1, classify.MAX_TRIES + 1):
                 t0 = time.time()
                 try:
-                    msg = classify.call(client, m, prompt, obs, temp)
+                    msg = classify.call(client, m, prompt, obs)
                     rows, art = classify.parse(msg, obs)
                 except Exception as e:
                     print(f"    pass{p} forsok {forsok}: {type(e).__name__}: {e}")
@@ -280,18 +278,16 @@ def kor(modeller, passes=3, dry=False, temperaturer=(None,)):
                     continue
                 rap = REMEDIATION / "kalibrering_rasvar"
                 rap.mkdir(parents=True, exist_ok=True)
-                write_text(rap / f"{namn.replace('@', '_').replace('=', '')}_pass{p}.txt",
-                           classify.raw_text(msg))
+                write_text(rap / f"{m}_{stampel}_pass{p}.txt", classify.raw_text(msg))
                 P.append({r["observation_id"]: r for r in rows})
                 usage.append(classify.usage_fields(msg)); fel_tot += fel; art_tot += art
                 print(f"    pass{p}  {len(rows)} rader  {dg['authored_scores_median']:.0f}/16 "
                       f"egna poang  id-rep {dg['stated_id_differs']}  {time.time()-t0:.0f}s")
                 break
         if len(P) != passes:
-            resultat[namn] = {"grind": "FALLER", "skal": f"bara {len(P)} av {passes} pass",
-                              "tankande": classify.tankande_for(m),
-                              "temperatur": temp,
-                              "forsta_felet": fel_tot[0] if fel_tot else None}
+            resultat[m] = {"grind": "FALLER", "skal": f"bara {len(P)} av {passes} pass",
+                           "tankande": classify.tankande_for(m),
+                           "forsta_felet": fel_tot[0] if fel_tot else None}
             print(f"    GRIND: FALLER — bara {len(P)} av {passes} pass"); continue
 
         kon = consensus.rows(P, inp)
@@ -305,13 +301,11 @@ def kor(modeller, passes=3, dry=False, temperaturer=(None,)):
         pri_lika = sum(1 for r in kon if r["primary_emotion"] == refrad[r["observation_id"]]["primary_emotion"])
         med = [classify.diagnostics(list(p.values()))["authored_scores_median"] for p in P]
         grind, skal = grind_ur_spec(P, spec, fel_tot)
-        resultat[namn] = {
+        resultat[m] = {
             "grind": "KLARAR" if grind else "FALLER",
             "grindens_skal": skal,
             "tankande": classify.tankande_for(m),
-            "temperatur": temp,
-            "temperatur_not": ("ej skickad; leverantorens standardvarde" if temp is None
-                               else "utskriven i anropet"),
+            "korning": stampel,
             "valideringsfel": len(fel_tot), "emissionsartefakter": art_tot,
             "egna_poang_median": med,
             "poang_over_0_05_median": [statistics.median(
@@ -328,7 +322,7 @@ def kor(modeller, passes=3, dry=False, temperaturer=(None,)):
             "kostnad_usd_batteriet": round(kost, 4),
             "kostnad_usd_per_verk": round(kost * (1800 / (len(obs) * passes)), 2),
         }
-        r = resultat[namn]
+        r = resultat[m]
         print(f"    GRIND: {r['grind']}   sjalv-primary {sjalv['primary_emotion']:.1%}   "
               f"lika referensen {r['primary_lika_referensen']}   "
               f"MAD egna {r['mad_over_passen'].get('mad_poang_egna')}   "
@@ -354,9 +348,12 @@ def kor(modeller, passes=3, dry=False, temperaturer=(None,)):
             ut = ut.with_name(ut.stem + f"_{passes}pass.json")
             print(f"\n  tidigare fil har annat antal pass — skriver {ut.name}")
         else:
-            for m, r in gammalt.get("resultat", {}).items():
-                if m not in samlat:
-                    samlat[m] = r
+            # Det gamla behaller sin nyckel, det nya far en ledig. Aldre
+            # matningar ska aldrig flytta pa sig: nagon kan ha citerat dem.
+            gamla = gammalt.get("resultat", {})
+            samlat = dict(gamla)
+            for m, r in resultat.items():
+                samlat[ledig_nyckel(m, samlat)] = r
     write_text(ut, json.dumps({"batteri_sha256": bsha,
                                "referensmodell": bat["meta"]["referensmodell"],
                                "passes": passes, "resultat": samlat},
@@ -369,6 +366,4 @@ if __name__ == "__main__":
     a = sys.argv[2:]
     sys.exit(kor(sys.argv[1].split(","),
                  int(a[a.index("--passes") + 1]) if "--passes" in a else 3,
-                 "--dry-run" in a,
-                 tuple(temp_av(x) for x in a[a.index("--temperature") + 1].split(","))
-                 if "--temperature" in a else (None,)))
+                 "--dry-run" in a))

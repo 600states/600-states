@@ -1,15 +1,18 @@
-"""Temperaturen har en enda definition, och journalen far inte ljuga om den.
+"""Temperaturen finns inte, och en matning far inte radera en annan.
 
-Temperaturen stod osatt till 2026-11-06 med noten "ej satt; leverantorens
-standardvarde galler; omatt". Noten var HARDKODAD bredvid ett hardkodat null.
-Satte nagon temperaturen i anropet skulle journalen fortsatt pasta att den var
-osatt - och ett manifest som pastar en parameter koden inte anvande ar precis
-FYND 004 en gang till.
+2026-11-06 byggdes kalibreringsbatteriet ut for att mata temperaturen, som
+stod som projektets sista osatta parameter. Anropet foll innan det lamnade
+maskinen: varken temperature eller top_p finns i API:ets kropp for den har
+modellgenerationen. Fragan ar stangd, men inte genom en matning - det fanns
+ingenting att mata.
 
-Det har testet gor tre pastaenden till grindar:
-  1. driftens anrop skickar INTE parametern sa lange den ar osatt
-  2. ett satt varde gar oforandrat till API:et
-  3. journalens falt och not kommer ur vardet, inte ur en strang i koden
+Samma korning avslojade ett andra fel. Morgonens matning av samma modell
+skrevs over, bade i resultatfilen och bland rasvaren, trots att filen sedan
+tidigare slas samman i stallet for att ersattas. Sammanslagningen skyddade
+mot en annan modell, inte mot samma modell en gang till.
+
+Testet laser bada: ingen samplingsparameter nagonstans i anropsvagen, och
+ingen nyckel som kan ta en annan matnings plats.
 """
 import inspect, sys
 from pathlib import Path
@@ -36,53 +39,43 @@ class _Klient:
     def __init__(self): self.messages = _Meddelanden()
 
 
-def _anrop(temperature):
+def test_anropet_skickar_ingen_samplingsparameter():
     k = _Klient()
-    classify.call(k, "claude-opus-5", "prompt", [{"observation_id": "OBS-1"}],
-                  temperature)
-    return k.messages.kwargs
+    classify.call(k, "claude-opus-5", "prompt", [{"observation_id": "OBS-1"}])
+    assert "temperature" not in k.messages.kwargs
+    assert "top_p" not in k.messages.kwargs
 
 
-def test_osatt_temperatur_skickar_ingen_parameter():
-    """None ar inte 1.0. Att utelamna parametern ar vad instrumentet gjort i
-    varje korning hittills; att skicka ett varde vore ett pastaende om vad
-    leverantorens standardvarde ar."""
-    assert "temperature" not in _anrop(None)
+def test_call_tar_inte_emot_nagot_som_anda_inte_gar_att_skicka():
+    """Ett argument som bara kan ge TypeError ar en falla, inte en mojlighet."""
+    assert list(inspect.signature(classify.call).parameters) == [
+        "client", "model", "prompt", "items"]
 
 
-def test_satt_temperatur_gar_oforandrad_till_anropet():
-    for v in (0.0, 0.3, 1.0):
-        assert _anrop(v)["temperature"] == v
-
-
-def test_driften_skickar_den_enda_definitionen():
-    """Inte ett eget varde pa anropsstallet - samma varde som journalen skriver."""
+def test_korjournalen_sager_vad_som_faktiskt_galler():
+    """Faltet star kvar - ett falt som forsvinner ur provenienskedjan laser som
+    om fragan aldrig stallts - men noten far inte pasta ett standardvarde som
+    ingen kan satta."""
+    assert classify.TEMPERATUR is None
+    not_ = classify.TEMPERATUR_NOT.lower()
+    assert "ingen temperatur" in not_ and "effort" in not_
+    assert "omatt" not in not_
     src = inspect.getsource(classify.run)
-    assert "call(client, model, prompt, items, TEMPERATUR)" in src
     assert '"temperature": TEMPERATUR' in src
-    assert '"temperature_note": temperatur_not()' in src
+    assert '"temperature_note": TEMPERATUR_NOT' in src
 
 
-def test_noten_harleds_ur_vardet():
-    assert classify.TEMPERATUR is None, "temperaturen ar beslutad - uppdatera FYND/journal"
-    assert "omatt" in classify.temperatur_not()
-    gammal = classify.TEMPERATUR
-    try:
-        classify.TEMPERATUR = 0.0
-        assert "omatt" not in classify.temperatur_not()
-    finally:
-        classify.TEMPERATUR = gammal
+def test_en_matning_tar_aldrig_en_annans_nyckel():
+    upptagna = {"claude-opus-5": {}, "claude-sonnet-5-5": {}}
+    assert calibrate.ledig_nyckel("claude-haiku-5-5", upptagna) == "claude-haiku-5-5"
+    assert calibrate.ledig_nyckel("claude-opus-5", upptagna) == "claude-opus-5#kor2"
+    upptagna["claude-opus-5#kor2"] = {}
+    assert calibrate.ledig_nyckel("claude-opus-5", upptagna) == "claude-opus-5#kor3"
 
 
-def test_matningarna_skriver_inte_over_varandra():
-    """Tva temperaturer ar tva matningar. Delar de nyckel forsvinner den
-    forsta tyst, vilket ar hur matningen for sonnet och haiku gick forlorad."""
-    nycklar = {calibrate.etikett("claude-opus-5", t) for t in (None, 0.0, 1.0)}
-    assert len(nycklar) == 3
-    assert calibrate.etikett("claude-opus-5", None) == "claude-opus-5"
-
-
-def test_default_betyder_utelamnad_inte_ett():
-    assert calibrate.temp_av("default") is None
-    assert calibrate.temp_av("0") == 0.0
-    assert calibrate.temp_av("1") == 1.0
+def test_rasvaren_bar_korningens_stampel():
+    """Utan stampeln skriver nasta korning av samma modell over svaren, och da
+    gar varken matningen eller brusgolvet att rakna om."""
+    src = inspect.getsource(calibrate.kor)
+    assert 'f"{m}_{stampel}_pass{p}.txt"' in src
+    assert "stampel = time.strftime" in src

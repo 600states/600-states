@@ -83,24 +83,35 @@ EFFORT = {
     "claude-haiku-5-5":  "medium",
 }
 
-# TEMPERATUREN HAR EN ENDA DEFINITION, OCH DEN AR OSATT.
+# TEMPERATUREN FINNS INTE. Uppmatt 2026-11-06, efter ett misslyckat forsok att
+# mata den.
 #
-# None betyder att parametern inte skickas alls: leverantorens standardvarde
-# galler, precis som i varje korning hittills. Vardet far satt forst nar
-# kalibreringsbatteriet matt vad det gor med utfallet - regel 0.1, och FYND 004
-# som skal: ett manifest som pastar en parameter koden inte anvande ar varre an
-# inget verk alls.
+# Temperaturen stod som projektets sista osatta parameter, med noten "ej satt;
+# leverantorens standardvarde galler; omatt". Kalibreringsbatteriet byggdes ut
+# for att mata vad den gor med utfallet. Anropet foll pa TypeError innan det
+# lamnade maskinen:
 #
-# Darfor star den har och ingen annanstans. Korjournalens falt laser detta
-# varde och noten harleds ur det, sa att journalen inte kan pasta "ej satt" om
-# nagon satter den. Tva stallen hade varit tva sanningar.
+#   Messages.stream() got an unexpected keyword argument 'temperature'
+#
+# Kontrollerat i tre led:
+#   - anthropic 2.5.0, Messages.stream(): ingen temperature, ingen top_p i
+#     signaturen
+#   - samma paket, types/message_create_params.py: orden forekommer inte alls
+#   - API-referensen for Messages: kroppens parametrar ar max_tokens, messages,
+#     model, cache_control, container, diagnostics, inference_geo, metadata,
+#     output_config, service_tier, speed, stop_sequences, stream, system,
+#     thinking, tool_choice, tools. Varken temperature eller top_p namns.
+#
+# Samplingen ar alltsa inte en parameter nagon kan satta for den har
+# modellgenerationen. Kontrollen heter effort, och den star utskriven ovan.
+#
+# Fragan ar darmed stangd, men inte genom en matning: det fanns ingenting att
+# mata. Falten star kvar i korjournalen, for ett falt som forsvinner ur
+# provenienskedjan laser som om fragan aldrig stallts.
 TEMPERATUR = None
-
-def temperatur_not():
-    """Journalens not om temperaturen, harledd ur vardet - aldrig skriven."""
-    if TEMPERATUR is None:
-        return "ej satt; leverantorens standardvarde galler; omatt"
-    return "utskriven i instrumentet; matt i kalibreringsbatteriet"
+TEMPERATUR_NOT = ("API:et for denna modellgeneration tar ingen temperatur-"
+                  "parameter; kontrollerat mot SDK:ns signatur och "
+                  "API-referensen 2026-11-06; effort ar kontrollen")
 
 def tankande_for(model):
     return TANKANDE.get(model, {"type": "disabled"})
@@ -277,7 +288,7 @@ def diagnostics(rows):
             "stated_secondary_differs":
                 sum(1 for r in rows if r.get("stated_secondary") != r.get("secondary_emotion"))}
 
-def call(client, model, prompt, items, temperature=None):
+def call(client, model, prompt, items):
     """Ett anrop. Prefixet cachas, batchen ar det enda som varierar.
 
     TAENKANDET AR AVSTANGT, och det ar en instrumentparameter. Opus 5 taenker
@@ -300,18 +311,15 @@ def call(client, model, prompt, items, temperature=None):
     get_final_message() ger samma Message-objekt som create() gav, sa
     raw_text(), parse(), usage och stop_reason ar oforandrade.
 
-    TEMPERATUREN SKICKAS BARA NAR DEN AR SATT. None utelamnar parametern helt,
-    vilket ar skillnad fran att skicka leverantorens standardvarde: det forsta
-    ar det instrumentet gjort hittills, det andra ar ett pastaende om vad
-    standardvardet ar. Argumentet finns for kalibreringsbatteriet; driften
-    skickar classify.TEMPERATUR, som ar None tills nagon beslutar annat.
+    INGEN SAMPLINGSPARAMETER SKICKAS, for det finns ingen att skicka. Se noten
+    vid TEMPERATUR: varken temperature eller top_p star i API:ets kropp for den
+    har modellgenerationen. Ett argument for det hade bara kunnat ge TypeError,
+    och ett argument som alltid faller ar en falla, inte en mojlighet.
     """
-    extra = {} if temperature is None else {"temperature": temperature}
     with client.messages.stream(
         model=model, max_tokens=32000,
         thinking=tankande_for(model),
         output_config={"effort": effort_for(model)},
-        **extra,
         system=[{"type": "text", "text": prompt, "cache_control": {"type": "ephemeral"}},
                 {"type": "text", "text": OUTPUT_RULE, "cache_control": {"type": "ephemeral"}}],
         messages=[{"role": "user", "content": json.dumps(
@@ -623,7 +631,7 @@ def run(day, only_pass=None, budget=None, model=DEFAULT_MODEL, dry=False):
            "effort": effort_for(model),
            "effort_note": "utskriven; lika modellens API-standardvarde 2026-11-06",
            "temperature": TEMPERATUR,
-           "temperature_note": temperatur_not(),
+           "temperature_note": TEMPERATUR_NOT,
            "prompt_sha256": sha(PROMPT_FILE), "spec_sha256": sha(SPEC_FILE),
            "batch_size": len(bs[0][1]), "calls": []}
     # Grinden gar fore anropen, inte efter: upptacks ett byte av instrument
@@ -644,7 +652,7 @@ def run(day, only_pass=None, budget=None, model=DEFAULT_MODEL, dry=False):
                 t0 = time.time()
                 msg = None
                 try:
-                    msg = call(client, model, prompt, items, TEMPERATUR)
+                    msg = call(client, model, prompt, items)
                     rows, artefakter = parse(msg, items)
                     usage = msg.usage
                 except (anthropic.APIError, json.JSONDecodeError) as e:
