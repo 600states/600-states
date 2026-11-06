@@ -13,6 +13,7 @@ def rad(oid, pri, sec):
     return {"observation_id": oid, "neutral_event_representation": "x", "scores": s,
             "primary_emotion": pri, "secondary_emotion": sec,
             "stated_primary": pri, "stated_secondary": sec,
+            "stated_observation_id": oid,
             "intensity": 0.5, "confidence": 0.7, "classification_note": "n"}
 
 INP = [{"observation_id": "OBS-A"}, {"observation_id": "OBS-B"}]
@@ -119,15 +120,48 @@ def test_overskottsrad_kastas_nar_alla_begarda_finns():
     assert {r["observation_id"] for r in rows} == {"OBS-A", "OBS-B"}
     assert classify.validate(rows, INP) == []
 
-def test_overskottsrad_kastas_inte_nar_en_begard_saknas():
-    """Underskott faller. Saknas OBS-B gar det inte att veta om extraraden ar
-    den - ingenting kastas, och felet namner bade saknat och overflodigt."""
+def test_stympat_id_aterstalls_genom_uteslutning():
+    """Exakt ett begart id saknas, exakt ett okant finns: identiteten ar bestamd.
+
+    Uppmatt pa 2026/308: modellen skrev OBS-231 i stallet for
+    OBS-F3239B4CC67CBB1E. Ar de ovriga exakt matchade finns bara en observation
+    kvar som raden kan vara. Logik, inte likhet - ingen troskel, inget antagande
+    om ordning."""
     b = kopia()
-    b[1]["observation_id"] = "OBS-B_DUP_GUARD"
+    b[1]["observation_id"] = "OBS-231"
+    rows, _ = parsa(b, INP)
+    assert {r["observation_id"] for r in rows} == {"OBS-A", "OBS-B"}
+    assert rows[1]["stated_observation_id"] == "OBS-231"   # modellens egna star kvar
+    assert classify.validate(rows, INP) == []
+    assert classify.diagnostics(rows)["stated_id_differs"] == 1
+
+def test_tva_stympade_id_aterstalls_aldrig():
+    """Tva okanda och tva saknade: uteslutningen ar inte entydig. Ingenting rors."""
+    inp3 = INP + [{"observation_id": "OBS-C"}]
+    b = kopia() + [rad("OBS-C", "Fear", "Anger")]
+    b[1]["observation_id"] = "OBS-231"
+    b[2]["observation_id"] = "OBS-E238"
+    rows, _ = parsa(b, inp3)
+    assert {r["observation_id"] for r in rows} == {"OBS-A", "OBS-231", "OBS-E238"}
+    assert any("saknas" in f for f in classify.validate(rows, inp3))
+
+def test_stympat_id_aterstalls_aldrig_vid_dubblett():
+    """En dubblett betyder att radantalet stammer av fel anledning."""
+    b = kopia()
+    b[1]["observation_id"] = "OBS-A"
+    rows, _ = parsa(b, INP)
+    assert [r["observation_id"] for r in rows] == ["OBS-A", "OBS-A"]
+    assert any("dubbletter" in f for f in classify.validate(rows, INP))
+
+def test_overskottsrad_aterstalls_inte_som_id():
+    """Fel radantal: en extra rad ar inte ett stympat id. Ingenting rors."""
+    b = kopia()
+    extra = rad("OBS-B_DUP_GUARD", "Calm", "Curiosity")
+    b.append(extra)
+    b[1]["observation_id"] = "OBS-231"       # och ett stympat id ovanpa
     rows, artefakter = parsa(b, INP)
-    assert artefakter == 0 and len(rows) == 2
-    fel = classify.validate(rows, INP)
-    assert any("OBS-B" in f and "OBS-B_DUP_GUARD" in f for f in fel)
+    assert artefakter == 0 and len(rows) == 3
+    assert any("saknas" in f for f in classify.validate(rows, INP))
 
 def test_dubblerad_begard_rad_kastas_aldrig():
     """Forekommer ett begart id tva ganger gar det inte att veta vilken

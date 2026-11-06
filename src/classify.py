@@ -126,7 +126,7 @@ def validate(rows, inp):
         # ur scores i parse(), sa en kontroll av dem vore en kontroll av var egen
         # aritmetik. Kvar star kravet att modellen LEVERERAR sin egen bedomning.
         # Vi slutar krava att den stammer, inte att den finns.
-        for k in ("stated_primary", "stated_secondary"):
+        for k in ("stated_primary", "stated_secondary", "stated_observation_id"):
             if not str(r.get(k) or "").strip():
                 fel.append(f"{oid}: {k} saknas i svaret")
         if r.get("primary_emotion") == r.get("secondary_emotion"):
@@ -147,7 +147,10 @@ def diagnostics(rows):
     pris, och siffran ar gratis har - kalibreringsbatteriet far den utan eget
     anrop."""
     nz = [sum(1 for v in r["scores"].values() if v > 0) for r in rows]
-    return {"authored_scores_median": statistics.median(nz),
+    return {"stated_id_differs":
+                sum(1 for r in rows
+                    if r.get("stated_observation_id") != r.get("observation_id")),
+            "authored_scores_median": statistics.median(nz),
             "rows_with_two_or_fewer": sum(1 for n in nz if n <= 2),
             "unique_intensity": len({r["intensity"] for r in rows}),
             "unique_confidence": len({r["confidence"] for r in rows}),
@@ -301,6 +304,10 @@ def parse(msg, inp=None):
                 and all(isinstance(v, (int, float)) for v in s.values())):
             r["primary_emotion"], r["secondary_emotion"] = derive(s)
 
+    for r in rows:
+        if isinstance(r, dict):
+            r["stated_observation_id"] = r.get("observation_id")
+
     # Overskottsrader kastas bara nar varje begard observation finns exakt en
     # gang. Annars lamnas raderna ororda och validate() rapporterar bristen.
     if inp is not None:
@@ -311,7 +318,48 @@ def parse(msg, inp=None):
                       and r.get("observation_id") in want]
             artefakter += len(rows) - len(behall)
             rows = behall
+        else:
+            rows = repair_id(rows, want)
     return rows, artefakter
+
+
+def repair_id(rows, want):
+    """Ett stympat observation_id aterstalls genom UTESLUTNING, aldrig gissning.
+
+    Modellen stympar eller konfabulerar ibland ett observation_id: OBS-231 i
+    stallet for OBS-F3239B4CC67CBB1E, eller ett fullangdigt men pahittat
+    OBS-D8238B561030425F. Uppmatt i korningen av 2026/308: 11 av 18 misslyckade
+    forsok, 61 procent, var id-fel. Orsaken ar strukturell - sexton slumpmassiga
+    hextecken ar den enda delen av utdatan som bar noll information och noll
+    redundans, sa det finns ingenting for modellen att upptacka felet mot.
+
+    EN INNEHALLSKONTROLL PROVADES OCH FORKASTADES. Jaccard mellan indatans
+    rubrik och modellens neutral_event_representation, matt pa 1750 verifierat
+    korrekta rader: korrekta par gar ner till 0,000 och slumppar upp till 0,700,
+    sa ingen troskel separerar dem. Aven radvis sekvenskontroll faller: lagsta
+    kvot mellan ratt linje och basta felstallning var 1,0x, och ett simulerat
+    radbortfall kunde ge HOGRE poang an originalet. En sadan grind hade sett ut
+    som en kontroll utan att vara en.
+
+    Uteslutning kraver ingen troskel och inget antagande om ordning. Saknas
+    exakt ett begart id och finns exakt ett okant, ar de ovriga 49 exakt
+    matchade - och da finns det bara en observation kvar som den okanda raden
+    kan vara. Det ar logik, inte likhet.
+
+    Strikt: ett enda id per batch. Tva eller fler okanda, en dubblett, eller
+    fel radantal - ingenting rors, och validate() faller batchen som forut.
+    Modellens egna varde star kvar som stated_observation_id, sa att andelen
+    gar att mata over tid.
+    """
+    ids = [r.get("observation_id") for r in rows if isinstance(r, dict)]
+    if len(ids) != len(want) or len(set(ids)) != len(ids):
+        return rows
+    saknas = sorted(want - set(ids))
+    over = [r for r in rows if isinstance(r, dict) and r.get("observation_id") not in want]
+    if len(saknas) != 1 or len(over) != 1:
+        return rows
+    over[0]["observation_id"] = saknas[0]
+    return rows
 
 JOURNAL_FALT = ("model", "prompt_sha256", "spec_sha256")
 
