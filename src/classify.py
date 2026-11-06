@@ -118,6 +118,26 @@ def passdir(day):
     d.mkdir(parents=True, exist_ok=True)
     return d
 
+def _for_manga_decimaler(v, prec):
+    """Fler decimaler an specen tillater.
+
+    Jamfor mot round() och inte mot repr(): ett varde som kom ur JSON som 0.06
+    ar narmaste double till 0.06, och repr av ett BERAKNAT varde kan ge
+    0.060000000000000005 utan att modellen skrivit nagot fel. Toleransen gor
+    kontrollen till en fraga om vad modellen skrev, inte om flyttal."""
+    return abs(float(v) - round(float(v), prec)) > 1e-9
+
+def spec_precision():
+    """Decimalkravet ur den frysta specen, aldrig hardkodat."""
+    import json as _j
+    sp_ = _j.loads(SPEC_FILE.read_text(encoding="utf-8"))
+    v = {sp_.get("score_precision"), sp_.get("intensity_precision"),
+         sp_.get("confidence_precision")}
+    v.discard(None)
+    if len(v) != 1:
+        raise SystemExit(f"specens tre precisionsfalt sager olika: {sorted(v)}")
+    return int(v.pop())
+
 def validate(rows, inp):
     """Returnerar lista med fel. Tom lista = godkant. Foljer specens validation_policy."""
     fel = []
@@ -166,6 +186,17 @@ def validate(rows, inp):
             v = r.get(k)
             if not isinstance(v, (int, float)) or not 0 <= v <= 1:
                 fel.append(f"{oid}: {k} utanfor 0-1")
+        # Specen anger score_precision, intensity_precision och
+        # confidence_precision = 2, och ingenting kontrollerade det. Ett krav
+        # utan efterkontroll ar ett onskemal. Referensmodellen bryter det aldrig
+        # - uppmatt 2026-11-06 pa 1800 rader, noll overtradelser - sa grinden
+        # utesluter ingen modell som gor det specen kraver.
+        prec = spec_precision()
+        for namn, v in [(f"scores[{k}]", vv) for k, vv in (s.items() if isinstance(s, dict) else [])] \
+                       + [("intensity", r.get("intensity")), ("confidence", r.get("confidence"))]:
+            if isinstance(v, (int, float)) and _for_manga_decimaler(v, prec):
+                fel.append(f"{oid}: {namn} har fler an {prec} decimaler: {v}")
+                break
         if not str(r.get("classification_note", "")).strip():
             fel.append(f"{oid}: ingen classification_note")
     return fel

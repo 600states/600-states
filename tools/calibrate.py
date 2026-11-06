@@ -64,6 +64,44 @@ def deltaE(h1, h2):
     a, b = _lab(h1), _lab(h2)
     return sum((x - y) ** 2 for x, y in zip(a, b)) ** 0.5
 
+def grind_ur_spec(P, spec, fel):
+    """Grinden harleds ur specens egna falt, aldrig ur ett observerat snitt.
+
+    DEN FORSTA VERSIONEN AV DEN HAR FUNKTIONEN VAR FEL, och felet ar vart att
+    skriva ut. Den kravde 13-15 av 16 egenforfattade poang. Den siffran kom
+    inte ur specen utan ur en observation i handovern om hur pilotens
+    klassificerare betedde sig, och jag gjorde en beskrivning till en regel.
+
+    Uppmatt 2026-11-06 pa referensmodellens 600 rader: de atta lagsta poangen i
+    varje rad ar exakt 0.00 i 34 procent av fallen och har medianen 0.020.
+    Referensmodellen nollar alltsa sjalv en tredjedel av svansen. Bandet 13-15
+    matte darmed svansens granularitet, inte om modellen gor matningen - och
+    uteslot claude-sonnet-5-5 pa fel grund.
+
+    Specen gor foljande obligatoriskt, och det ar vad grinden provar:
+      exact_16_score_keys_required
+      all_scores_range_0_1
+      score/intensity/confidence_precision
+      mechanical_zero_fill_prohibited - specens eget skal beskriver fjorton av
+        sexton mekaniskt satta till noll, alltsa tva kvar; mattet ar
+        rows_with_two_or_fewer
+      primary_must_rank_first / secondary_must_rank_second - harleds, alltid uppfyllt
+
+    Specen sager uttryckligen att gleshet och numerisk upplosning ska
+    RAPPORTERAS, inte falla en korning:
+      two_sparse_batch_is_diagnostic_warning_not_automatic_semantic_failure
+      batch_sparsity_and_numeric_resolution_must_be_reported
+    De star darfor bland de rapporterade matten och inte i grinden."""
+    skal = []
+    if fel:
+        skal.append(f"{len(fel)} valideringsfel, forst: {fel[0][:70]}")
+    if spec.get("mechanical_zero_fill_prohibited"):
+        glesa = sum(classify.diagnostics(list(p.values()))["rows_with_two_or_fewer"] for p in P)
+        if glesa:
+            skal.append(f"{glesa} rader med hogst tva egna poang "
+                        f"(mechanical_zero_fill_prohibited)")
+    return (not skal), (skal or ["uppfyller specens obligatoriska falt"])
+
 def kor(modeller, passes=3, dry=False):
     prompt, spec = classify.gate_instrument()
     bat = json.loads(BATTERI.read_text(encoding="utf-8"))
@@ -110,6 +148,9 @@ def kor(modeller, passes=3, dry=False):
                 if fel and forsok < classify.MAX_TRIES:
                     print(f"    pass{p} forsok {forsok}: {len(fel)} fel, forst: {fel[0][:70]}")
                     continue
+                rap = REMEDIATION / "kalibrering_rasvar"
+                rap.mkdir(parents=True, exist_ok=True)
+                write_text(rap / f"{m}_pass{p}.txt", classify.raw_text(msg))
                 P.append({r["observation_id"]: r for r in rows})
                 usage.append(classify.usage_fields(msg)); fel_tot += fel; art_tot += art
                 print(f"    pass{p}  {len(rows)} rader  {dg['authored_scores_median']:.0f}/16 "
@@ -131,13 +172,18 @@ def kor(modeller, passes=3, dry=False):
               for r in kon if r["observation_id"] in refrad]
         pri_lika = sum(1 for r in kon if r["primary_emotion"] == refrad[r["observation_id"]]["primary_emotion"])
         med = [classify.diagnostics(list(p.values()))["authored_scores_median"] for p in P]
-        grind = (not fel_tot and min(med) >= 13 and max(med) <= 16
-                 and all(classify.diagnostics(list(p.values()))["rows_with_two_or_fewer"] == 0 for p in P))
+        grind, skal = grind_ur_spec(P, spec, fel_tot)
         resultat[m] = {
             "grind": "KLARAR" if grind else "FALLER",
+            "grindens_skal": skal,
             "tankande": classify.tankande_for(m),
             "valideringsfel": len(fel_tot), "emissionsartefakter": art_tot,
             "egna_poang_median": med,
+            "poang_over_0_05_median": [statistics.median(
+                [sum(1 for v in r["scores"].values() if v >= 0.05) for r in p.values()])
+                for p in P],
+            "unika_intensity": [classify.diagnostics(list(p.values()))["unique_intensity"] for p in P],
+            "unika_confidence": [classify.diagnostics(list(p.values()))["unique_confidence"] for p in P],
             "sjalvoverensstammelse": {k: round(v, 3) for k, v in sjalv.items()},
             "primary_lika_referensen": f"{pri_lika}/{len(kon)}",
             "deltaE_mot_referensen": {"median": round(statistics.median(dE), 2),
