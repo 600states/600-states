@@ -183,6 +183,11 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:24px;justify-content:space-between;
 footer a{color:var(--muted);text-decoration:none}
 footer a:hover{color:var(--ink)}
 footer .fine{font-size:var(--step-micro);color:var(--dim)}
+.lnk{color:var(--accent);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+.lnk:hover{color:var(--ink)}
+footer .repo{font-size:var(--step-micro);color:var(--dim)}
+footer .repo a{color:var(--muted);text-decoration:underline;text-underline-offset:3px}
+footer .repo a:hover{color:var(--ink)}
 
 @media (max-width:860px){
   /* Menyn doldes pa mobil, och da gick labs.html inte att na fran en telefon
@@ -251,6 +256,7 @@ footer .fine{font-size:var(--step-micro);color:var(--dim)}
   <div class="wrap axis-pad">
     <p class="r">600 STATES turns one UTC day of observed news into one image. Six hundred observations, each read through a frozen emotional protocol, each converted to a colour by a frozen formula, laid out in the order they happened across a 30&nbsp;&times;&nbsp;20 field. Nothing is composed. No colour is chosen. If a day comes out ugly, the day came out ugly.</p>
     <p class="r" style="margin-top:1.15em">That is an easy thing to claim and a hard thing to be true. So this page is the audit &mdash; including the findings that made finished work worthless.</p>
+    <p class="r" style="margin-top:1.15em">And the instrument is open. Every gate named below is a few lines of code you can read: <a class="lnk" href="https://github.com/600states/600-states">github.com/600states/600-states</a>. An audit you cannot check is an advertisement.</p>
   </div>
 </section>
 
@@ -519,6 +525,7 @@ footer .fine{font-size:var(--step-micro);color:var(--dim)}
 <footer>
   <div class="wrap">
     <p><a href="/">&larr; 600 STATES</a></p>
+    <p class="repo">Source: <a href="https://github.com/600states/600-states">github.com/600states/600-states</a></p>
     <p class="fine">The artwork is the Proof of State. The manifest is the Proof of Work.</p>
   </div>
 </footer>
