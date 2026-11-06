@@ -233,7 +233,7 @@ footer .repo a:hover{color:var(--ink)}
       <p class="sub">Every method error found while building the instrument, what the measurement was, and what changed because of it.</p>
     </div>
     <div class="tile hero-say lift">
-      <p class="lead">The instrument has been wrong ten times. This is the list.</p>
+      <p class="lead">The instrument has been wrong eleven times. This is the list.</p>
 
       <ol class="toc">
         <li><a href="#hash"><span>I</span>The hash that could not be reproduced</a></li>
@@ -246,6 +246,7 @@ footer .repo a:hover{color:var(--ink)}
         <li><a href="#quantize"><span>VIII</span>Seven values out of a hundred and one</a></li>
         <li><a href="#noise"><span>IX</span>The instrument does not reproduce itself</a></li>
         <li><a href="#onerun"><span>X</span>One day, one run, one outcome</a></li>
+        <li><a href="#temp"><span>XI</span>The parameter that did not exist</a></li>
       </ol>
       <p class="note">Most of these have the same shape: the rule existed, and no line of code enforced it. That is the lesson the whole project now runs on &mdash; <b>a rule that cannot stop a run is a wish.</b></p>
     </div>
@@ -459,6 +460,40 @@ footer .repo a:hover{color:var(--ink)}
         <p><b>No flag opens it.</b> Redoing a day requires deleting the lock file by hand: a visible, deliberate act that no scheduled job performs by accident. And the run journal grows and is never overwritten, so the number of calls made for a day is publishable evidence that the rule was kept.</p>
       </div>
     </article>
+
+    <article class="ch r" id="temp">
+      <div class="ch-head">
+        <p class="ch-num">XI</p>
+        <div><h2>The parameter that did not exist</h2><p class="when">6 November 2026</p></div>
+      </div>
+      <div class="ch-body">
+        <p>Temperature &mdash; how much randomness the model is allowed &mdash; was the last setting in this project nobody had measured. The run journal recorded it as unset and unmeasured, which was honest but unfinished. So the calibration battery was extended to measure it: the default against zero, six calls, $2.58.</p>
+        <p>The second run failed before it left the machine, three times in a row:</p>
+        <blockquote>
+          <p><code>Messages.stream() got an unexpected keyword argument 'temperature'</code></p>
+        </blockquote>
+        <p>Checked three ways: the SDK signature has neither <code>temperature</code> nor <code>top_p</code>; the words do not appear anywhere in its message types; the API reference lists the body parameters without them. <b>Sampling is not something you can set for this generation of models.</b> The control is called effort, and it was already written out in the instrument.</p>
+        <p>The question is closed &mdash; but not by a measurement. There was nothing there to measure. The old note said the vendor&rsquo;s default applies, which implies a value someone could have chosen and we declined to. No such value exists in this chain. The field stays in the journal, because a field that disappears reads as though the question was never asked, but the note now says what is true and how it was checked.</p>
+        <p>The mistake was not the instrument&rsquo;s. Nobody read the signature before writing the measurement. Three minutes would have been enough.</p>
+        <p><b>Then the measurement erased another measurement.</b> That morning the calibration file had been fixed against exactly this: one run used to delete another, so results are merged rather than replaced. The merge kept entries for models that were <em>not</em> in the new run. It protected against a different model &mdash; but not against <b>the same model run again</b>, which is the commonest case of all. The evening run took the morning&rsquo;s place without a word, and the raw responses with it.</p>
+        <p>What was lost was not a duplicate. <b>The difference between two runs of an identical configuration is the noise floor</b>, and that measurement needs both of them. The entry was recovered from file history, and it gave the number that would otherwise have gone: finding&nbsp;IX measured against a reference manifest, this one measured against the instrument repeating itself.</p>
+        <div class="data">
+          <table>
+            <caption>Two runs of the same model on the same battery, nothing set differently</caption>
+            <thead><tr><th>Measure</th><th class="n">morning</th><th class="n">evening</th><th class="n">change</th></tr></thead>
+            <tbody>
+              <tr><th>Self&#8209;agreement, primary</th><td class="n">0.78</td><td class="n">0.76</td><td class="n">&minus;0.02</td></tr>
+              <tr><th>Mean deviation, sixteen scores</th><td class="n"><b>0.0179</b></td><td class="n"><b>0.0192</b></td><td class="n"><b>+0.0013</b></td></tr>
+              <tr><th>Primary states equal to reference</th><td class="n">42/50</td><td class="n">41/50</td><td class="n">&minus;1 tile</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><b>The scores barely move; the labels move more.</b> That is why the model was chosen on the scores and not on the labels: the score measure reads 800 values instead of 50, holds nearly still when the instrument reads the same day again, and is the quantity the colour model actually uses.</p>
+        <blockquote class="pull">
+          <p>A guard against overwriting has to be tested against the commonest case, not the most interesting one.</p>
+        </blockquote>
+      </div>
+    </article>
   </div>
 </section>
 
@@ -493,7 +528,6 @@ footer .repo a:hover{color:var(--ink)}
       <div class="ch-body">
         <p>Honest work has an open list, and this is ours.</p>
         <ul class="open">
-          <li><b>Temperature.</b> Not set in the code, not in the spec, never logged. Unset means the vendor&rsquo;s default applies &mdash; a value nobody owns and that can change with a model version. The run journal records it as unmeasured. It must be measured, not guessed. The November calibration measured model choice, not temperature, and that is the one promised measurement that did not happen.</li>
           <li><b>The floor for evidence with a content hash.</b> 94.3% measured. Which floor should apply is undecided, so the number is reported and not approved.</li>
           <li><b>Secondary states are less stable than primary.</b> 0.56 against 0.78 in self&#8209;agreement. Whether the colour model should weight secondary lower is open &mdash; and must not be decided on the basis of which option looks better.</li>
           <li><b>The reach of the one&#8209;run rule.</b> The gate stops a re&#8209;run of a frozen day, but deleting the lock file by hand leaves no trace inside that day&rsquo;s own folder. An append&#8209;only freeze log outside it is proposed and not yet built.</li>
@@ -516,6 +550,7 @@ footer .repo a:hover{color:var(--ink)}
       <div class="rule r"><p>Every derived field carries its derivation.</p></div>
       <div class="rule r"><p>A failed call must leave as much trace as a successful one.</p></div>
       <div class="rule r"><p>A rejected solution is documented as carefully as an adopted one.</p></div>
+      <div class="rule r"><p>A guard against overwriting is tested against the commonest case.</p></div>
       <div class="rule r"><p>You may write down what is already true. You may not invent what nobody measured.</p></div>
     </div>
     <p class="meta r">The series starts on 1&nbsp;December&nbsp;2026. One work per UTC day, for as long as there are days.</p>
