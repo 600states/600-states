@@ -77,20 +77,23 @@ img{display:block;max-width:100%}
 .hero-say .lead{font-size:clamp(1.2rem,1.9vw,2rem);line-height:1.18;letter-spacing:-0.035em}
 .hero-say .note{font-size:var(--step-small);line-height:1.5;color:var(--muted);max-width:52ch}
 .toc{list-style:none;margin:0;padding:0;counter-reset:none;display:grid;gap:2px;flex:1;align-content:center}
+/* Raderna ar brickor med mellanrum, inte rader med linjer under: startsidan
+   skiljer allt med farg och mellanrum och har inte en enda harfin linje. */
 .toc a{display:grid;grid-template-columns:4.5ch 1fr;gap:12px;align-items:baseline;text-decoration:none;
-  padding:7px 0;font-size:var(--step-micro);color:var(--muted);border-bottom:1px solid #221d28;transition:color .2s}
-.toc li:last-child a{border-bottom:0}
-.toc a:hover{color:var(--accent)}
+  padding:7px 12px;font-size:var(--step-micro);color:var(--muted);background:#1f1a24;transition:color .2s,background .2s}
+.toc a:hover{color:var(--accent);background:#241e2a}
 .toc span{color:var(--dim);font-variant-numeric:tabular-nums}
 .toc a:hover span{color:var(--accent)}
 @media (max-width:860px){.toc{display:none}}
 
 section{padding:clamp(64px,8vw,140px) var(--m)}
 .wrap{max-width:1180px;margin:0 auto}
-.axis-pad{max-width:72ch}
+/* Matten ligger pa texten, inte pa omslaget. Som .wrap{margin:0 auto} centrerades
+   sektionen pa sin egen bredd och borjade 206px till hoger om kapitlens vanstermarginal. */
+.axis-pad > *{max-width:72ch}
 
 /* --- kapitel --- */
-.ch{border-top:1px solid #26212b;padding-top:clamp(28px,3vw,52px);margin-top:clamp(56px,7vw,120px)}
+.ch{padding-top:clamp(28px,3vw,52px);margin-top:clamp(56px,7vw,120px)}
 .ch:first-of-type{margin-top:0}
 .ch-head{display:grid;grid-template-columns:5.5ch 1fr;gap:clamp(16px,2vw,40px);align-items:start}
 .ch-num{font-size:clamp(1.6rem,2.6vw,2.6rem);font-weight:500;letter-spacing:-0.05em;color:var(--accent);line-height:0.9}
@@ -128,7 +131,6 @@ td.n,th.n{text-align:right;padding-right:0;font-variant-numeric:tabular-nums}
 
 /* --- kapitel IX, tyngdpunkten --- */
 .core{background:var(--paper);color:var(--paper-ink)}
-.core .ch{border-top-color:#dcd8d4}
 .core .ch-num{color:var(--grief)}
 .core .ch-body p{color:#2b2830}
 .core .when{color:var(--paper-muted)}
@@ -150,7 +152,7 @@ td.n,th.n{text-align:right;padding-right:0;font-variant-numeric:tabular-nums}
 .end .big{font-size:clamp(1.5rem,3vw,3rem);line-height:1.12;letter-spacing:-0.04em;max-width:24ch}
 .end .meta{margin-top:clamp(24px,3vw,44px);font-size:var(--step-small);line-height:1.55;max-width:58ch;opacity:.92}
 
-footer{padding:clamp(40px,5vw,80px) var(--m);border-top:1px solid #26212b}
+footer{padding:clamp(40px,5vw,80px) var(--m);background:var(--surface)}
 footer .wrap{display:flex;flex-wrap:wrap;gap:24px;justify-content:space-between;align-items:baseline}
 footer a{color:var(--muted);text-decoration:none}
 footer a:hover{color:var(--ink)}
@@ -158,8 +160,7 @@ footer .fine{font-size:var(--step-micro);color:var(--dim)}
 
 @media (max-width:860px){
   .topbar{grid-template-columns:56px 1fr}
-  .t-act{display:none}
-  .t-nav{padding-left:16px;gap:18px;overflow-x:auto}
+  .t-nav{display:none}
   .hero{grid-template-columns:1fr}
   .ch-head{grid-template-columns:1fr;gap:10px}
 }
