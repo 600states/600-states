@@ -89,6 +89,38 @@ def build_data(data_root: Path, out: Path) -> None:
     print("  data.js        %7d bytes  %s" % ((out / "data.js").stat().st_size, agreement))
 
 
+TALORD = {"ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14,
+          "fifteen": 15, "sixteen": 16, "seventeen": 17, "eighteen": 18,
+          "nineteen": 19, "twenty": 20}
+
+
+def gate_hjaltens_rakning(html: str) -> int:
+    """Siffran i hjalten ska vara lika med antalet kapitel pa sidan.
+
+    Sidan pastod "wrong eleven times" och listade tio kapitel. Felet ar inte
+    siffran utan att ingenting kunde fanga den: en rakning i en rubrik ar ett
+    pastaende som vem som helst kan kontrollera, och det fanns ingen kontroll.
+    Att lamna den ogrindad pa just den har sidan vore att upprepa kapitel IV,
+    "The check that could not fail".
+
+    Returnerar antalet kapitel. Faller med besked om de inte stammer."""
+    kapitel = len(re.findall(r'<p class="ch-num">[IVXLC]+</p>', html))
+    lead = re.search(r'<p class="lead">(.*?)</p>', html, re.S)
+    if not lead:
+        raise SystemExit("hittar ingen <p class=\"lead\"> att rakna mot")
+    ord_ = re.search(r"\b(%s)\b" % "|".join(TALORD), lead.group(1))
+    if not ord_:
+        raise SystemExit("hjalten innehaller inget talord ur ordboken: "
+                         + lead.group(1)[:80])
+    sagt = TALORD[ord_.group(1)]
+    if sagt != kapitel:
+        raise SystemExit(
+            "hjalten sager %s (%d) men sidan har %d kapitel — "
+            "andra ordet eller kapitlen, bygget stoppas"
+            % (ord_.group(1), sagt, kapitel))
+    return kapitel
+
+
 def build_stamp() -> str:
     """Kort commit-hash, sa att den utrullade adressen sjalv kan sagas vilken
     version som ligger ute. Ett tillagg i tradet markeras, annars ljuger
@@ -123,6 +155,9 @@ def main(argv):
         html, n = re.subn(r'(<meta name="build" content=")[^"]*(">)', r"\g<1>" + stamp + r"\g<2>", html, count=1)
         if n != 1:
             raise SystemExit("hittar ingen byggstampel i " + sida)
+        if sida == "labs.html":
+            kap = gate_hjaltens_rakning(html)
+            print("  %-14s %d kapitel, hjaltens rakning stammer" % ("grind:", kap))
         # newline="\n": utan den oversatter Python \n till CRLF pa Windows, och
         # med core.autocrlf=true i arbetstradet blev den utrullade filens bytes
         # beroende av vilken maskin som byggde. Servern ar Unix och det som
