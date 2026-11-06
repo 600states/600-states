@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "site/labs.html"
+        ],
+        "createdAt": "2026-11-06T15:54:21.656Z",
+        "reason": "falsk traff: detektorn loser inte clamp(). Uppmatt i webblasare vid 422px (clampens golv): minsta inset .data 14px, section.core/.end 16px, .rule 18px, blockquote 18px, .hero-name 20px - alla over regelns 12-16px, och vaxer med bredden. index.html ger samma traffar pa samma clamp-paddingar."
+      }
+    ]
+  }
+}
