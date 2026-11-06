@@ -7,6 +7,8 @@
 <meta name="description" content="One UTC day becomes 600 news observations, 600 colours and one irreversible visual state. The series begins 1 December 2026.">
 <link rel="canonical" href="https://600states.com/">
 <meta name="build" content="dev">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500&display=swap" rel="stylesheet">
@@ -79,7 +81,7 @@ img{display:block;max-width:100%}
 section[id]{scroll-margin-top:76px}
 .topbar{display:grid;gap:var(--gap);grid-template-columns:60px 1fr auto;height:60px}
 .tile{background:var(--surface);overflow:hidden;position:relative}
-.t-logo{background:var(--ink);color:var(--bg);display:grid;place-items:center;font-weight:500;font-size:18px;letter-spacing:-0.05em}
+.t-logo{background:var(--ink);color:var(--bg);display:grid;place-items:center;font-weight:500;font-size:18px;letter-spacing:-0.05em;text-decoration:none}
 .t-nav{display:flex;align-items:center;gap:28px;padding-left:var(--axis);font-size:var(--step-micro)}
 .t-nav a{text-decoration:none;color:var(--muted);transition:color .2s}
 .t-nav a:hover{color:var(--ink)}
@@ -240,7 +242,7 @@ h2{font-size:var(--step-head)}
 
 <div class="topbar-wrap">
   <div class="topbar">
-    <div class="tile t-logo lift" aria-hidden="true">600</div>
+    <a class="tile t-logo lift" href="/" aria-label="600 STATES, home">600</a>
     <nav class="tile t-nav lift" aria-label="Main">
       <a href="#about">About</a>
       <a href="#method">Method</a>

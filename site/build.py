@@ -121,6 +121,43 @@ def gate_hjaltens_rakning(html: str) -> int:
     return kapitel
 
 
+def cirkel_ur_verket(src: Path, storlek: int):
+    """En cirkel ur verket: diametern ar verkets fulla hojd, centrerad i bredd.
+
+    Faltet ar 30x20 rutor, alltsa bredare an hogt. Cirkeln tar hela hojden och
+    skar lika mycket fran bada sidorna, sa att mitten av verket ar mitten av
+    market. Masken ritas i fyrdubbel skala och krymps, annars blir kanten
+    trappstegsformad vid 16 px.
+    """
+    from PIL import Image, ImageDraw
+    im = Image.open(src).convert("RGB")
+    w, h = im.size
+    kvadrat = im.crop(((w - h) // 2, 0, (w - h) // 2 + h, h)).resize(
+        (storlek, storlek), Image.LANCZOS)
+    mask = Image.new("L", (storlek * 4, storlek * 4), 0)
+    ImageDraw.Draw(mask).ellipse((0, 0, storlek * 4 - 1, storlek * 4 - 1), fill=255)
+    kvadrat.putalpha(mask.resize((storlek, storlek), Image.LANCZOS))
+    return kvadrat
+
+
+def build_favicon(data_root: Path, out: Path):
+    """Markena genereras ur verket vid varje bygge, som data.js och
+    renderingarna: de ar harledda ur arkivet och hor darfor inte i git."""
+    src = render_for(data_root / "08_V3_STATES" / "STATE_001", "001")
+    ico = out / "favicon.ico"
+    cirkel_ur_verket(src, 48).save(ico, sizes=[(16, 16), (32, 32), (48, 48)])
+    # Apple visar ingen genomskinlighet, den blir svart. Lagg cirkeln pa
+    # sidans egen bakgrund i stallet for att lata systemet valja.
+    from PIL import Image
+    platta = Image.new("RGB", (180, 180), (10, 10, 11))
+    c = cirkel_ur_verket(src, 180)
+    platta.paste(c, (0, 0), c)
+    apple = out / "apple-touch-icon.png"
+    platta.save(apple)
+    for f in (ico, apple):
+        print("  %-14s %7d bytes" % (f.name, f.stat().st_size))
+
+
 def build_stamp() -> str:
     """Kort commit-hash, sa att den utrullade adressen sjalv kan sagas vilken
     version som ligger ute. Ett tillagg i tradet markeras, annars ljuger
@@ -166,6 +203,8 @@ def main(argv):
         print("  %-14s %7d bytes  build=%s" % (sida, (out / sida).stat().st_size, stamp))
 
     build_data(data_root, out)
+
+    build_favicon(data_root, out)
 
     for day in DAYS:
         src = render_for(data_root / "08_V3_STATES" / ("STATE_" + day), day)

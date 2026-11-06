@@ -37,13 +37,19 @@ En annan malmapp gar att ange: `python site/build.py <malmapp>`.
     index.html
     labs.html
     data.js
+    favicon.ico
+    apple-touch-icon.png
     img/state_001.png
     img/state_002.png
     img/state_003.png
     img/state_004.png
 
-Sex filer, cirka 416 KB. Ingenting annat. Mappen ar avsedd att speglas rakt
+Nio filer, cirka 480 KB. Ingenting annat. Mappen ar avsedd att speglas rakt
 upp, sa lagg aldrig nagot i den som inte ska vara publikt lasbart.
+
+Markena genereras ur state_001 vid varje bygge, som allt annat harlett ur
+arkivet: en cirkel ur verkets fulla hojd, centrerad i bredd. Darfor ligger de
+inte i git.
 
 ### .htaccess ligger bara pa servern
 
