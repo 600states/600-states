@@ -38,6 +38,37 @@ PASSES      = (1, 2, 3)
 MAX_TRIES   = 3
 DEFAULT_MODEL = os.environ.get("STATES_MODEL", "claude-opus-5")
 
+# TAENKANDET AR EN INSTRUMENTPARAMETER. Hur den uttrycks skiljer sig per modell,
+# och det ar transport, inte instruktion - ingen modell far en annan prompt.
+# Men att en modell inte KAN uppfylla parametern ar ett resultat, inte en
+# teknikalitet: uppmatt 2026-11-06 gav claude-opus-5-5 felet
+# '"thinking.type.disabled" is not supported for this model', alltsa finns bara
+# adaptivt taenkande med effort-reglering. Ett resonemangssteg vars innehall
+# inte returneras gar da inte att undvika, och det ar vad vi avvisade.
+TANKANDE = {
+    "claude-opus-5":     {"type": "disabled"},
+    "claude-haiku-5-5":  {"type": "disabled"},
+    "claude-sonnet-5-5": {"type": "between_tools"},   # modellen taenker inte fore svaret
+}
+
+def tankande_for(model):
+    return TANKANDE.get(model, {"type": "disabled"})
+
+def ska_forsoka_igen(e):
+    """Bara fel som kan bli ratt vid nasta forsok.
+
+    Ett 400 blir aldrig ratt vid forsok tva: fel parameter ar fel parameter.
+    Uppmatt 2026-11-06 i kalibreringen - nio rundresor av tre konfigurationsfel,
+    eftersom BadRequestError arver APIError. Samma gransdragning som for
+    ValueError: ett fel som uppstod innan begaran accepterades ar ett
+    konfigurationsfel, och tre tysta omforsok doljer signalen."""
+    import anthropic
+    if isinstance(e, json.JSONDecodeError):
+        return True                      # svaret kom fram, det var trasigt
+    if isinstance(e, anthropic.APIStatusError):
+        return e.status_code == 429 or e.status_code >= 500
+    return isinstance(e, anthropic.APIError)   # anslutning, timeout
+
 OUTPUT_RULE = (
     "Return ONLY a JSON array. One object per supplied observation, in the same order, "
     "with exactly these keys: observation_id, neutral_event_representation, scores, "
@@ -184,7 +215,7 @@ def call(client, model, prompt, items):
     """
     with client.messages.stream(
         model=model, max_tokens=32000,
-        thinking={"type": "disabled"},
+        thinking=tankande_for(model),
         system=[{"type": "text", "text": prompt, "cache_control": {"type": "ephemeral"}},
                 {"type": "text", "text": OUTPUT_RULE, "cache_control": {"type": "ephemeral"}}],
         messages=[{"role": "user", "content": json.dumps(
@@ -463,7 +494,8 @@ def run(day, only_pass=None, budget=None, model=DEFAULT_MODEL, dry=False):
     # manifestets proveniensansprak; en samplingsparameter som ingen ager far
     # inte saknas i den - en okand parameter ska sta som okand. Vardet satts
     # forst nar kalibreringsbatteriet matt vad det gor med utfallet.
-    rec = {"state_id": sp.state_id(day), "model": model, "thinking_disabled": True,
+    rec = {"state_id": sp.state_id(day), "model": model,
+           "thinking": tankande_for(model),
            "temperature": None,
            "temperature_note": "ej satt; leverantorens standardvarde galler; omatt",
            "prompt_sha256": sha(PROMPT_FILE), "spec_sha256": sha(SPEC_FILE),
@@ -490,6 +522,11 @@ def run(day, only_pass=None, budget=None, model=DEFAULT_MODEL, dry=False):
                     rows, artefakter = parse(msg, items)
                     usage = msg.usage
                 except (anthropic.APIError, json.JSONDecodeError) as e:
+                    if not ska_forsoka_igen(e):
+                        print(f"  pass{p} batch{n:02d}: {type(e).__name__}: {e}")
+                        print("  INGET OMFORSOK — felet uppstod innan begaran accepterades")
+                        spara_misslyckat(d, p, n, attempt, msg)
+                        raise
                     # Bara fel som uppstod efter att begaran gick ivag far ett nytt
                     # forsok. Ett fel fore dess ar ett konfigurationsfel - fel
                     # parameter, fel modellnamn, saknad nyckel - och det kan aldrig

@@ -294,3 +294,31 @@ def test_id_felet_namner_dubbletter():
     rows[1]["observation_id"] = "OBS-A"              # samma id tva ganger
     fel = classify.validate(rows, INP)
     assert any("dubbletter" in f and "OBS-A" in f for f in fel)
+
+
+def test_tankandet_ar_per_modell():
+    """Instrumentparametern ar "taenkandet av". Hur den uttrycks skiljer sig per
+    modell, och det ar transport - ingen modell far en annan prompt.
+
+    Uppmatt 2026-11-06: claude-opus-5-5 svarar 400 pa "disabled" och erbjuder
+    bara adaptivt taenkande; claude-sonnet-5-5 vill ha "between_tools"."""
+    assert classify.tankande_for("claude-opus-5") == {"type": "disabled"}
+    assert classify.tankande_for("claude-sonnet-5-5") == {"type": "between_tools"}
+    assert classify.tankande_for("en-okand-modell") == {"type": "disabled"}
+
+def test_ett_400_kors_aldrig_om():
+    """Fel parameter ar fel parameter aven vid forsok tva. Uppmatt 2026-11-06:
+    nio rundresor av tre konfigurationsfel, eftersom BadRequestError arver
+    APIError."""
+    import anthropic
+    class Status(anthropic.APIStatusError):
+        # Byggs utan httpx: SDK:ns transportberoende ska inte avgora om ett test
+        # gar att kora. ska_forsoka_igen laser bara status_code och typen.
+        def __init__(self, kod): self.status_code = kod
+    status = Status
+    assert not classify.ska_forsoka_igen(status(400))   # fel parameter
+    assert not classify.ska_forsoka_igen(status(401))   # fel nyckel
+    assert classify.ska_forsoka_igen(status(429))       # hastighetsgrans
+    assert classify.ska_forsoka_igen(status(503))       # tillfalligt
+    assert classify.ska_forsoka_igen(json.JSONDecodeError("x", "y", 0))
+    assert not classify.ska_forsoka_igen(ValueError("lokalt fel"))

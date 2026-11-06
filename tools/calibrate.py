@@ -99,7 +99,12 @@ def kor(modeller, passes=3, dry=False):
                     msg = classify.call(client, m, prompt, obs)
                     rows, art = classify.parse(msg, obs)
                 except Exception as e:
-                    print(f"    pass{p} forsok {forsok}: {type(e).__name__}: {e}"); continue
+                    print(f"    pass{p} forsok {forsok}: {type(e).__name__}: {e}")
+                    if not classify.ska_forsoka_igen(e):
+                        print("      INGET OMFORSOK — felet uppstod innan begaran accepterades")
+                        fel_tot.append(f"{type(e).__name__}: {e}")
+                        break
+                    continue
                 fel = classify.validate(rows, obs)
                 dg = classify.diagnostics(rows)
                 if fel and forsok < classify.MAX_TRIES:
@@ -111,7 +116,9 @@ def kor(modeller, passes=3, dry=False):
                       f"egna poang  id-rep {dg['stated_id_differs']}  {time.time()-t0:.0f}s")
                 break
         if len(P) != passes:
-            resultat[m] = {"grind": "FALLER", "skal": f"bara {len(P)} av {passes} pass"}
+            resultat[m] = {"grind": "FALLER", "skal": f"bara {len(P)} av {passes} pass",
+                           "tankande": classify.tankande_for(m),
+                           "forsta_felet": fel_tot[0] if fel_tot else None}
             print(f"    GRIND: FALLER — bara {len(P)} av {passes} pass"); continue
 
         kon = consensus.rows(P, inp)
@@ -128,6 +135,7 @@ def kor(modeller, passes=3, dry=False):
                  and all(classify.diagnostics(list(p.values()))["rows_with_two_or_fewer"] == 0 for p in P))
         resultat[m] = {
             "grind": "KLARAR" if grind else "FALLER",
+            "tankande": classify.tankande_for(m),
             "valideringsfel": len(fel_tot), "emissionsartefakter": art_tot,
             "egna_poang_median": med,
             "sjalvoverensstammelse": {k: round(v, 3) for k, v in sjalv.items()},
