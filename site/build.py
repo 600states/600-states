@@ -123,7 +123,11 @@ def main(argv):
         html, n = re.subn(r'(<meta name="build" content=")[^"]*(">)', r"\g<1>" + stamp + r"\g<2>", html, count=1)
         if n != 1:
             raise SystemExit("hittar ingen byggstampel i " + sida)
-        io.open(out / sida, "w", encoding="utf-8").write(html)
+        # newline="\n": utan den oversatter Python \n till CRLF pa Windows, och
+        # med core.autocrlf=true i arbetstradet blev den utrullade filens bytes
+        # beroende av vilken maskin som byggde. Servern ar Unix och det som
+        # ligger ute ar LF.
+        io.open(out / sida, "w", encoding="utf-8", newline="\n").write(html)
         print("  %-14s %7d bytes  build=%s" % (sida, (out / sida).stat().st_size, stamp))
 
     build_data(data_root, out)
