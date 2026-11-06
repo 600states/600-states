@@ -57,6 +57,9 @@ img{display:block;max-width:100%}
 }
 
 /* --- topbar, identisk med startsidan --- */
+/* Menyn ligger utanfor .board for att position:sticky bara galler inom sitt
+   eget omslag: lag den kvar i .board slutade den folja med nar hero tog slut. */
+.topbar-wrap{position:sticky;top:0;z-index:30;background:var(--bg);padding:var(--gap) var(--gap) 0}
 .board{padding:var(--gap);display:grid;gap:var(--gap)}
 .topbar{display:grid;gap:var(--gap);grid-template-columns:60px 1fr auto;height:60px}
 .tile{background:var(--surface);overflow:hidden;position:relative}
@@ -69,7 +72,14 @@ img{display:block;max-width:100%}
 .t-act:hover{background:var(--accent);color:var(--accent-ink)}
 
 /* --- hero --- */
-.hero{display:grid;gap:var(--gap);grid-template-columns:1fr 1fr;min-height:62svh}
+.hero{display:grid;gap:var(--gap);grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;min-height:62svh}
+.hero-name{grid-column:1;grid-row:1}
+/* Verket far en egen ruta bredvid namnet, precis som pa startsidan, och aldrig
+   text ovanpa: ett falt av 600 farger ger ingen kontrast att lasa mot.
+   object-fit:contain, for verk beskars aldrig. */
+.hero-pic{grid-column:1;grid-row:2;background:#0B0E12;min-height:0}
+.hero-pic img{width:100%;height:100%;object-fit:contain}
+.hero-say{grid-column:2;grid-row:1 / span 2;justify-content:space-between}
 .hero-name{background:var(--paper);color:var(--paper-ink);display:flex;flex-direction:column;justify-content:flex-end;padding:clamp(20px,2.4vw,40px)}
 .hero-name h1{font-size:clamp(3rem,1rem + 8.5vw,9.5rem);line-height:0.82}
 .hero-name .sub{font-size:clamp(1.125rem,1.1vw,1.3125rem);line-height:1.3;letter-spacing:-0.015em;color:var(--paper-muted);max-width:36ch;margin-top:20px}
@@ -93,7 +103,7 @@ section{padding:clamp(64px,8vw,140px) var(--m)}
 .axis-pad > *{max-width:72ch}
 
 /* --- kapitel --- */
-.ch{padding-top:clamp(28px,3vw,52px);margin-top:clamp(56px,7vw,120px)}
+.ch{scroll-margin-top:76px;padding-top:clamp(28px,3vw,52px);margin-top:clamp(56px,7vw,120px)}
 .ch:first-of-type{margin-top:0}
 .ch-head{display:grid;grid-template-columns:5.5ch 1fr;gap:clamp(16px,2vw,40px);align-items:start}
 .ch-num{font-size:clamp(1.6rem,2.6vw,2.6rem);font-weight:500;letter-spacing:-0.05em;color:var(--accent);line-height:0.9}
@@ -166,14 +176,15 @@ footer .fine{font-size:var(--step-micro);color:var(--dim)}
 @media (max-width:860px){
   .topbar{grid-template-columns:56px 1fr}
   .t-nav{display:none}
-  .hero{grid-template-columns:1fr}
+  .hero{grid-template-columns:1fr;grid-template-rows:auto}
+  .hero-name,.hero-pic,.hero-say{grid-column:1;grid-row:auto}
   .ch-head{grid-template-columns:1fr;gap:10px}
 }
 </style>
 </head>
 <body>
 
-<header class="board">
+<div class="topbar-wrap">
   <div class="topbar">
     <a class="tile t-logo lift" href="/">600</a>
     <nav class="tile t-nav lift" aria-label="Main">
@@ -185,11 +196,16 @@ footer .fine{font-size:var(--step-micro);color:var(--dim)}
     </nav>
     <a class="tile t-act lift" href="mailto:archive@600states.com?subject=600%20STATES%20%E2%80%94%20notify%20me%20before%20the%20first%20State&amp;body=Please%20tell%20me%20before%20the%20series%20opens%20on%201%20December%202026.%0A%0AName%3A%0AInterest%20(collector%2C%20press%2C%20research)%3A">Get the opening notice</a>
   </div>
+</div>
 
+<header class="board">
   <div class="hero">
     <div class="tile hero-name lift">
       <h1>600<br>LABS</h1>
       <p class="sub">Every method error found while building the instrument, what the measurement was, and what changed because of it.</p>
+    </div>
+    <div class="tile hero-pic lift">
+      <img src="img/state_001.png" alt="A rendered 600 STATES field: 600 solid colour squares in a 30 by 20 grid, one day of observed news." width="3087" height="2057">
     </div>
     <div class="tile hero-say lift">
       <p class="lead">The instrument has been wrong eleven times. This is the list.</p>
