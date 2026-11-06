@@ -5,7 +5,8 @@ ingen PHP. Sidan visar instrumentet, den ar inte en del av det.
 
 ## Vad som ligger har och vad som inte gor det
 
-    index.html   hela sidan, inklusive CSS och JS
+    index.html   startsidan, inklusive CSS och JS
+    labs.html    600 LABS - fynden, matningarna och vad som andrades
     build.py     bygger en uppladdningsbar mapp
 
 Repot bar sidan, inte dess innehall. `data.js` och de fyra renderingarna
@@ -34,6 +35,7 @@ En annan malmapp gar att ange: `python site/build.py <malmapp>`.
 `site/dist/` blir exakt det som ska ligga i `public_html`:
 
     index.html
+    labs.html
     data.js
     img/state_001.png
     img/state_002.png

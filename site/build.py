@@ -115,12 +115,16 @@ def main(argv):
     (out / "img").mkdir(exist_ok=True)
 
     stamp = build_stamp()
-    html = io.open(HERE / "index.html", encoding="utf-8").read()
-    html, n = re.subn(r'(<meta name="build" content=")[^"]*(">)', r"\g<1>" + stamp + r"\g<2>", html, count=1)
-    if n != 1:
-        raise SystemExit("hittar ingen byggstampel i index.html")
-    io.open(out / "index.html", "w", encoding="utf-8").write(html)
-    print("  index.html     %7d bytes  build=%s" % ((out / "index.html").stat().st_size, stamp))
+    # Varje sida stamplas, och en sida utan stampel faller bygget: en sida som
+    # inte gar att binda till en version ar inte sparbar, och det ar hela
+    # skalet till att stampeln finns.
+    for sida in ("index.html", "labs.html"):
+        html = io.open(HERE / sida, encoding="utf-8").read()
+        html, n = re.subn(r'(<meta name="build" content=")[^"]*(">)', r"\g<1>" + stamp + r"\g<2>", html, count=1)
+        if n != 1:
+            raise SystemExit("hittar ingen byggstampel i " + sida)
+        io.open(out / sida, "w", encoding="utf-8").write(html)
+        print("  %-14s %7d bytes  build=%s" % (sida, (out / sida).stat().st_size, stamp))
 
     build_data(data_root, out)
 
