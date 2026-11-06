@@ -172,6 +172,37 @@ def build_stamp() -> str:
         return "unknown"
 
 
+def gate_rent_trad(out: Path, stamp: str) -> None:
+    """UPPLADDNINGSMAPPEN FAR INTE INNEHALLA ETT SMUTSIGT BYGGE.
+
+    Felet som gav upphov till grinden, 2026-11-06: bygget kordes fore
+    commiten, stampeln blev "9a1f3ba-dirty", och filerna lag kvar i dist
+    redo att laddas upp. En sida som pastar sig byggd ur ingen kand commit
+    hor inte hemma pa en sajt vars hela tes ar sparbarhet - och stampeln
+    finns just for att den sidan ska kunna bindas till en version.
+
+    RATT ORDNING AR COMMITTA, BYGG, LADDA UPP. Grinden gor ordningen till en
+    regel i stallet for nagot man ska komma ihag.
+
+    Den galler bara standardmappen. Vill du forhandsgranska ett opaverkat
+    trad finns malmappsargumentet sedan tidigare:
+
+        python site/build.py ..\forhandsvisning
+
+    Det bygget far behalla sin -dirty-stampel. Det ar inte till servern.
+    """
+    if not stamp.endswith("-dirty"):
+        return
+    if out.resolve() != (HERE / "dist").resolve():
+        print("  NOTERA smutsigt trad: stampeln blir %s. Bygget gar till en egen"
+              " mapp och ska inte laddas upp." % stamp)
+        return
+    raise SystemExit(
+        "smutsigt trad: stampeln skulle bli %s och bygget hamna i dist.\n"
+        "  Committa forst, bygg sedan. Vill du bara titta:\n"
+        "    python site/build.py <nagon annan mapp>" % stamp)
+
+
 def main(argv):
     if len(argv) > 2:
         raise SystemExit("anvandning: python site/build.py [malmapp]")
@@ -184,6 +215,7 @@ def main(argv):
     (out / "img").mkdir(exist_ok=True)
 
     stamp = build_stamp()
+    gate_rent_trad(out, stamp)
     # Varje sida stamplas, och en sida utan stampel faller bygget: en sida som
     # inte gar att binda till en version ar inte sparbar, och det ar hela
     # skalet till att stampeln finns.
