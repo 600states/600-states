@@ -101,6 +101,11 @@ section{padding:clamp(64px,8vw,140px) var(--m)}
 .ch .when{margin-top:14px;font-size:var(--step-micro);color:var(--dim);letter-spacing:0}
 .ch-body{margin-left:0;margin-top:clamp(22px,2.4vw,40px);max-width:70ch}
 .ch-body > * + *{margin-top:1.15em}
+/* ATTA tight-leading-traffar star kvar med avsikt, se commit f32bd75: de sitter
+   pa rubrik- och citattyp vars radavstand kommer ur den frysta tokenskalan.
+   SA HAR SKILJER DU EN AKTA REGRESSION FRAN DEM: las vardet. 1,18x och 1,25x ar
+   rubriker och citat och ska ligga kvar. Allt som traffar .ch-body p ar brodtext
+   och ar ett verkligt fel - radavstandet nedan far aldrig under 1,3. */
 .ch-body p{font-size:var(--step-small);line-height:1.6;color:#eae6eb}
 .ch-body b,.ch-body strong{font-weight:500;color:var(--ink)}
 @media (min-width:900px){
