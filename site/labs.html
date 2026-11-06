@@ -228,7 +228,7 @@ footer .fine{font-size:var(--step-micro);color:var(--dim)}
       <p class="sub">Every method error found while building the instrument, what the measurement was, and what changed because of it.</p>
     </div>
     <div class="tile hero-say lift">
-      <p class="lead">The instrument has been wrong ten times. This is the list.</p>
+      <p class="lead">The instrument has been wrong eleven times. This is the list.</p>
 
       <ol class="toc">
         <li><a href="#hash"><span>I</span>The hash that could not be reproduced</a></li>
@@ -241,6 +241,7 @@ footer .fine{font-size:var(--step-micro);color:var(--dim)}
         <li><a href="#quantize"><span>VIII</span>Seven values out of a hundred and one</a></li>
         <li><a href="#noise"><span>IX</span>The instrument does not reproduce itself</a></li>
         <li><a href="#onerun"><span>X</span>One day, one run, one outcome</a></li>
+        <li><a href="#hidden"><span>XI</span>The environment that hid the bug</a></li>
       </ol>
       <p class="note">Most of these have the same shape: the rule existed, and no line of code enforced it. That is the lesson the whole project now runs on &mdash; <b>a rule that cannot stop a run is a wish.</b></p>
     </div>
@@ -453,6 +454,36 @@ footer .fine{font-size:var(--step-micro);color:var(--dim)}
         <p><b>No flag opens it.</b> Redoing a day requires deleting the lock file by hand: a visible, deliberate act that no scheduled job performs by accident. And the run journal grows and is never overwritten, so the number of calls made for a day is publishable evidence that the rule was kept.</p>
       </div>
     </article>
+  </div>
+
+    <article class="ch r" id="hidden">
+      <div class="ch-head">
+        <p class="ch-num">XI</p>
+        <div><h2>The environment that hid the bug</h2><p class="when">6 November 2026</p></div>
+      </div>
+      <div class="ch-body">
+        <p>A tile in the landing page&rsquo;s hero was empty on a phone. The artwork was there, the file had loaded, the tile had its full height. Nothing was visible.</p>
+        <p><b>It took four deployments.</b> Each time the right thing was measured, in an environment where the fault could not occur.</p>
+        <p>The hero tiles start at <code>opacity:0</code> and are given a class by an <code>IntersectionObserver</code> once they scroll into view. On that phone the observer never fired for that one tile, so it stayed at zero &mdash; invisible, at full height, holding a loaded image.</p>
+        <p>Both test environments had <code>prefers-reduced-motion: reduce</code>, and the rule that belongs to it sets <code>opacity:1</code> on exactly the two classes that collided. <b>The precondition for the fault had been removed before the measurement began.</b></p>
+        <p>Two reviewers did this independently, by different routes: one through the browser&rsquo;s motion setting, the other by applying the class manually to make screenshots deterministic. Both reported the image as visible. <b>Both were right about what they measured.</b></p>
+        <div class="data">
+          <table>
+            <caption>What the measurements said, and what the person saw</caption>
+            <tbody>
+              <tr><th>Deployments</th><td class="n hit">4</td></tr>
+              <tr><th>Environments that hid the fault</th><td class="n hit">2 of 2</td></tr>
+              <tr><th>What every measurement reported</th><td class="n">the image is visible</td></tr>
+              <tr><th>What the person saw</th><td class="n">an empty tile</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><b>The lesson is not about CSS.</b> When someone reports something that cannot be reproduced, the first move is to remove whatever in your own environment could be hiding it &mdash; not to guess at a cause.</p>
+        <p>It is the same shape as finding&nbsp;IV. The difference is that there the impossibility was in the code, and here it was in the environment. The second kind is harder, because code can be read.</p>
+        <p>The build is now served locally and tested in both motion states. <b>A measurement taken in one state is a measurement of that state.</b></p>
+      </div>
+    </article>
+
   </div>
 </section>
 

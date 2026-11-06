@@ -23,8 +23,17 @@ def sida(ord_, n):
     return '<p class="lead">The instrument has been wrong %s times.</p>%s' % (ord_, kapitel(n))
 
 def test_den_riktiga_sidan_passerar():
+    """Att ordet och antalet stammer - INTE vilket tal det rakar vara.
+
+    Testet lag tidigare pa == 10 och foll sa fort ett elfte kapitel skrevs.
+    Det var en observation av dagslaget upphojd till regel, samma form som
+    bandet 13-15 i kapitel VII pa sidan sjalv. Grinden provar en relation;
+    testet ska prova samma relation."""
+    import re
     html = io.open(SIDA, encoding="utf-8").read()
-    assert build.gate_hjaltens_rakning(html) == 10
+    kapitel_pa_sidan = len(re.findall(r'<p class="ch-num">[IVXLC]+</p>', html))
+    assert kapitel_pa_sidan >= 1
+    assert build.gate_hjaltens_rakning(html) == kapitel_pa_sidan
 
 def test_fel_siffra_stoppar_bygget():
     with pytest.raises(SystemExit) as e:
