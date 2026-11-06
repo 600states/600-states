@@ -69,8 +69,15 @@ def rows(P, inp):
     return out
 
 def build(day, passdir, data=DATA):
-    rs = rows(load_passes(passdir), load_inputs(sp.classifier_input(data, day)))
     out = sp.emotion_manifest(data, day)
+    # Frysningen skriver aldrig over en frysning. Se gate_dygnet_ar_oppet i
+    # classify.py: en dag, en korning, ett utfall. Grinden star FORE rows(),
+    # sa ett redan fryst dygn inte ens raknas om.
+    if sp.sha_sidecar(out).exists():
+        raise SystemExit(
+            f"{sp.state_id(day)} ar redan fryst ({sp.sha_sidecar(out).name}) — "
+            "manifestet skrivs inte om. En dag, en korning, ett utfall.")
+    rs = rows(load_passes(passdir), load_inputs(sp.classifier_input(data, day)))
     with atomic_write(out) as fh:
         w = csv.DictWriter(fh, fieldnames=COLUMNS); w.writeheader(); w.writerows(rs)
     # Frys manifestet. Fargen far inte roras forran detta ligger fast - sidecar

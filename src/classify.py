@@ -523,9 +523,37 @@ def skriv_journal(day, gammal, rec, parse_fel):
     write_text(journalfil(day), json.dumps(ut, ensure_ascii=False, indent=1))
     print(f"\n  {ut['totals']}")
 
+def gate_dygnet_ar_oppet(day, data=DATA):
+    """EN DAG, EN KORNING, ETT UTFALL. Beslut 2026-11-06.
+
+    Lasningen fore frysningen ar inte unik - uppmatt i FYND 006 byter atta
+    rutor av femtio primartillstand nar samma modell laser om samma dygn. Det
+    ar en egenskap hos instrumentet och den doljs inte.
+
+    Men den egenskapen haller bara om korningen ar den FORSTA. Far man kora om
+    tills bilden blir snygg finns det inget svar pa fragan "varfor just den har
+    lasningen" - och da ar "irreversible" ett loftesord utan tackning.
+
+    Darfor: nar emotionsmanifestet har sin sha256-sidecar ar dygnet stangt.
+    Omkorning av en ENSKILD batch vid valideringsfel ar oforandrat tillaten -
+    det ar att fullborda korningen, inte att gora om den, och passfiler som
+    redan finns hoppas over. Det som avvisas ar en ny korning av ett dygn som
+    redan blivit ett verk.
+
+    INGEN FLAGGA OPPNAR DEN HAR GRINDEN. Att gora om ett dygn kraver att man
+    med handen raderar sidecaren, vilket ar en synlig och avsiktlig handling.
+    Ett schemalagt jobb gor det aldrig av misstag."""
+    side = sp.sha_sidecar(sp.emotion_manifest(data, day))
+    if side.exists():
+        raise gates.GateFailure(
+            f"{sp.state_id(day)} ar redan fryst ({side.name}) — en dag, en "
+            "korning, ett utfall. Dygnet kan inte klassificeras om.")
+
+
 def run(day, only_pass=None, budget=None, model=DEFAULT_MODEL, dry=False):
     sp.state_id(day)
     print(f"=== {sp.state_id(day)} — klassificering ===")
+    gate_dygnet_ar_oppet(day)
     prompt, spec = gate_instrument()
     bs = batches(day)
     n_obs = sum(len(b) for _, b in bs)
