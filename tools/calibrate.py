@@ -12,13 +12,24 @@ pass med median pa intensity och confidence; en modell som ar bra enskilt men
 ostadig mellan pass beter sig annorlunda har.
 
 GRIND OCH RAPPORT AR SKILDA SAKER.
-  Grinden ar mekanisk efterlevnad: kompletta rader, noll valideringsfel, noll
-  rader med hogst tva egna poang, median 13-15 av 16. Antingen klarar modellen
-  protokollet eller inte.
+  Grinden ar mekanisk efterlevnad och harleds UR SPECENS EGNA FALT, se
+  grind_ur_spec(). Den tidigare texten har angav "median 13-15 av 16 egna
+  poang". Den siffran kom ur en observation i handovern, inte ur specen, och
+  uteslot modeller pa fel grund. Uppmatt pa referensmodellens egna 600 rader
+  ar de atta lagsta poangen exakt 0.00 i 33.8% av fallen: bandet matte
+  svansens granularitet, inte om modellen gor matningen. Borttaget 2026-11-06.
   Rapporten ar sjalvoverensstammelse over passen, deltaE mot referensen, och
   kostnad. deltaE RAPPORTERAS, det ar ALDRIG en grind: regel 0.1 forbjuder att
   ett matt pa den renderade bilden blir ett mal. Att valja modell efter vilken
   som ger vackrast farg vore brott mot den regeln.
+
+SJALVOVERENSSTAMMELSE MATS PA TVA NIVAER, och skillnaden avgjorde modellvalet.
+  Pa etiketten: andel observationer dar alla tre passen ger samma primary
+  respektive secondary. 50 observationer ger standardfelet +/-0.059 vid p=0.78,
+  sa tva modeller som skiljer nagra rader ar inte atskiljbara pa det mattet.
+  Pa de 16 poangen: medelavvikelsen mellan passen per poang (MAD). 800 varden
+  i stallet for 50 etiketter. Det ar dessutom den storhet fargmodellen laser -
+  fargen kommer ur hela vektorn och intensity, inte ur etiketten.
 
 Beslutsregeln ska sattas fore matningen, annars ar den efterhandsrationalisering:
 modeller som faller pa grinden ar ute; bland dem som klarar den valjs den
@@ -63,6 +74,41 @@ def deltaE(h1, h2):
     """CIE76. Rapporterat matt, aldrig en grind."""
     a, b = _lab(h1), _lab(h2)
     return sum((x - y) ** 2 for x, y in zip(a, b)) ** 0.5
+
+def mad_over_passen(P, falt):
+    """Medelavvikelsen mellan de tre passen, per poang och per skalarfalt.
+
+    Sjalvoverensstammelse pa etiketten raknar 50 varden per modell och har
+    standardfelet +/-0.059 vid n=50: den kan inte skilja tva narliggande
+    modeller at. Det har mattet raknar 50*16 = 800 varden ur samma svar, utan
+    ett enda extra anrop, och det mater den storhet fargmodellen faktiskt
+    laser. "egna" utesluter poang som ar noll i alla tre passen, annars skulle
+    en modell som nollar halva vektorn fa battre siffra for att den avstod.
+    "nollflip" ar ett tillstand som fick poang i ett pass och nollades i ett
+    annat - det ar inte en justering utan ett byte av lasning.
+    """
+    ids = sorted(set.intersection(*(set(p) for p in P)))
+    if not ids or len(P) < 2:
+        return {}
+    def spridning(v):
+        return sum(abs(a - b) for i, a in enumerate(v) for b in v[i+1:]) / (len(v)*(len(v)-1)/2)
+    alla, egna, flip, ngz = [], [], 0, 0
+    for o in ids:
+        for e in EMOTION_STATES:
+            v = [float(p[o]["scores"][e]) for p in P]
+            d = spridning(v)
+            alla.append(d)
+            if any(x > 0 for x in v):
+                ngz += 1; egna.append(d)
+                if any(x == 0 for x in v): flip += 1
+    ut = {"mad_poang_alla": round(statistics.mean(alla), 4),
+          "mad_poang_egna": round(statistics.mean(egna), 4),
+          "nollflip_andel": round(flip / ngz, 4) if ngz else None}
+    for f in falt:
+        ut[f"mad_{f}"] = round(statistics.mean(
+            [spridning([float(p[o][f]) for p in P]) for o in ids]), 4)
+    return ut
+
 
 def grind_ur_spec(P, spec, fel):
     """Grinden harleds ur specens egna falt, aldrig ur ett observerat snitt.
@@ -185,6 +231,7 @@ def kor(modeller, passes=3, dry=False):
             "unika_intensity": [classify.diagnostics(list(p.values()))["unique_intensity"] for p in P],
             "unika_confidence": [classify.diagnostics(list(p.values()))["unique_confidence"] for p in P],
             "sjalvoverensstammelse": {k: round(v, 3) for k, v in sjalv.items()},
+            "mad_over_passen": mad_over_passen(P, ("intensity", "confidence")),
             "primary_lika_referensen": f"{pri_lika}/{len(kon)}",
             "deltaE_mot_referensen": {"median": round(statistics.median(dE), 2),
                                       "p90": round(sorted(dE)[int(.9*(len(dE)-1))], 2),
@@ -195,15 +242,37 @@ def kor(modeller, passes=3, dry=False):
         r = resultat[m]
         print(f"    GRIND: {r['grind']}   sjalv-primary {sjalv['primary_emotion']:.1%}   "
               f"lika referensen {r['primary_lika_referensen']}   "
+              f"MAD egna {r['mad_over_passen'].get('mad_poang_egna')}   "
+              f"nollflip {r['mad_over_passen'].get('nollflip_andel')}   "
               f"deltaE median {r['deltaE_mot_referensen']['median']}   "
               f"${r['kostnad_usd_per_verk']}/verk")
 
+    # EN KORNING FICK TIDIGARE RADERA EN ANNAN. Filnamnet bars av datumet och
+    # skrevs med write_text, som ersatter. Korde man opus efter sonnet samma
+    # dag fanns bara opus kvar, utan ett ord om att nagot forsvunnit. Matningen
+    # for sonnet och haiku 2026-11-06 gick forlorad sa. Nu slas resultaten
+    # samman, och bara nar det ar samma batteri: ett annat batteri ar en annan
+    # matning och far inte blandas in i samma fil.
     ut = REMEDIATION / f"600_STATES_KALIBRERING_{time.strftime('%Y%m%d')}.json"
-    write_text(ut, json.dumps({"batteri_sha256": classify.sha(BATTERI),
+    bsha = classify.sha(BATTERI)
+    samlat = dict(resultat)
+    if ut.exists():
+        gammalt = json.loads(ut.read_text(encoding="utf-8"))
+        if gammalt.get("batteri_sha256") != bsha:
+            ut = ut.with_name(ut.stem + f"_{bsha[:8]}.json")
+            print(f"\n  tidigare fil galler ett annat batteri — skriver {ut.name}")
+        elif gammalt.get("passes") != passes:
+            ut = ut.with_name(ut.stem + f"_{passes}pass.json")
+            print(f"\n  tidigare fil har annat antal pass — skriver {ut.name}")
+        else:
+            for m, r in gammalt.get("resultat", {}).items():
+                if m not in samlat:
+                    samlat[m] = r
+    write_text(ut, json.dumps({"batteri_sha256": bsha,
                                "referensmodell": bat["meta"]["referensmodell"],
-                               "passes": passes, "resultat": resultat},
+                               "passes": passes, "resultat": samlat},
                               ensure_ascii=False, indent=1))
-    print(f"\n  {ut.name}")
+    print(f"\n  {ut.name}  ({len(samlat)} modeller: {', '.join(sorted(samlat))})")
     return 0
 
 if __name__ == "__main__":
