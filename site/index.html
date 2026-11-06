@@ -67,7 +67,14 @@ img{display:block;max-width:100%}
    osynligt bakom en klippning som ingenting tog bort. Det var sa
    hjaltebilden forsvann pa iOS. Inget som sidan pastar sig vara far vila pa
    att ett skript gar igenom. */
-.shutter{animation:shutter 1.1s cubic-bezier(.65,0,.2,1)}
+.shutter{opacity:1;animation:shutter 1.1s cubic-bezier(.65,0,.2,1)}
+/* opacity:1 ar en sparr, inte dekoration. Rutan hade bade .shutter och
+   .lift. Bada satter animation-genvagen, .shutter star senare i filen och
+   vann - sa .lift{opacity:0} blev kvar medan den enda animation som kordes
+   var slutaren, som aldrig ror opacity. Rutan var darfor osynlig aven nar
+   allt annat fungerade. .lift ar borttagen fran elementet, och sparren
+   star kvar sa att samma kollision inte kan uppsta igen om nagon lagger
+   tillbaka klassen. */
 @media (prefers-reduced-motion:reduce){
   .r,.r.in,.lift,.shutter,.shutter.in{
     opacity:1;transform:none;clip-path:none;animation:none}
@@ -289,7 +296,7 @@ h2{font-size:var(--step-head)}
       <h1>600<br>STATES</h1>
       <p class="t-sub">A daily data artwork. One UTC day, 600 news observations, one irreversible field of colour.</p>
     </div>
-    <div class="tile t-pic shutter lift" id="shutter">
+    <div class="tile t-pic shutter" id="shutter">
       <img fetchpriority="high" src="img/state_002.png" alt="A rendered 600 STATES field: 600 solid colour squares in a 30 by 20 grid." width="3087" height="2057">
     </div>
     <div class="tile t-pic second lift">
