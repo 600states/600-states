@@ -77,8 +77,11 @@ img{display:block;max-width:100%}
    lasa mot, sa texten vilar pa ett platt tackskikt - ingen gradient, ingen
    skugga. Opaciteten ar raknad, inte vald: verkets ljusaste farg ar
    #E3D76C, och vid 0,55 blir kompositen #6B6636, vilket ger vit text
-   kontrast 5,85 mot sidans samsta punkt. */
-.hero-name img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+   kontrast 5,85 mot sidans samsta punkt.
+   object-fit:contain, aldrig cover: cover beskar, och ett beskuret verk ar ett
+   annat verk. Uppmatt med cover lag 26 procent av bredden utanfor rutan vid
+   1440px. Brevladorna ovan och under ar #0B0E12, samma som rutans botten. */
+.hero-name img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
 .hero-name::after{content:"";position:absolute;inset:0;background:rgba(10,10,11,.55)}
 .hero-name h1,.hero-name .sub{position:relative;z-index:1}
 .hero-name{position:relative;background:#0B0E12;color:var(--ink);display:flex;flex-direction:column;justify-content:flex-end;padding:clamp(20px,2.4vw,40px)}
