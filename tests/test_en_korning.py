@@ -51,4 +51,16 @@ def test_grinden_star_fore_anropen():
     import inspect
     src = inspect.getsource(classify.run)
     assert "gate_dygnet_ar_oppet(day)" in src
-    assert src.index("gate_dygnet_ar_oppet(day)") < src.index("call(")
+    # Sedan 2026-11-07 ligger sjalva anropen i kor_i_batch och kor_direkt.
+    # Grinden ska sta fore bada, och ingen av dem far anropas nagon annanstans
+    # ifran - annars kan ett dygn na API:et utan att ha passerat grinden.
+    for utforare in ("kor_i_batch(", "kor_direkt("):
+        assert utforare in src, f"{utforare} anropas inte ur run()"
+        assert src.index("gate_dygnet_ar_oppet(day)") < src.index(utforare)
+    for namn in ("kor_i_batch", "kor_direkt"):
+        kallor = (ROT / "src").glob("*.py")
+        for f in kallor:
+            if f.name == "classify.py":
+                continue
+            assert f"{namn}(" not in f.read_text(encoding="utf-8"), (
+                f"{namn} anropas fran {f.name}, utanfor grindens rackvidd")

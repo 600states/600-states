@@ -1,6 +1,13 @@
 """Klassificeringssteget. Anropar API:et direkt, inte som agent.
 
-    python3 src/classify.py <AAAAMMDD> [--pass N] [--budget N] [--model ID] [--dry-run]
+    python3 src/classify.py <AAAAMMDD> [--pass N] [--budget N] [--model ID]
+                                      [--dry-run] [--live] [--slapp]
+
+Leveransen ar Batch API (halva listpriset, faststallt 2026-11-06). --live kor
+direkta anrop i stallet, till fullt pris: for en enskild batch man vill se
+svaret pa med en gang. --slapp skickar batchjobbet och gar ur; nasta korning
+hamtar det. Jobbfilen pa disk ar skyddet mot att betala for samma jobb tva
+ganger.
 
 Kedjans andra ande. Tidigare kordes klassificeringen utanfor kedjan, for hand,
 vilket gjorde ett dygn omojligt att kora oovervakat.
@@ -316,19 +323,130 @@ def call(client, model, prompt, items):
     har modellgenerationen. Ett argument for det hade bara kunnat ge TypeError,
     och ett argument som alltid faller ar en falla, inte en mojlighet.
     """
-    with client.messages.stream(
-        model=model, max_tokens=32000,
-        thinking=tankande_for(model),
-        output_config={"effort": effort_for(model)},
-        system=[{"type": "text", "text": prompt, "cache_control": {"type": "ephemeral"}},
-                {"type": "text", "text": OUTPUT_RULE, "cache_control": {"type": "ephemeral"}}],
-        messages=[{"role": "user", "content": json.dumps(
+    with client.messages.stream(**anropsparametrar(model, prompt, items)) as s:
+        return s.get_final_message()
+
+def anropsparametrar(model, prompt, items):
+    """ANROPETS PARAMETRAR HAR ETT STALLE, och det ar inte stadning.
+
+    Dygnet gar antingen genom Batch API (leveransvagen, se LEVERANS) eller
+    genom ett direkt anrop. Byggde de var sin begaran skulle instrumentet med
+    tiden bli tva: en modellparameter rattad pa ena stallet och glomd pa det
+    andra ger tva olika laesningar av samma dygn, och ingenting i manifestet
+    hade visat vilken som gallde. Samma skal som fick kallregistret att fa en
+    enda definition efter FYND 004.
+
+    Begaran ar identisk i bada vagarna. Det enda som skiljer ar leveransen:
+    stroemmat svar nu, eller ett jobb som hamtas nar det ar klart."""
+    return {
+        "model": model, "max_tokens": 32000,
+        "thinking": tankande_for(model),
+        "output_config": {"effort": effort_for(model)},
+        "system": [{"type": "text", "text": prompt, "cache_control": {"type": "ephemeral"}},
+                   {"type": "text", "text": OUTPUT_RULE, "cache_control": {"type": "ephemeral"}}],
+        "messages": [{"role": "user", "content": json.dumps(
             [{k: it[k] for k in ("observation_id", "tile_index", "observation_timestamp_utc",
                                  "neutral_source_claim", "review_region", "selection_layer",
                                  "source_tier", "representative_domain") if k in it} for it in items],
             ensure_ascii=False)}],
-    ) as s:
-        return s.get_final_message()
+    }
+
+# ================================ LEVERANS ================================
+#
+# BESLUTET FANNS, KODEN GJORDE DET INTE. Uppmatt 2026-11-07.
+#
+# Parameterregistret: "leverans | Batch API, 50 % av listpris | faststallt
+# 2026-11-06". Projektbeskrivningen sager samma sak. Klassificeraren skickade
+# anda vanliga anrop - service_tier "standard" i varje usage-rad i 2026/308
+# och 2026/309 - och dygnet kostade dubbelt mot det beslutade.
+#
+# Det ar samma form som FYND 001-004: regeln star i ett dokument, aldrig i
+# den kodvag som avgor. Den har gangen kostade den $7,50 per dygn, och den var
+# direkt orsak till att takets slog i mitt i 2026/309.
+#
+# Darfor ar batchvagen nu standard och lever har, med tre egenskaper som
+# daglig obevakad drift kraver:
+#
+#   JOBBET SKRIVS TILL DISK INNAN DET VANTAS PA. Ett jobb ar betalt i samma
+#   stund det tas emot. Dor processen under vantan maste nasta korning HAMTA
+#   det jobbet, inte skicka ett nytt - annars betalar ett schemalagt jobb
+#   tva ganger for samma dygn och ingen ser det.
+#
+#   RONDER, INTE OMFORSOK I RAD. Ett batchjobb kommer tillbaka helt eller
+#   delvis. De batchar som foll pa parsning eller validering skickas i en ny
+#   rond, hogst MAX_TRIES ronder. Samma grindar som i direktvagen, samma kod.
+#
+#   DEN SOM INTE VILL VANTA SLAPPER. --slapp skickar jobbet, skriver
+#   jobbfilen och gar ur. Nasta korning hamtar. Det ar den form schemalaggaren
+#   behover: batchen far ta upp till 24 timmar utan att en process halls vid
+#   liv under tiden.
+LEVERANS = "batch"
+
+def jobbfil(day):
+    return passdir(day) / "batch_jobb.json"
+
+def kund_id(p, n):
+    return f"pass{p}_batch{n:02d}"
+
+def tyd_kund_id(cid):
+    m = re.fullmatch(r"pass(\d+)_batch(\d+)", cid)
+    if not m:
+        raise ValueError(f"okant custom_id i batchsvaret: {cid!r}")
+    return int(m.group(1)), int(m.group(2))
+
+def las_jobb(day):
+    f = jobbfil(day)
+    return json.loads(f.read_text(encoding="utf-8")) if f.exists() else None
+
+def rensa_jobb(day):
+    f = jobbfil(day)
+    if f.exists():
+        f.unlink()
+
+def skicka_jobb(client, model, prompt, day, todo):
+    """Skickar ronden och skriver jobbfilen INNAN nagon vantan borjar."""
+    begaran = [{"custom_id": kund_id(p, n),
+                "params": anropsparametrar(model, prompt, items)}
+               for p, n, items in todo]
+    jobb = client.messages.batches.create(requests=begaran)
+    write_text(jobbfil(day), json.dumps(
+        {"id": jobb.id, "model": model, "prompt_sha256": sha(PROMPT_FILE),
+         "skickat": time.strftime("%Y%m%dT%H%M%SZ", time.gmtime()),
+         "begaran": [b["custom_id"] for b in begaran]}, ensure_ascii=False, indent=1))
+    print(f"  batchjobb {jobb.id} skickat — {len(begaran)} begaran")
+    print(f"    jobbfil: {jobbfil(day).name} (hamtas av nasta korning om denna avbryts)")
+    return jobb.id
+
+def vanta_pa_jobb(client, bid, pauser=(15, 30, 60), tak=24 * 3600):
+    """Pollar till jobbet har slutat. Returnerar sista statusen."""
+    t0, i, sist = time.time(), 0, None
+    while True:
+        jobb = client.messages.batches.retrieve(bid)
+        c = jobb.request_counts
+        nu = (c.succeeded, c.errored, c.processing, c.canceled, c.expired)
+        if nu != sist:
+            print(f"    {jobb.processing_status}: {c.succeeded} klara, {c.processing} kvar"
+                  + (f", {c.errored} fel" if c.errored else "")
+                  + (f", {c.expired} utgangna" if c.expired else ""))
+            sist = nu
+        if jobb.processing_status == "ended":
+            return jobb
+        if time.time() - t0 > tak:
+            raise gates.GateFailure(
+                f"batchjobb {bid} har inte slutat efter {tak // 3600} timmar — "
+                "jobbfilen ligger kvar, kor steget igen for att hamta det")
+        time.sleep(pauser[min(i, len(pauser) - 1)]); i += 1
+
+def jobbets_svar(client, bid):
+    """(pass, batch, meddelande, fel) per begaran. Fel ar None nar svaret kom."""
+    for rad in client.messages.batches.results(bid):
+        p, n = tyd_kund_id(rad.custom_id)
+        typ = getattr(rad.result, "type", None)
+        if typ == "succeeded":
+            yield p, n, rad.result.message, None
+        else:
+            fel = getattr(rad.result, "error", None)
+            yield p, n, None, f"{typ}: {getattr(fel, 'message', fel) or 'utan meddelande'}"
 
 def raw_text(msg):
     """Svarets text, oforandrad. Separat fran parse sa att den gar att spara
@@ -585,7 +703,184 @@ def gate_dygnet_ar_oppet(day, data=DATA):
             "korning, ett utfall. Dygnet kan inte klassificeras om.")
 
 
-def run(day, only_pass=None, budget=None, model=DEFAULT_MODEL, dry=False):
+def kor_i_batch(client, model, prompt, day, todo, d, rec, omgang, slapp=False):
+    """Dygnet genom Batch API. Returnerar (antal parse-fel, utgangskod).
+
+    RONDER, INTE OMFORSOK I RAD. Ett jobb kommer tillbaka helt eller delvis;
+    de batchar som foll pa parsning eller validering gar in i en ny rond.
+    Hogst MAX_TRIES ronder, samma tak som direktvagen har per batch.
+
+    JOBBFILEN AR SKYDDET MOT DUBBEL BETALNING. Finns den vid start hamtas det
+    jobbet i stallet for att ett nytt skickas. Den skrivs fore vantan och
+    raderas forst nar svaren ar omhandertagna."""
+    parse_fel_totalt = 0
+    for rond in range(1, MAX_TRIES + 1):
+        kvar = [t for t in todo if not (d / f"pass{t[0]}_batch_{t[1]:02d}.json").exists()]
+        if not kvar:
+            break
+        jobb = las_jobb(day)
+        if jobb is None:
+            print(f"\n  rond {rond}: {len(kvar)} begaran")
+            bid = skicka_jobb(client, model, prompt, day, kvar)
+            if slapp:
+                print("\n  --slapp: jobbet ligger kvar hos leverantoren. "
+                      "Kor steget igen for att hamta det.")
+                return parse_fel_totalt, 2
+        else:
+            bid = jobb["id"]
+            print(f"\n  hamtar jobb {bid} fran {jobb.get('skickat', 'tidigare korning')}"
+                  f" — {len(jobb.get('begaran', []))} begaran")
+            if jobb.get("prompt_sha256") not in (None, sha(PROMPT_FILE)):
+                raise gates.GateFailure(
+                    f"jobbet {bid} skickades med en annan prompt an den som galler nu — "
+                    "ett annat instrument mitt i ett dygn")
+        vanta_pa_jobb(client, bid)
+        for pnr, nnr, msg, felmeddelande in jobbets_svar(client, bid):
+            if (d / f"pass{pnr}_batch_{nnr:02d}.json").exists():
+                continue                      # redan omhandertagen i en tidigare rond
+            items = dict((n, it) for n, it in batches(day)).get(nnr)
+            if felmeddelande:
+                print(f"  pass{pnr} batch{nnr:02d}: {felmeddelande}")
+                continue
+            try:
+                rows, artefakter = parse(msg, items)
+            except json.JSONDecodeError as e:
+                parse_fel_totalt += 1
+                print(f"  pass{pnr} batch{nnr:02d}: JSONDecodeError: {e}")
+                spara_misslyckat(d, pnr, nnr, rond, msg)
+                continue
+            fel, dg = godkann(rows, items)
+            if fel:
+                print(f"  pass{pnr} batch{nnr:02d}: {len(fel)} valideringsfel pa "
+                      f"{len(rows)} rader")
+                spara_misslyckat(d, pnr, nnr, rond, msg, fel)
+                continue
+            skriv_svar(d, pnr, nnr, rows, dg, artefakter, msg, rec, omgang,
+                       None, jobb=bid)
+        rensa_jobb(day)
+    annu_kvar = [t for t in todo if not (d / f"pass{t[0]}_batch_{t[1]:02d}.json").exists()]
+    if annu_kvar:
+        print(f"\n  {len(annu_kvar)} batchar kvar efter {MAX_TRIES} ronder")
+    return parse_fel_totalt, 0
+
+def godkann(rows, items):
+    """Valideringen och glesgrinden — ETT STALLE for bada leveransvagarna.
+
+    Nollfyllningsdefekten passerar validering men ar det fel som
+    ogiltigforklarade pilotserien: fjorton av sexton poang mekaniskt satta till
+    noll. Specen kallar det en diagnostisk varning; i drift kor vi om batchen i
+    stallet for att spara den.
+
+    Lag den har kontrollen i bada vagarna var for sig vore den rattad pa ett
+    stalle den dag den andras. Ett dygn kort genom batch och ett kort direkt
+    ska vara samma instrument eller inget av dem."""
+    fel = validate(rows, items)
+    if fel:
+        # Diagnostiken raknas inte pa ett svar som anda faller. Den raknade
+        # tidigare alltid, och ett tomt svar fallde da hela korningen med
+        # StatisticsError i stallet for att falla den batchen - ett fel i
+        # instrumenteringen som hade sett ut som ett fel i dygnet.
+        return fel, {}
+    dg = diagnostics(rows)
+    if dg["authored_scores_median"] <= 2:
+        fel = [f"glest poangvektor, median {dg['authored_scores_median']:.0f}/16 "
+               f"egna poang — protokollet har inte foljts"]
+    return fel, dg
+
+def skriv_svar(d, p, n, rows, dg, artefakter, msg, rec, omgang, sekunder,
+               parse_fel=0, jobb=None):
+    """Passfilen och journalraden — ETT STALLE for bada leveransvagarna."""
+    usage = msg.usage
+    write_text(d / f"pass{p}_batch_{n:02d}.json",
+               json.dumps(rows, ensure_ascii=False, indent=1))
+    rad = {"run": omgang, "pass": p, "batch": n, "rows": len(rows),
+           "seconds": sekunder,
+           "input_tokens": usage.input_tokens,
+           "output_tokens": usage.output_tokens,
+           "cache_read": getattr(usage, "cache_read_input_tokens", 0),
+           "cache_write": getattr(usage, "cache_creation_input_tokens", 0),
+           "block_types": block_types(msg),
+           "emission_artifacts": artefakter,
+           "parse_failures": parse_fel, **dg}
+    if jobb:
+        rad["delivery"] = "batch"
+        rad["batch_id"] = jobb
+    rec["calls"].append(rad)
+    print(f"  pass{p} batch{n:02d}  {len(rows)} rader  "
+          f"{dg['authored_scores_median']:.0f}/16 egna poang  "
+          f"cache {getattr(usage,'cache_read_input_tokens',0):,}")
+    print(f"    uttalat mot harlett: primary {dg['stated_primary_differs']}, "
+          f"secondary {dg['stated_secondary_differs']}  "
+          f"emissionsartefakter {artefakter}")
+
+def kor_direkt(client, model, prompt, todo, d, rec, omgang, budget=None):
+    """Dygnet genom direkta anrop. Returnerar (antal parse-fel, utgangskod).
+
+    Fullt listpris. Leveransvagen ar Batch API sedan 2026-11-07; den har
+    vagen finns kvar for en enskild batch man vill se svaret pa med en gang,
+    och for den dag batchkon ligger nere."""
+    import anthropic
+    gjorda = parse_fel_totalt = 0
+    for p, n, items in todo:
+        if budget is not None and gjorda >= budget:
+            print(f"\n  budget {budget} nadd, {len(todo) - gjorda} anrop kvar — kor steget igen")
+            return 2
+        parse_fel = 0
+        for attempt in range(1, MAX_TRIES + 1):
+            t0 = time.time()
+            msg = None
+            try:
+                msg = call(client, model, prompt, items)
+                rows, artefakter = parse(msg, items)
+                usage = msg.usage
+            except (anthropic.APIError, json.JSONDecodeError) as e:
+                if not ska_forsoka_igen(e):
+                    print(f"  pass{p} batch{n:02d}: {type(e).__name__}: {e}")
+                    print("  INGET OMFORSOK — felet uppstod innan begaran accepterades")
+                    spara_misslyckat(d, p, n, attempt, msg)
+                    raise
+                # Bara fel som uppstod efter att begaran gick ivag far ett nytt
+                # forsok. Ett fel fore dess ar ett konfigurationsfel - fel
+                # parameter, fel modellnamn, saknad nyckel - och det kan aldrig
+                # lyckas vid forsok tva. Tre omforsok med sleep emellan doljer
+                # da signalen i en obevakad daglig korning och kostar tid utan
+                # att nagot anrop gors. JSONDecodeError hor till denna sida:
+                # svaret kom fram men gick inte att lasa, och nasta forsok kan
+                # ge ett annat svar.
+                #
+                # Ett anrop som misslyckas ska lamna lika mycket spar som ett som
+                # lyckas. Forut skrevs bara undantagets klassnamn, och rasvaret -
+                # det enda som kan saga varfor - kastades. Da ser ett avhugget
+                # svar ut som ett trasigt svar.
+                # Trasig JSON mitt i ett komplett svar raknas for sig. Ett fall
+                # av tre forsok matt 2026-11-05: modellen stakade sig och skrev
+                # halva faltet tva ganger. Haller den andelen i sig blir det ett
+                # tiotal omkorningar om dygnet. Andelen ska matas over flera
+                # dygn innan formatkravet ror sig - darfor en raknare, ingen
+                # atgard.
+                if isinstance(e, json.JSONDecodeError):
+                    parse_fel += 1
+                    parse_fel_totalt += 1
+                print(f"  pass{p} batch{n:02d} forsok {attempt}: {type(e).__name__}: {e}")
+                spara_misslyckat(d, p, n, attempt, msg)
+                time.sleep(2 * attempt); continue
+            fel, dg = godkann(rows, items)
+            if fel:
+                print(f"  pass{p} batch{n:02d} forsok {attempt}: {len(fel)} valideringsfel "
+                      f"pa {len(rows)} rader")
+                spara_misslyckat(d, p, n, attempt, msg, fel)
+                if attempt == MAX_TRIES:
+                    print("  GER UPP pa denna batch"); break
+                continue
+            skriv_svar(d, p, n, rows, dg, artefakter, msg, rec, omgang,
+                       round(time.time() - t0, 1), parse_fel)
+            break
+        gjorda += 1
+    gjorda += 1
+    return parse_fel_totalt, 0
+
+def run(day, only_pass=None, budget=None, model=DEFAULT_MODEL, dry=False,
+        leverans=None, slapp=False):
     sp.state_id(day)
     print(f"=== {sp.state_id(day)} — klassificering ===")
     gate_dygnet_ar_oppet(day)
@@ -642,85 +937,18 @@ def run(day, only_pass=None, budget=None, model=DEFAULT_MODEL, dry=False):
     # utan stampel gar det inte att se vilka anrop som hor ihop.
     omgang = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
     gjorda = parse_fel_totalt = 0
+    utgang = 0
     try:
-        for p, n, items in todo:
-            if budget is not None and gjorda >= budget:
-                print(f"\n  budget {budget} nadd, {len(todo) - gjorda} anrop kvar — kor steget igen")
-                return 2
-            parse_fel = 0
-            for attempt in range(1, MAX_TRIES + 1):
-                t0 = time.time()
-                msg = None
-                try:
-                    msg = call(client, model, prompt, items)
-                    rows, artefakter = parse(msg, items)
-                    usage = msg.usage
-                except (anthropic.APIError, json.JSONDecodeError) as e:
-                    if not ska_forsoka_igen(e):
-                        print(f"  pass{p} batch{n:02d}: {type(e).__name__}: {e}")
-                        print("  INGET OMFORSOK — felet uppstod innan begaran accepterades")
-                        spara_misslyckat(d, p, n, attempt, msg)
-                        raise
-                    # Bara fel som uppstod efter att begaran gick ivag far ett nytt
-                    # forsok. Ett fel fore dess ar ett konfigurationsfel - fel
-                    # parameter, fel modellnamn, saknad nyckel - och det kan aldrig
-                    # lyckas vid forsok tva. Tre omforsok med sleep emellan doljer
-                    # da signalen i en obevakad daglig korning och kostar tid utan
-                    # att nagot anrop gors. JSONDecodeError hor till denna sida:
-                    # svaret kom fram men gick inte att lasa, och nasta forsok kan
-                    # ge ett annat svar.
-                    #
-                    # Ett anrop som misslyckas ska lamna lika mycket spar som ett som
-                    # lyckas. Forut skrevs bara undantagets klassnamn, och rasvaret -
-                    # det enda som kan saga varfor - kastades. Da ser ett avhugget
-                    # svar ut som ett trasigt svar.
-                    # Trasig JSON mitt i ett komplett svar raknas for sig. Ett fall
-                    # av tre forsok matt 2026-11-05: modellen stakade sig och skrev
-                    # halva faltet tva ganger. Haller den andelen i sig blir det ett
-                    # tiotal omkorningar om dygnet. Andelen ska matas over flera
-                    # dygn innan formatkravet ror sig - darfor en raknare, ingen
-                    # atgard.
-                    if isinstance(e, json.JSONDecodeError):
-                        parse_fel += 1
-                        parse_fel_totalt += 1
-                    print(f"  pass{p} batch{n:02d} forsok {attempt}: {type(e).__name__}: {e}")
-                    spara_misslyckat(d, p, n, attempt, msg)
-                    time.sleep(2 * attempt); continue
-                fel = validate(rows, items)
-                dg = diagnostics(rows)
-                # Nollfyllningsdefekten passerar validering men ar det fel som
-                # ogiltigforklarade pilotserien: fjorton av sexton poang mekaniskt
-                # satta till noll. Specen kallar det en diagnostisk varning; i drift
-                # kor vi om batchen i stallet for att spara den.
-                if not fel and dg["authored_scores_median"] <= 2:
-                    fel = [f"glest poangvektor, median {dg['authored_scores_median']:.0f}/16 "
-                           f"egna poang — protokollet har inte foljts"]
-                if fel:
-                    print(f"  pass{p} batch{n:02d} forsok {attempt}: {len(fel)} valideringsfel "
-                          f"pa {len(rows)} rader")
-                    spara_misslyckat(d, p, n, attempt, msg, fel)
-                    if attempt == MAX_TRIES:
-                        print("  GER UPP pa denna batch"); break
-                    continue
-                write_text(d / f"pass{p}_batch_{n:02d}.json",
-                           json.dumps(rows, ensure_ascii=False, indent=1))
-                rec["calls"].append({"run": omgang, "pass": p, "batch": n, "rows": len(rows),
-                                     "seconds": round(time.time() - t0, 1),
-                                     "input_tokens": usage.input_tokens,
-                                     "output_tokens": usage.output_tokens,
-                                     "cache_read": getattr(usage, "cache_read_input_tokens", 0),
-                                     "cache_write": getattr(usage, "cache_creation_input_tokens", 0),
-                                     "block_types": block_types(msg),
-                                     "emission_artifacts": artefakter,
-                                     "parse_failures": parse_fel, **dg})
-                print(f"  pass{p} batch{n:02d}  {len(rows)} rader  "
-                      f"{dg['authored_scores_median']:.0f}/16 egna poang  "
-                      f"cache {getattr(usage,'cache_read_input_tokens',0):,}")
-                print(f"    uttalat mot harlett: primary {dg['stated_primary_differs']}, "
-                      f"secondary {dg['stated_secondary_differs']}  "
-                      f"emissionsartefakter {artefakter}")
-                break
-            gjorda += 1
+        if (leverans or LEVERANS) == "batch":
+            parse_fel_totalt, utgang = kor_i_batch(
+                client, model, prompt, day, todo, d, rec, omgang, slapp)
+            if utgang:
+                return utgang
+        else:
+            parse_fel_totalt, utgang = kor_direkt(
+                client, model, prompt, todo, d, rec, omgang, budget)
+            if utgang:
+                return utgang
     finally:
         # Journalen skrivs pa VARJE utgang: budgettaket, ett grindfel, ett
         # avbrott mitt i, normal avslutning. Samma regel som instrumenteringen
@@ -746,7 +974,9 @@ def main():
                      int(a[a.index("--pass") + 1]) if "--pass" in a else None,
                      int(a[a.index("--budget") + 1]) if "--budget" in a else None,
                      a[a.index("--model") + 1] if "--model" in a else DEFAULT_MODEL,
-                     "--dry-run" in a))
+                     "--dry-run" in a,
+                     "direkt" if "--live" in a else None,
+                     "--slapp" in a))
     except gates.GateFailure as e:
         print(f"\nKEDJAN STOPPAD: {e}"); sys.exit(1)
 

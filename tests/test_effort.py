@@ -33,4 +33,8 @@ def test_opus_5_5_star_inte_i_tabellen():
 def test_effort_skrivs_i_korjournalen():
     src = (Path(__file__).resolve().parent.parent / "src" / "classify.py").read_text(encoding="utf-8")
     assert '"effort": effort_for(model)' in src
-    assert 'output_config={"effort": effort_for(model)}' in src
+    # Anropets parametrar byggs pa ETT stalle sedan batchvagen kom till, sa att
+    # direktvagen och Batch API inte kan bli tva olika instrument. Effort ska
+    # ligga dar, inte pa ett anropsstalle.
+    assert '"output_config": {"effort": effort_for(model)}' in src
+    assert "def anropsparametrar(" in src
