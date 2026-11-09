@@ -1,13 +1,20 @@
 """Klassificeringssteget. Anropar API:et direkt, inte som agent.
 
     python3 src/classify.py <AAAAMMDD> [--pass N] [--budget N] [--model ID]
-                                      [--dry-run] [--live] [--slapp]
+                                      [--dry-run] [--live] [--slapp] [--en-i-taget]
 
 Leveransen ar Batch API (halva listpriset, faststallt 2026-11-06). --live kor
 direkta anrop i stallet, till fullt pris: for en enskild batch man vill se
 svaret pa med en gang. --slapp skickar batchjobbet och gar ur; nasta korning
 hamtar det. Jobbfilen pa disk ar skyddet mot att betala for samma jobb tva
 ganger.
+
+--en-i-taget skickar EN observation per begaran i stallet for femtio. Matvag for
+FYND 009: med en observation finns ingen rad att halka mellan, och identiteten
+kommer ur begaran. Den frysta prompten och specen ar oforandrade - avvikelsen
+galler canonical_batch_size, och den noteras. Passfilerna blir identiska i form.
+Journalen markerar dygnet med delivery_form, sa att det aldrig kan forvaxlas med
+ett dygn kort pa den beslutade formen.
 
 Kedjans andra ande. Tidigare kordes klassificeringen utanfor kedjan, for hand,
 vilket gjorde ett dygn omojligt att kora oovervakat.
@@ -763,6 +770,157 @@ def kor_i_batch(client, model, prompt, day, todo, d, rec, omgang, slapp=False):
         print(f"\n  {len(annu_kvar)} batchar kvar efter {MAX_TRIES} ronder")
     return parse_fel_totalt, 0
 
+def kund_id_en(p, n, i):
+    return f"pass{p}_batch{n:02d}_obs{i:02d}"
+
+def tyd_kund_id_en(cid):
+    m = re.fullmatch(r"pass(\d+)_batch(\d+)_obs(\d+)", cid)
+    if not m:
+        raise ValueError(f"okant custom_id: {cid!r}")
+    return int(m.group(1)), int(m.group(2)), int(m.group(3))
+
+def endir(d):
+    k = d / "_en_i_taget"
+    k.mkdir(parents=True, exist_ok=True)
+    return k
+
+def kor_i_batch_en(client, model, prompt, day, todo, d, rec, omgang, slapp=False):
+    """EN OBSERVATION PER BEGARAN. Matvag, annu inte beslutad leveransform.
+
+    Varfor den finns: observation_id glider ett steg i svansen av en batch om
+    femtio (FYND 009), och felet gar inte att reparera - tva rader gor anspraak
+    pa samma observation. Med en observation per begaran finns ingen rad att
+    halka mellan. Identiteten kommer ur begaran, inte ur modellens avskrift.
+
+    DEN FRYSTA PROMPTEN RORS INTE. Prompten sager "one object per supplied
+    observation"; med en observation ar svaret en array om ett objekt, och
+    kontraktet haller ordagrant. Det enda som avviker fran specen ar
+    canonical_batch_size, och den avvikelsen noteras redan i utskriften.
+
+    PASSFILEN BLIR IDENTISK I FORM. De femtio enskilda svaren sats ihop i
+    indatans ordning och skrivs som en vanlig passfil, sa att konsensus, farg
+    och revision inte ser nagon skillnad alls.
+
+    VARJE SVAR LIGGER KVAR PA DISK. Ett jobb pa artonhundra begaran kan behova
+    flera ronder, och ett svar som redan ar betalt far aldrig hamtas en gang
+    till. Delresultaten ligger i _en_i_taget/ och ronden fragar bara efter det
+    som saknas."""
+    k = endir(d)
+    parse_fel_totalt = 0
+
+    def saknas():
+        ut = []
+        for p, n, items in todo:
+            if (d / f"pass{p}_batch_{n:02d}.json").exists():
+                continue
+            for i, it in enumerate(items, start=1):
+                if not (k / f"{kund_id_en(p, n, i)}.json").exists():
+                    ut.append((p, n, i, it))
+        return ut
+
+    for rond in range(1, MAX_TRIES + 1):
+        kvar = saknas()
+        if not kvar:
+            break
+        jobb = las_jobb(day)
+        if jobb is None:
+            print(f"\n  rond {rond}: {len(kvar)} begaran, en observation i varje")
+            begaran = [{"custom_id": kund_id_en(p, n, i),
+                        "params": anropsparametrar(model, prompt, [it])}
+                       for p, n, i, it in kvar]
+            jobbet = client.messages.batches.create(requests=begaran)
+            bid = jobbet.id
+            write_text(jobbfil(day), json.dumps(
+                {"id": bid, "model": model, "prompt_sha256": sha(PROMPT_FILE),
+                 "skickat": time.strftime("%Y%m%dT%H%M%SZ", time.gmtime()),
+                 "form": "en_i_taget",
+                 "begaran": [b["custom_id"] for b in begaran]},
+                ensure_ascii=False, indent=1))
+            print(f"  batchjobb {bid} skickat — {len(begaran)} begaran")
+            print(f"    jobbfil: {jobbfil(day).name}")
+            if slapp:
+                print("\n  --slapp: jobbet ligger kvar hos leverantoren. Kor steget igen"
+                      " for att hamta det. Leverantorens fonster ar 24 timmar.")
+                return parse_fel_totalt, 2
+        else:
+            bid = jobb["id"]
+            print(f"\n  hamtar jobb {bid} fran {jobb.get('skickat', 'tidigare korning')}"
+                  f" — {len(jobb.get('begaran', []))} begaran")
+            if jobb.get("prompt_sha256") not in (None, sha(PROMPT_FILE)):
+                raise gates.GateFailure(
+                    f"jobbet {bid} skickades med en annan prompt an den som galler nu")
+        jobbet = vanta_pa_jobb(client, bid)
+        # Fordrojningen ar det andra matet: leverantorens fonster ar 24 timmar
+        # och schemalaggningen ska tala det, inte den observerade minuten.
+        if getattr(jobbet, "created_at", None) and getattr(jobbet, "ended_at", None):
+            sek = (jobbet.ended_at - jobbet.created_at).total_seconds()
+            print(f"    jobbets fordrojning: {sek/60:.1f} minuter")
+            rec.setdefault("batch_latency_seconds", []).append(
+                {"batch_id": bid, "requests": len(jobb["begaran"]) if jobb else len(kvar),
+                 "seconds": round(sek, 1)})
+        for cid, msg, felmeddelande in [(r.custom_id,
+                                         getattr(r.result, "message", None),
+                                         None if getattr(r.result, "type", None) == "succeeded"
+                                         else getattr(r.result, "type", "okant"))
+                                        for r in client.messages.batches.results(bid)]:
+            p, n, i = tyd_kund_id_en(cid)
+            if felmeddelande:
+                print(f"  {cid}: {felmeddelande}")
+                continue
+            items = dict(batches(day))[n]
+            it = items[i - 1]
+            try:
+                rows, artefakter = parse(msg, [it])
+            except json.JSONDecodeError as e:
+                parse_fel_totalt += 1
+                print(f"  {cid}: JSONDecodeError: {e}")
+                write_text(k / f"FAILED_{cid}.txt", raw_text(msg))
+                continue
+            fel, dg = godkann(rows, [it])
+            if fel:
+                print(f"  {cid}: {len(fel)} valideringsfel — {fel[0][:80]}")
+                write_text(k / f"FAILED_{cid}.txt", raw_text(msg))
+                continue
+            u = msg.usage
+            write_text(k / f"{cid}.json", json.dumps(
+                {"row": rows[0], "artefakter": artefakter, "batch_id": bid,
+                 "usage": {"input_tokens": u.input_tokens,
+                           "output_tokens": u.output_tokens,
+                           "cache_read": getattr(u, "cache_read_input_tokens", 0),
+                           "cache_write": getattr(u, "cache_creation_input_tokens", 0)}},
+                ensure_ascii=False, indent=1))
+        rensa_jobb(day)
+        # Satt ihop de batchar som blivit kompletta.
+        for p, n, items in todo:
+            fil = d / f"pass{p}_batch_{n:02d}.json"
+            if fil.exists():
+                continue
+            delar = [k / f"{kund_id_en(p, n, i)}.json" for i in range(1, len(items) + 1)]
+            if not all(x.exists() for x in delar):
+                continue
+            svar = [json.loads(x.read_text(encoding="utf-8")) for x in delar]
+            rows = [x["row"] for x in svar]
+            fel, dg = godkann(rows, items)
+            if fel:
+                print(f"  pass{p} batch{n:02d} foll vid hopsattningen: {fel[0][:90]}")
+                continue
+            write_text(fil, json.dumps(rows, ensure_ascii=False, indent=1))
+            summa = {f: sum(x["usage"][f] for x in svar)
+                     for f in ("input_tokens", "output_tokens", "cache_read", "cache_write")}
+            rec["calls"].append({"run": omgang, "pass": p, "batch": n, "rows": len(rows),
+                                 "seconds": None, "delivery": "batch_en_i_taget",
+                                 "requests": len(svar),
+                                 "batch_id": sorted({x["batch_id"] for x in svar}),
+                                 "emission_artifacts": sum(x["artefakter"] for x in svar),
+                                 "parse_failures": 0, **summa, **dg})
+            print(f"  pass{p} batch{n:02d}  {len(rows)} rader ur {len(svar)} begaran  "
+                  f"{dg['authored_scores_median']:.0f}/16 egna poang  "
+                  f"cache {summa['cache_read']:,}")
+    annu = saknas()
+    if annu:
+        print(f"\n  {len(annu)} enskilda begaran kvar efter {MAX_TRIES} ronder")
+    return parse_fel_totalt, 0
+
 def godkann(rows, items):
     """Valideringen och glesgrinden — ETT STALLE for bada leveransvagarna.
 
@@ -880,7 +1038,7 @@ def kor_direkt(client, model, prompt, todo, d, rec, omgang, budget=None):
     return parse_fel_totalt, 0
 
 def run(day, only_pass=None, budget=None, model=DEFAULT_MODEL, dry=False,
-        leverans=None, slapp=False):
+        leverans=None, slapp=False, en_i_taget=False):
     sp.state_id(day)
     print(f"=== {sp.state_id(day)} — klassificering ===")
     gate_dygnet_ar_oppet(day)
@@ -900,6 +1058,13 @@ def run(day, only_pass=None, budget=None, model=DEFAULT_MODEL, dry=False,
     if dry:
         chars = len(prompt) + len(OUTPUT_RULE)
         print(f"  TORRKORNING — inget anrop gors")
+        if en_i_taget:
+            # En torrkorning som rapporterar fel antal begaran ar varre an
+            # ingen: siffrorna harifran citeras i beslutsunderlag.
+            n_beg = sum(len(items) for _, _, items in todo)
+            print(f"  EN I TAGET: {n_beg:,} begaran, en observation i varje")
+            print(f"  prefixet lases da {n_beg:,} ganger i stallet for {len(todo)} —"
+                  f" det ar hela kostnadsfragan")
         print(f"  cachat prefix {chars:,} tecken, cirka {chars // 4:,} tokens")
         print(f"  per anrop tillkommer batchen, cirka {len(json.dumps(bs[0][1])) // 4:,} tokens")
         print(f"  modell {model}")
@@ -939,7 +1104,16 @@ def run(day, only_pass=None, budget=None, model=DEFAULT_MODEL, dry=False,
     gjorda = parse_fel_totalt = 0
     utgang = 0
     try:
-        if (leverans or LEVERANS) == "batch":
+        if en_i_taget:
+            # Matvag, se FYND 009. Noteras i journalen sa att ett dygn kort sa
+            # aldrig kan forvaxlas med ett kort pa den beslutade formen.
+            rec["delivery_form"] = "en_observation_per_begaran"
+            rec["delivery_form_note"] = (
+                "matvag 2026-11-09, ej beslutad leveransform. Frysta prompten och "
+                "specen oforandrade; avvikelsen galler canonical_batch_size. Se FYND 009")
+            parse_fel_totalt, utgang = kor_i_batch_en(
+                client, model, prompt, day, todo, d, rec, omgang, slapp)
+        elif (leverans or LEVERANS) == "batch":
             parse_fel_totalt, utgang = kor_i_batch(
                 client, model, prompt, day, todo, d, rec, omgang, slapp)
             if utgang:
@@ -976,7 +1150,8 @@ def main():
                      a[a.index("--model") + 1] if "--model" in a else DEFAULT_MODEL,
                      "--dry-run" in a,
                      "direkt" if "--live" in a else None,
-                     "--slapp" in a))
+                     "--slapp" in a,
+                     "--en-i-taget" in a))
     except gates.GateFailure as e:
         print(f"\nKEDJAN STOPPAD: {e}"); sys.exit(1)
 
