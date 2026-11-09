@@ -1116,13 +1116,18 @@ def run(day, only_pass=None, budget=None, model=DEFAULT_MODEL, dry=False,
         elif (leverans or LEVERANS) == "batch":
             parse_fel_totalt, utgang = kor_i_batch(
                 client, model, prompt, day, todo, d, rec, omgang, slapp)
-            if utgang:
-                return utgang
         else:
             parse_fel_totalt, utgang = kor_direkt(
                 client, model, prompt, todo, d, rec, omgang, budget)
-            if utgang:
-                return utgang
+        # ETT STALLE. Raden lag tidigare i tva av tre grenar och saknades i den
+        # tredje: ett jobb som slapptes med --slapp foll darfor vidare till
+        # grinden "alla 3 pass tacker alla batchar", som med ratta sade att 36
+        # batchar saknas - och korningen avslutades med KEDJAN STOPPAD och
+        # felkod 1. Jobbet lag i kon, journalen var skriven och ingenting var
+        # fel, men bade en manniska och ett schemalagt jobb laser det som ett
+        # haveri. Ett slappt jobb ar inte ett fel; det ar en vantan.
+        if utgang:
+            return utgang
     finally:
         # Journalen skrivs pa VARJE utgang: budgettaket, ett grindfel, ett
         # avbrott mitt i, normal avslutning. Samma regel som instrumenteringen

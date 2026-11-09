@@ -136,3 +136,18 @@ def test_dygnet_markeras_i_journalen():
     src = inspect.getsource(classify.run)
     assert 'rec["delivery_form"] = "en_observation_per_begaran"' in src
     assert "FYND 009" in src
+
+
+def test_ett_slappt_jobb_ar_inte_ett_haveri():
+    """--slapp returnerade 2 ur utforaren men raden som bar vidare returen
+    saknades i matvagens gren. Korningen foll da till fullstandighetsgrinden
+    och avslutades med KEDJAN STOPPAD och felkod 1, trots att jobbet lag i kon
+    och journalen var skriven. Ett schemalagt jobb laser det som ett haveri."""
+    import inspect, re
+    src = inspect.getsource(classify.run)
+    # exakt en retur for utgangskoden, och den ska sta fore fullstandighetsgrinden
+    assert src.count("if utgang:\n            return utgang") == 1, \
+        "returen ska sta pa ett stalle, delad av alla leveransvagar"
+    # grinden sjalv, inte ordalydelsen: frasen star aven i kommentaren ovanfor
+    assert src.index("if utgang:") < src.index('gates._say("alla 3 pass'), \
+        "returen star efter grinden — ett slappt jobb rapporteras da som fel"
