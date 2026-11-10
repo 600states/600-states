@@ -15,8 +15,9 @@ def sha(p): return hashlib.sha256(Path(p).read_bytes()).hexdigest()
 
 def audit(day, data=DATA):
     D = sp.outdir(data, day)
-    pre = list(csv.DictReader(open(sp.pre_manifest(data, day), encoding="utf-8")))
-    emo = list(csv.DictReader(open(sp.color_manifest(data, day), encoding="utf-8")))
+    # Revisionen laser dygnets egna filer, aven de tre som frystes under v3.2.
+    pre = list(csv.DictReader(open(sp.frozen(sp.pre_manifest(data, day)), encoding="utf-8")))
+    emo = list(csv.DictReader(open(sp.frozen(sp.color_manifest(data, day)), encoding="utf-8")))
     inp = {}
     for f in sorted(sp.classifier_input(data, day).glob("batch_*.json")):
         for it in json.loads(f.read_text(encoding="utf-8")): inp[it["observation_id"]] = it
@@ -79,10 +80,10 @@ def audit(day, data=DATA):
     chk("publisher cap <= 10", max(caps.values()) <= 10, f"max {max(caps.values())}, {len(caps)} publicister")
 
     files = {
-        "pre-emotion": sp.pre_manifest(data, day),
-        "emotion+farg": sp.color_manifest(data, day),
-        "near-duplicate": sp.near_duplicate(data, day),
-        "PNG": sp.png(data, day),
+        "pre-emotion": sp.frozen(sp.pre_manifest(data, day)),
+        "emotion+farg": sp.frozen(sp.color_manifest(data, day)),
+        "near-duplicate": sp.frozen(sp.near_duplicate(data, day)),
+        "PNG": sp.frozen(sp.png(data, day)),
     }
     site = json.loads(sp.site_json(data, day).read_text(encoding="utf-8"))
     m = site["meta"]

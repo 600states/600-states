@@ -201,6 +201,23 @@ evidence capture behind the URL, the three classifier passes behind the
 consensus, the frozen formula behind the hex. Do not collapse a step, cache
 away an intermediate, or drop a column because nothing reads it yet.
 
+## The manifest version names a shape: write `V`, read `frozen()`
+
+`v3.2` has 17 columns in the pre-emotion manifest, `v3.3` has 19. Two shapes
+under one version name is what made "Execution Spec v2.2" useless as a
+reference, so the columns and the version move together.
+
+2026/308 is frozen as v3.2 and stays that way. So production steps
+(`run_state`, `consensus`, `run_color`, `render`) write `statepaths.V` and
+nothing else — what happens to be on disk must never decide the shape that is
+written — while the steps that read a finished day (`audit_state`,
+`build_site`, `build_battery`) go through `statepaths.frozen()`, which takes
+the day's own file. Audit of 2026/308 passes unchanged under v3.3 code.
+
+A day that was produced under an older version cannot be half re-run: colour
+and render would write `V` beside its older manifests. Produce it whole, or
+leave it alone.
+
 ## Two `basis()`, and only one of them is the series
 
 `capture_state.basis()` belongs to the pilot path. It can return three levels

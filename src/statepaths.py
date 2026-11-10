@@ -14,6 +14,15 @@ Ett protokollbrott som uppstod av att strangen byggdes pa fem stallen i koden.
 
 ARET ar aldrig hardkodat. Serien ar oppen over ar; 2027/001 kommer.
 
+MANIFESTVERSIONEN NAMNER EN FORM, inte en smak. v3.2 har 17 kolumner i
+pre-emotionsmanifestet, v3.3 har 19: evidence_retrieved_at och evidence_basis
+kom till med FYND 011. Tva former under ett versionsnamn ar precis det som
+gjorde "Execution Spec v2.2" oanvandbart som referens - se AGENTS.md.
+
+SKRIVNING ANVANDER ALLTID V. LASNING TAR DYGNETS EGEN FIL. De tre dygn som
+redan ar frysta bar v3.2 och ska fortsatta gora det; de ska anda ga att
+revidera och publicera. Darfor frozen().
+
 KATALOGEN heter STATE_<state_key>, alltsa STATE_2026_335. Pilotserien ligger i
 STATE_001..STATE_010 med den gamla namngivningen och ror inte dessa - en
 efterhandskorning av 2 januari 2026 hamnar i STATE_2026_002 bredvid, aldrig
@@ -21,7 +30,7 @@ ovanpa.
 """
 from datetime import date
 
-MANIFEST_VERSION = "v3.2"
+MANIFEST_VERSION = "v3.3"
 GENERATION_DIR = "08_V3_STATES"
 
 def _d(day):
@@ -54,3 +63,17 @@ def png(DATA, day):               return _f(DATA, day, f"{V}_CONSENSUS.png")
 def site_json(DATA, day):         return outdir(DATA, day) / f"site_{state_key(day)}.json"
 def classifier_input(DATA, day):  return outdir(DATA, day) / "classifier_input"
 def sha_sidecar(path):            return path.with_name(path.name + ".sha256")
+
+def frozen(path):
+    """Dygnets egen fil, aven om den frystes under en tidigare manifestversion.
+
+    Anvands vid LASNING - revision, publicering, batteribygge. Skrivning gar
+    aldrig genom den har funktionen: ett nytt dygn ska bara V och ingenting
+    annat, annars avgor vad som rakar ligga pa disk vilken form som skrivs.
+    """
+    if path.exists():
+        return path
+    hits = sorted(path.parent.glob(path.name.replace(V, "v*")))
+    if not hits:
+        raise FileNotFoundError(path)
+    return hits[-1]

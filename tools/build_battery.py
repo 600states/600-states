@@ -31,7 +31,7 @@ REFERENS = REMEDIATION / "600_STATES_KALIBRERINGSBATTERI_v1.0_REFERENS.json"
 def bygg(day, storlek=50):
     d = sp.outdir(DATA, day)
     kon = {r["observation_id"]: r for r in csv.DictReader(
-        open(sp.emotion_manifest(DATA, day), encoding="utf-8"))}
+        open(sp.frozen(sp.emotion_manifest(DATA, day)), encoding="utf-8"))}
     inp = {}
     for f in sorted(sp.classifier_input(DATA, day).glob("batch_*.json")):
         for it in json.loads(f.read_text(encoding="utf-8")):
