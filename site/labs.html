@@ -233,7 +233,7 @@ footer .repo a:hover{color:var(--ink)}
       <p class="sub">Every method error found while building the instrument, what the measurement was, and what changed because of it.</p>
     </div>
     <div class="tile hero-say lift">
-      <p class="lead">The instrument has been wrong eleven times. This is the list.</p>
+      <p class="lead">The instrument has been wrong thirteen times. This is the list.</p>
 
       <ol class="toc">
         <li><a href="#hash"><span>I</span>The hash that could not be reproduced</a></li>
@@ -247,6 +247,8 @@ footer .repo a:hover{color:var(--ink)}
         <li><a href="#noise"><span>IX</span>The instrument does not reproduce itself</a></li>
         <li><a href="#onerun"><span>X</span>One day, one run, one outcome</a></li>
         <li><a href="#temp"><span>XI</span>The parameter that did not exist</a></li>
+        <li><a href="#delivery"><span>XII</span>The delivery path never built</a></li>
+        <li><a href="#slip"><span>XIII</span>The identifiers slipped</a></li>
       </ol>
       <p class="note">Most of these have the same shape: the rule existed, and no line of code enforced it. That is the lesson the whole project now runs on &mdash; <b>a rule that cannot stop a run is a wish.</b></p>
     </div>
@@ -493,6 +495,87 @@ footer .repo a:hover{color:var(--ink)}
         </blockquote>
       </div>
     </article>
+
+    <article class="ch r" id="delivery">
+      <div class="ch-head">
+        <p class="ch-num">XII</p>
+        <div><h2>The delivery path that was decided and never built</h2><p class="when">7 November 2026</p></div>
+      </div>
+      <div class="ch-body">
+        <p>The parameter register had said it since 6&nbsp;November: <em>delivery &mdash; Batch API, 50% of list price.</em> The project&rsquo;s own description said the same. The code sent ordinary calls. The proof is in the run journals: <code>service_tier: "standard"</code> in every usage line of both completed days.</p>
+        <p><b>The fifth time with the same shape.</b> The rule existed. It was documented. It stood in the first thing a recovery reads. It was never in the code path that decides.</p>
+        <p>It cost $7.50 a day &mdash; and it was the direct reason the account&rsquo;s usage ceiling was hit in the middle of a day&rsquo;s classification, 31 of 36 calls in, with the ceiling set to release on 1&nbsp;December. Had it not been found then, it would have been found on day one.</p>
+        <div class="data">
+          <table>
+            <caption>Measured the same evening, after the fix</caption>
+            <thead><tr><th>Delivery</th><th class="n">per call</th><th class="n">per day</th></tr></thead>
+            <tbody>
+              <tr><th>Direct</th><td class="n">$0.436</td><td class="n">$15.70</td></tr>
+              <tr><th>Batch</th><td class="n hit">$0.219</td><td class="n hit">$7.88</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Exactly half &mdash; not derived from a price list, but counted from the journal&rsquo;s own token rows.</p>
+        <blockquote class="pull">
+          <p>One request, one place. Had the two delivery paths each built their own request, a parameter corrected in one and forgotten in the other would give two different readings of the same day, with nothing in the manifest to show which applied.</p>
+        </blockquote>
+      </div>
+    </article>
+
+    <article class="ch r" id="slip">
+      <div class="ch-head">
+        <p class="ch-num">XIII</p>
+        <div><h2>The identifiers slipped &mdash; and the fix was already in the spec</h2><p class="when">7&ndash;10 November 2026</p></div>
+      </div>
+      <div class="ch-body">
+        <p>Two requests in one day failed identically on every attempt. Six of six, two passes, two delivery paths, two dates. One identifier missing, one duplicated.</p>
+        <div class="data">
+          <table>
+            <caption>Position by position inside the batch of fifty</caption>
+            <thead><tr><th>Position</th><th>input id</th><th>returned id</th></tr></thead>
+            <tbody>
+              <tr><th>47</th><td>&hellip;AEB757E4</td><td>&hellip;AEB757E4</td></tr>
+              <tr><th>48</th><td>&hellip;1F44067F</td><td class="hit">&hellip;08D1EC36</td></tr>
+              <tr><th>49</th><td>&hellip;08D1EC36</td><td class="hit">&hellip;3745844E</td></tr>
+              <tr><th>50</th><td>&hellip;3745844E</td><td>&hellip;3745844E</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><b>The identifiers slip by one row in the tail.</b> The content stays where it belongs &mdash; row 48 carries its own observation&rsquo;s text, row 49 carries its own. The classification is right. Only the copied identifier slides, after some fifteen thousand tokens of generation, with forty&#8209;seven rows already delivered.</p>
+        <p>It is chapter&nbsp;VI&rsquo;s problem in its worst form: sixteen random hex characters are the one part of the output with no redundancy, and in a hash string nothing constrains the next character.</p>
+        <p><b>And it could not be repaired.</b> Repair by elimination needs exactly one missing identifier and exactly one <em>unknown</em> one &mdash; then logic leaves only one observation the row can be. Here nothing is unknown; one is duplicated, and two rows claim the same observation. Choosing between them needs either an assumption about order or a similarity measure, and both were already tested and measured as unreliable.</p>
+        <p>So the batch fails, which is correct. But the consequence was new: <b>a day can become impossible to complete</b> &mdash; and <em>one day, one run, one outcome</em> means it cannot be worked around by running the day again.</p>
+        <p>The obvious fix was to have the model echo a second, shorter key beside the identifier. We rejected it, and the reason belongs here: <b>a disagreement between the two does not say which one slipped.</b> It would have been one more gate that looks like a check without being one.</p>
+        <p>What we did instead was to stop asking the model to copy identifiers at all. <b>Each observation is now sent on its own.</b> Identity comes from the request. With one observation there is no row to slip between &mdash; the failure is not repaired, it is impossible.</p>
+        <p>Then we read the frozen execution spec again, and found this:</p>
+        <blockquote>
+          <p><code>"row_independence_required": true</code></p>
+        </blockquote>
+        <p>It had been there all along. <b>Fifty observations in one call could never guarantee it</b> &mdash; the model saw forty&#8209;nine other news items from the same day while judging the fiftieth. Fifty per call was chosen for cost. It was never a decision about how an observation should be judged.</p>
+        <blockquote class="pull">
+          <p>The rule existed. It was documented. It was frozen. It was never in the code path that decides. Seventh time &mdash; and the first time it points our way.</p>
+        </blockquote>
+        <p><b>The form was not neutral, and we measured it.</b> Same battery, same frozen prompt, same three passes &mdash; against a known noise floor: the same instrument run twice on 6&nbsp;November with nothing set differently between them.</p>
+        <div class="data">
+          <table>
+            <caption>Noise floor is the gap between the two runs of 6 November</caption>
+            <thead><tr><th>Measure</th><th class="n">run 1 &middot; run 2</th><th class="n">noise</th><th class="n">one per request</th></tr></thead>
+            <tbody>
+              <tr><th>Self&#8209;agreement, primary</th><td class="n">0.78&nbsp;&middot;&nbsp;0.76</td><td class="n">0.02</td><td class="n hit">0.86</td></tr>
+              <tr><th>Mean deviation, sixteen scores</th><td class="n">0.0179&nbsp;&middot;&nbsp;0.0192</td><td class="n">0.0013</td><td class="n">0.0197</td></tr>
+              <tr><th>Colour difference, median</th><td class="n">0.66&nbsp;&middot;&nbsp;0.73</td><td class="n">0.07</td><td class="n hit">1.96</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>The three passes agree far more with each other &mdash; five times the noise floor. The reading sits further from the old form&rsquo;s reading &mdash; seventeen times the noise floor. And the measure the colour model actually reads does not move at all.</p>
+        <p>The instrument is <b>as steady, aimed slightly differently.</b></p>
+        <p><b>Two things we will not say.</b> That it is <em>better</em>: there is no ground truth, and the reference is not truth &mdash; it is the old form. <em>More determinate</em> is measured; <em>better</em> is not measurable. And that the difference means anything: it follows from how the question is asked, not from anything in the day.</p>
+        <p>The figure in chapter&nbsp;IX &mdash; eight tiles in fifty &mdash; belongs to the old form. Under the new one it is <b>seven</b>. That chapter is not rewritten; a dated measurement stands as it was.</p>
+        <blockquote class="pull">
+          <p>A change that moves the instrument is made before the series begins, or not at all.</p>
+        </blockquote>
+      </div>
+    </article>
   </div>
 </section>
 
@@ -527,6 +610,7 @@ footer .repo a:hover{color:var(--ink)}
       <div class="ch-body">
         <p>Honest work has an open list, and this is ours.</p>
         <ul class="open">
+          <li><b>A new reference manifest.</b> The calibration battery measures against a reference built under the old delivery form. Until it is rebuilt, every future battery compares the instrument against something it no longer is.</li>
           <li><b>The floor for evidence with a content hash.</b> 94.3% measured. Which floor should apply is undecided, so the number is reported and not approved.</li>
           <li><b>Secondary states are less stable than primary.</b> 0.56 against 0.78 in self&#8209;agreement. Whether the colour model should weight secondary lower is open &mdash; and must not be decided on the basis of which option looks better.</li>
           <li><b>The reach of the one&#8209;run rule.</b> The gate stops a re&#8209;run of a frozen day, but deleting the lock file by hand leaves no trace inside that day&rsquo;s own folder. An append&#8209;only freeze log outside it is proposed and not yet built.</li>
@@ -550,6 +634,7 @@ footer .repo a:hover{color:var(--ink)}
       <div class="rule r"><p>A failed call must leave as much trace as a successful one.</p></div>
       <div class="rule r"><p>A rejected solution is documented as carefully as an adopted one.</p></div>
       <div class="rule r"><p>A guard against overwriting is tested against the commonest case.</p></div>
+      <div class="rule r"><p>A change that moves the instrument is made before the series begins, or not at all.</p></div>
       <div class="rule r"><p>You may write down what is already true. You may not invent what nobody measured.</p></div>
     </div>
     <p class="meta r">The series starts on 1&nbsp;December&nbsp;2026. One work per UTC day, for as long as there are days.</p>
