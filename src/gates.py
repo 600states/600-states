@@ -36,6 +36,31 @@ def gate_selection(chosen, report, regions, per_region, cap):
          f"{report['unika_observation_id']}")
     _say("unika url", report["unika_urler"] == len(chosen), f"{report['unika_urler']}")
 
+def gate_evidence_time(rows, nivaer):
+    """Ett dygn utan datering pa bevisen far inte frysas. FYND 011.
+
+    Bevisen samlades in och bars hela vagen till sista steget - och tappades i
+    det ogonblick som gor en post permanent. I den publicerade posten sag ett
+    dygn fangat samma dygn darfor identiskt ut som ett fangat tva veckor
+    senare, och det ar den enda skillnad v3.0 finns till for att gora.
+
+    Grinden stod aldrig har forut, sa tystnaden kostade ingenting. Nu kostar
+    den dygnet: saknas tidsstampeln eller nivan pa en enda rad gar manifestet
+    inte att skriva.
+
+    nivaer kommer fran den som satter faltet, aldrig fran en egen lista har -
+    tva definitioner av samma vokabular ar hur FYND 003 uppstod.
+    """
+    print("        evidence_basis:", dict(collections.Counter(
+        r.get("evidence_basis") or "SAKNAS" for r in rows)))
+    utan = [r for r in rows if not r.get("evidence_retrieved_at")]
+    _say("varje rad bar hamtningstidpunkt", not utan,
+         f"{len(utan)} rader utan" + (f" (t.ex. ruta {utan[0].get('tile_index')})" if utan else ""))
+    fel = [r for r in rows if r.get("evidence_basis") not in nivaer]
+    _say("varje rad bar en bevisniva ur specen", not fel,
+         f"{len(fel)} rader utanfor {list(nivaer)}"
+         + (f" (t.ex. ruta {fel[0].get('tile_index')}: {fel[0].get('evidence_basis')!r})" if fel else ""))
+
 def gate_claims(items, is_readable, is_digest=None):
     """is_readable ar SAMMA funktion som urvalsfiltret anvander. Tva egna
     definitioner av "lasbar" var orsaken till att urvalet slappte igenom rader

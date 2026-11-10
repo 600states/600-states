@@ -84,24 +84,36 @@ def step_select(day):
                          select_day.PER_REGION, select_day.PUBLISHER_CAP)
     write_text(sp.workdir(DATA, day) / "chosen.json", json.dumps(chosen, ensure_ascii=False))
 
+    # NAR SIDAN LASTES FOLJER MED IN I DET FRYSTA MANIFESTET. Det gjorde den inte
+    # forut: hamtningen stamplades, stampeln bars genom hela kedjan och tappades
+    # har, i steget som gor posten permanent. Utan den ar ett dygn fangat samma
+    # dygn omojligt att skilja fran ett fangat tva veckor senare. Se FYND 011.
     cols = ["state_id", "tile_index", "grid_row", "grid_column", "observation_id", "family_key",
             "first_mention_utc", "representative_url", "representative_domain", "source_tier",
             "selection_layer", "review_region", "action_geo_country", "mention_rows",
-            "registry_version", "evidence_http_status", "evidence_sha256"]
+            "registry_version", "evidence_http_status", "evidence_sha256",
+            "evidence_retrieved_at", "evidence_basis"]
+    rader = [{"state_id": c["state_id"], "tile_index": c["tile_index"],
+              "grid_row": c["grid_row"], "grid_column": c["grid_column"],
+              "observation_id": c["observation_id"], "family_key": c["family_key"],
+              "first_mention_utc": c["first_mention_utc"], "representative_url": c["url"],
+              "representative_domain": c["domain"], "source_tier": c["source_tier"],
+              "selection_layer": c["selection_layer"], "review_region": c["review_region"],
+              "action_geo_country": c.get("action_geo_country", ""),
+              "mention_rows": c["mention_rows"], "registry_version": c["registry_version"],
+              "evidence_http_status": c.get("http_status") or "",
+              "evidence_sha256": c.get("content_sha256") or "",
+              "evidence_retrieved_at": c.get("evidence_retrieved_at") or "",
+              "evidence_basis": pool_evidence.basis(c, day)} for c in chosen]
+
+    # GRINDEN GAR FORE SKRIVNINGEN. Raderna finns fardiga i minnet, sa att
+    # "manifestet saknar datering" gar att veta innan filen ar skriven i stallet
+    # for efterat, nar den redan ar den frysta posten. Jamfor b6aeab0.
+    gates.gate_evidence_time(rader, pool_evidence.BEVISNIVAER)
+
     pre = sp.pre_manifest(DATA, day)
     with atomic_write(pre) as fh:
-        w = csv.DictWriter(fh, fieldnames=cols); w.writeheader()
-        for c in chosen:
-            w.writerow({"state_id": c["state_id"], "tile_index": c["tile_index"],
-                        "grid_row": c["grid_row"], "grid_column": c["grid_column"],
-                        "observation_id": c["observation_id"], "family_key": c["family_key"],
-                        "first_mention_utc": c["first_mention_utc"], "representative_url": c["url"],
-                        "representative_domain": c["domain"], "source_tier": c["source_tier"],
-                        "selection_layer": c["selection_layer"], "review_region": c["review_region"],
-                        "action_geo_country": c.get("action_geo_country", ""),
-                        "mention_rows": c["mention_rows"], "registry_version": c["registry_version"],
-                        "evidence_http_status": c.get("http_status") or "",
-                        "evidence_sha256": c.get("content_sha256") or ""})
+        w = csv.DictWriter(fh, fieldnames=cols); w.writeheader(); w.writerows(rader)
     print(f"        {pre.name}")
 
     # near_duplicates() returnerar {"a": kandidat, "b": kandidat, "jaccard": tal}.

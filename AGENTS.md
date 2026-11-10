@@ -201,6 +201,27 @@ evidence capture behind the URL, the three classifier passes behind the
 consensus, the frozen formula behind the hex. Do not collapse a step, cache
 away an intermediate, or drop a column because nothing reads it yet.
 
+## Two `basis()`, and only one of them is the series
+
+`capture_state.basis()` belongs to the pilot path. It can return three levels
+and `OBSERVED_AT_CAPTURE` is not among them, because that path fetches long
+after the day it describes. It is still called by `repair_evidence.py`. Leave
+it alone; do not "complete" it.
+
+`pool_evidence.basis(candidate, day)` is the v3.0 path and the only producer of
+`OBSERVED_AT_CAPTURE`. Two lines in it are decisions, not implementation:
+
+- **The boundary is the UTC calendar day of the fetch**, compared with the day
+  the whole chain is already parameterised on. No tolerance either way.
+- **The evidence is the hashed page, not the attempt.** `fetch_one` stamps
+  `retrieved_at_utc` even when the fetch fails, so a row without
+  `content_sha256` is `NO_EVIDENCE` however promptly we tried.
+
+`gate_evidence_time` stops the freeze when a row carries no timestamp or no
+level, and it runs on the rows in memory, before the manifest is written. The
+field existed in the working file and was dropped at the freeze for three days
+before anyone looked; see FINDING 011.
+
 ## This repository is public
 
 Never commit, in code, comments, documentation, test fixtures or commit
