@@ -233,7 +233,7 @@ footer .repo a:hover{color:var(--ink)}
       <p class="sub">Every method error found while building the instrument, what the measurement was, and what changed because of it.</p>
     </div>
     <div class="tile hero-say lift">
-      <p class="lead">The instrument has been wrong thirteen times. This is the list.</p>
+      <p class="lead">The instrument has been wrong fourteen times. This is the list.</p>
 
       <ol class="toc">
         <li><a href="#hash"><span>I</span>The hash that could not be reproduced</a></li>
@@ -249,6 +249,7 @@ footer .repo a:hover{color:var(--ink)}
         <li><a href="#temp"><span>XI</span>The parameter that did not exist</a></li>
         <li><a href="#delivery"><span>XII</span>The delivery path never built</a></li>
         <li><a href="#slip"><span>XIII</span>The identifiers slipped</a></li>
+        <li><a href="#capture"><span>XIV</span>The timestamp that died at the freeze</a></li>
       </ol>
       <p class="note">Most of these have the same shape: the rule existed, and no line of code enforced it. That is the lesson the whole project now runs on &mdash; <b>a rule that cannot stop a run is a wish.</b></p>
     </div>
@@ -579,6 +580,44 @@ footer .repo a:hover{color:var(--ink)}
         <p>The error was public for a day, on a page whose whole claim is that the numbers can be trusted. No reviewer caught it and no gate caught it. The next measurement caught it, which is the only mechanism that could have.</p>
         <blockquote class="pull">
           <p>A change that moves the instrument is made before the series begins, or not at all.</p>
+        </blockquote>
+      </div>
+    </article>
+
+    <article class="ch r" id="capture">
+      <div class="ch-head">
+        <p class="ch-num">XIV</p>
+        <div><h2>The timestamp that died at the freeze</h2><p class="when">10 November 2026</p></div>
+      </div>
+      <div class="ch-body">
+        <p>The whole argument for rebuilding this instrument was a single distinction. Works from the pilot series carry evidence that was fetched long after the day it describes. Works from the new pipeline fetch the page <em>while the day is being observed</em>, and that is what makes the chain worth anything. We named the levels, wrote them into the evidence specification, and said in our own public copy that new States carry the fourth one.</p>
+        <div class="data">
+          <table>
+            <caption>Evidence basis, as documented</caption>
+            <thead><tr><th>Level</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><th>NO_EVIDENCE</th><td>nothing retrievable</td></tr>
+              <tr><th>RETROSPECTIVE</th><td>fetched later, not during the observed day</td></tr>
+              <tr><th>CONTEMPORANEOUS_ARCHIVE</th><td>a third&#8209;party archive copy from that month</td></tr>
+              <tr><th class="hit">OBSERVED_AT_CAPTURE</th><td class="hit">fetched during the observed day &mdash; the new pipeline&rsquo;s claim</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><b>The fourth level exists in exactly one place in this project: a row in a documentation table.</b> No line of code produces it. The function that assigns an evidence basis can return the first three and nothing else, and it belongs to the old path in any case &mdash; the new pipeline never calls it, and writes no evidence basis at all.</p>
+        <p>What makes this one different from the seven before it is where the loss happens. The rule was not forgotten, and the data was not missing.</p>
+        <p>The fetcher stamps every page it retrieves with the time it retrieved it. That stamp travels through the candidate pool and into the day&rsquo;s working file, where it is present and filled on <b>600 of 600</b> rows. Then the day is frozen &mdash; and the frozen manifest carries the page&rsquo;s status and its content hash, but not the hour it was read.</p>
+        <blockquote class="pull">
+          <p>The evidence was collected. It was carried to the last step. It was dropped at the one moment that makes a record permanent.</p>
+        </blockquote>
+        <p><b>The consequence is exact.</b> In the published record, a day captured as it happened and a day captured a fortnight later look identical. The distinction the new pipeline exists to make is the one distinction the manifest does not record &mdash; so it cannot be checked by a reader, and it cannot be checked by us.</p>
+        <p>Nothing was faked and no work is wrong because of this. What is wrong is the claim: <em>new States carry OBSERVED_AT_CAPTURE</em> is a sentence about a field that is not there. It has been removed from our public copy until the field exists, and the fix is small, because the measurement was never the problem.</p>
+        <blockquote class="pull">
+          <p>Eighth time. The rule existed, it was documented, it was frozen &mdash; and it was not in the code path that decides.</p>
+        </blockquote>
+        <p><b>And it answered a question we had not asked properly.</b> Looking for where the stamp was lost meant walking the pipeline stage by stage, and that showed something about the series itself: <b>exactly one stage is time&#8209;critical</b>. Acquiring the raw feed can be done from an archive. Selection, classification, colour and rendering all run over material that is already frozen, and give the same result whenever they run.</p>
+        <p>Only the fetch depends on <em>when</em> it happens. Everything else can be late without being wrong.</p>
+        <blockquote class="pull">
+          <p>A daily series does not need a machine running every day. It needs the page fetched on the day. The reading can wait.</p>
         </blockquote>
       </div>
     </article>
