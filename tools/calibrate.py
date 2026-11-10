@@ -70,6 +70,15 @@ from config import REMEDIATION
 from vocab import EMOTION_STATES
 
 BATTERI  = REMEDIATION / "600_STATES_KALIBRERINGSBATTERI_v1.0.json"
+def referensstampel(fil):
+    """Vilken referens en matning gjorts mot, som den star i resultatposten.
+
+    En post utan harkomst gar inte att jamfora med en annan post, och sedan
+    2026-11-10 finns tva nollpunkter. Egen funktion for att den ska ga att
+    prova utan att ett anrop gors."""
+    return {"referens": fil.name, "referens_sha256": classify.sha(fil)[:16]}
+
+
 def referensfil():
     """Nyaste referensen, och den star alltid utskriven i resultatet.
 
@@ -81,7 +90,8 @@ def referensfil():
     ny = REMEDIATION / "600_STATES_KALIBRERINGSBATTERI_v1.0_REFERENS_v2.0.json"
     return ny if ny.exists() else REMEDIATION / "600_STATES_KALIBRERINGSBATTERI_v1.0_REFERENS.json"
 
-REFERENS = referensfil()
+# Ingen modulniva-konstant: valet gjordes da vid import, och den som byggde
+# en ny referens i samma process matte fortfarande mot den gamla.
 
 # Listpris per miljon tokens, USD. Star har och inte i koden som kor, sa att en
 # prisandring aldrig kan paverka ett verk - bara rapporten.
@@ -319,6 +329,7 @@ def ledig_nyckel(namn, upptagna):
 def kor(modeller, passes=3, dry=False, en_i_taget=False):
     prompt, spec = classify.gate_instrument()
     bat = json.loads(BATTERI.read_text(encoding="utf-8"))
+    REFERENS = referensfil()
     ref = json.loads(REFERENS.read_text(encoding="utf-8"))
     obs = bat["observationer"]
     refrad = {r["observation_id"]: r for r in ref["rader"]}
@@ -405,8 +416,18 @@ def kor(modeller, passes=3, dry=False, en_i_taget=False):
                    for u in usage) / 1e6
         sjalv = {f: sum(1 for oid in P[0] if len({p[oid][f] for p in P}) == 1) / len(P[0])
                  for f in ("primary_emotion", "secondary_emotion")}
+        # Referensen ska tacka hela jamforelsen. Forut hoppade dE tyst over rader
+        # som saknades medan pri_lika kraschade pa samma villkor - raddningen lag
+        # alltsa i att den ena raden INTE hade skyddet. Skyddet star har i stallet,
+        # en gang, och bada raderna rakna over samma mangd.
+        saknas = [r["observation_id"] for r in kon if r["observation_id"] not in refrad]
+        if saknas:
+            raise SystemExit(
+                f"{REFERENS.name} saknar {len(saknas)} av {len(kon)} observationer "
+                f"(forst {saknas[0]}). En jamforelse over en delmangd ar inte "
+                f"jamforbar med en over hela batteriet.")
         dE = [deltaE(color_protocol.hex_of_row(r), color_protocol.hex_of_row(refrad[r["observation_id"]]))
-              for r in kon if r["observation_id"] in refrad]
+              for r in kon]
         pri_lika = sum(1 for r in kon if r["primary_emotion"] == refrad[r["observation_id"]]["primary_emotion"])
         med = [classify.diagnostics(list(p.values()))["authored_scores_median"] for p in P]
         grind, skal = grind_ur_spec(P, spec, fel_tot)
@@ -415,8 +436,7 @@ def kor(modeller, passes=3, dry=False, en_i_taget=False):
             "grindens_skal": skal,
             "tankande": classify.tankande_for(m),
             "korning": stampel,
-            "referens": REFERENS.name,
-            "referens_sha256": classify.sha(REFERENS)[:16],
+            **referensstampel(REFERENS),
             "form": ("en observation per begaran, Batch API — matvag FYND 009"
                      if en_i_taget else "femtio per anrop, direkt"),
             "valideringsfel": len(fel_tot), "emissionsartefakter": art_tot,

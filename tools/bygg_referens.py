@@ -41,10 +41,55 @@ GAMMAL  = REMEDIATION / "600_STATES_KALIBRERINGSBATTERI_v1.0_REFERENS.json"
 MODELL  = "claude-opus-5"
 PASS    = 3
 
+def bygg_meta(bat, stampel, enighet):
+    """Referensens meta. Ren funktion sa att den gar att prova utan ett anrop.
+
+    Allt harifran ska vara sant om den fil som faktiskt skrevs: formen, antalet
+    pass, hasharna och sokvagen till rasvaren. En referens vars meta pastar
+    nagot annat an vad korningen gjorde ar varre an ingen meta alls."""
+    meta = dict(bat["meta"])
+    meta.update({
+        "referens_version": "2.0",
+        "ersatter": GAMMAL.name,
+        "byggd": stampel,
+        "form": "en observation per begaran, Batch API",
+        "pass": PASS,
+        "modell": MODELL,
+        "prompt_sha256": classify.sha(classify.PROMPT_FILE),
+        "spec_sha256": classify.sha(classify.SPEC_FILE),
+        "batteri_sha256": classify.sha(BATTERI),
+        "rasvar": f"kalibrering_rasvar/{MODELL}_en_i_taget_{stampel}/",
+        "enighet_3_2_1": enighet,
+        "not": (bat["meta"].get("not", "") + " v2.0 ar byggd under formen en observation "
+                "per begaran, beslutad 2026-11-10 (FYND 009 och 010). v1.0 ar byggd med "
+                "femtio observationer i samma anrop och ligger kvar med sin hash; "
+                "matningar gjorda mot den ar fortfarande lasbara. Referensen ar inte "
+                "sanningen - den ar en fast punkt, och formen den byggdes i hor till "
+                "punkten.").strip(),
+    })
+    return meta
+
+
+def enighet_ur(rader):
+    """Hur manga rader som hade 3/3, 2/3 och 1/3. Summan maste bli alla rader -
+    ett varde utanfor skalan skulle annars forsvinna tyst ur rakningen."""
+    e = {n: sum(1 for r in rader if r["primary_agreement"] == f"{n}/3") for n in (3, 2, 1)}
+    if sum(e.values()) != len(rader):
+        raise SystemExit(f"enigheten summerar till {sum(e.values())} av {len(rader)} "
+                         f"rader - nagot varde ligger utanfor 3/3, 2/3, 1/3")
+    return e
+
+
 def main():
     dry = "--dry-run" in sys.argv[1:]
     prompt, spec = classify.gate_instrument()
     bat = json.loads(BATTERI.read_text(encoding="utf-8"))
+    # Modellen stod bara arvd ur batteriets meta. Bytte nagon MODELL har skrev
+    # referensen fortfarande batteriets modellnamn, och metat hade ljugit.
+    if bat["meta"]["referensmodell"] != MODELL:
+        sys.exit(f"batteriet anger referensmodell {bat['meta']['referensmodell']} "
+                 f"men programmet kor {MODELL}. En referens byggd av en annan "
+                 f"modell an batteriets ar inte samma fasta punkt.")
     obs = bat["observationer"]
     inp = {o["observation_id"]: o for o in obs}
     print(f"=== nytt referensmanifest · {len(obs)} observationer ur {bat['meta']['kalla_dygn']} ===")
@@ -81,26 +126,8 @@ def main():
     # Samma faltuppsattning som v1.0. Fargen harleds ur primary, secondary,
     # intensity och confidence, sa referensen behover inte bara hela vektorn.
 
-    enighet = {n: sum(1 for r in rader if r["primary_agreement"] == f"{n}/3") for n in (3, 2, 1)}
-    meta = dict(bat["meta"])
-    meta.update({
-        "referens_version": "2.0",
-        "ersatter": GAMMAL.name,
-        "byggd": stampel,
-        "form": "en observation per begaran, Batch API",
-        "pass": PASS,
-        "prompt_sha256": classify.sha(classify.PROMPT_FILE),
-        "spec_sha256": classify.sha(classify.SPEC_FILE),
-        "batteri_sha256": classify.sha(BATTERI),
-        "rasvar": f"kalibrering_rasvar/{MODELL}_en_i_taget_{stampel}/",
-        "enighet_3_2_1": enighet,
-        "not": (bat["meta"].get("not", "") + " v2.0 ar byggd under formen en observation "
-                "per begaran, beslutad 2026-11-10 (FYND 009 och 010). v1.0 ar byggd med "
-                "femtio observationer i samma anrop och ligger kvar med sin hash; "
-                "matningar gjorda mot den ar fortfarande lasbara. Referensen ar inte "
-                "sanningen - den ar en fast punkt, och formen den byggdes i hor till "
-                "punkten.").strip(),
-    })
+    enighet = enighet_ur(rader)
+    meta = bygg_meta(bat, stampel, enighet)
     write_text(NY, json.dumps({"meta": meta, "rader": rader}, ensure_ascii=False, indent=1))
     sha = classify.sha(NY)
     write_text(NY.with_suffix(".json.sha256"), f"{sha}  {NY.name}\n")
