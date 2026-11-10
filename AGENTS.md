@@ -256,6 +256,78 @@ what changed and why, with the measurement or finding that motivated it.
 
 A comment explains why a rule exists, not what the line does.
 
+## Nobody checks their own work — binding from 2026-11-10
+
+Whoever writes a thing does not write the check for it.
+
+This is not an opinion about who codes better. A test written by the author of
+the code inherits the author's assumptions, and the test then asks precisely
+the question the author already believed the answer to. The failure is
+structural and applies to every agent and every person working here.
+
+It is written down because it happened, on 2026-11-10, in this repository.
+Five tests were written for `tools/bygg_referens.py` by the same author as the
+program. Every one of them asserted on the *source text* rather than on
+behaviour:
+
+    assert "if NY.exists():" in inspect.getsource(bygg_referens.main)
+
+Replace `sys.exit(...)` with `print(...)` and the gate stops protecting
+anything while that assertion still passes. One of the five asserted that a
+sentence existed in a docstring — a test whose only way to fail is for someone
+to edit a comment. An independent reviewer found all five in one reading.
+
+It is the same shape as FINDING 001-004, and as the source-registry gate that
+compared a filename with itself, and as `audit_state.py` returning a hardcoded
+`True`. The difference is that this time the gate was the test suite.
+
+**The rule, in both directions:**
+
+| Who writes it | Who writes the test, the gate, and the review |
+|---|---|
+| Claude (this session) | Claude Code |
+| Claude Code | Claude (this session) |
+
+Applies to: code, gates, tests, anything that changes a frozen artefact, and
+any number that will be published.
+
+**The reviewer does not get the author's tests.** Only what must hold. Handing
+over the existing test file turns an independent question into an edit of the
+author's assumptions, which is the thing being guarded against.
+
+**Procedure.** The author writes the implementation, then writes a brief for
+the other agent stating what must hold and what must not be assumed, and tells
+the operator explicitly that it goes to the other agent. The operator carries
+it; the two agents do not talk directly. Disagreements go to the operator only
+when they are real disagreements.
+
+## No figure is published on one measurement — binding from 2026-11-10
+
+A number that has been measured once does not go on the public site, into the
+message bank, or into any document presented as evidence. Measure again,
+independently, and publish the pair or the range.
+
+Also written down because it happened the same day. A self-agreement figure of
+0.86 was measured once, published, and described as "five times the noise
+floor" — where the noise floor itself came from two measurements. The next run
+of the same configuration gave 0.82. The claim was wrong by the time it was
+read, and the error was public for a day on a page whose entire claim is that
+its numbers can be trusted.
+
+Two consequences, both binding:
+
+- **A measure with one measurement behind it carries no multiple.** At n = 50
+  the standard error is ±0.059. The figure has been in `tools/calibrate.py`
+  since the battery was built.
+- **Name the measure, not just the number.** The error that caused the above
+  was conflating agreement *between the three passes* with agreement *against
+  the reference*. Both are "tiles in fifty that differ". They are not the same
+  quantity and must never be written as if they were.
+
+Neither gate nor reviewer caught that one. The next measurement did, which is
+the only mechanism that could have — and is the reason this rule is about
+measuring twice rather than about reading more carefully.
+
 ## Tests
 
 Dependencies live in a virtual environment inside the repository, with locked
