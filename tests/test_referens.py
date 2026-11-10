@@ -165,3 +165,54 @@ def test_annan_modell_an_batteriets_stoppar_bygget(tmp_path, monkeypatch):
     with pytest.raises(SystemExit) as e:
         bygg_referens.main()
     assert "referensmodell" in str(e.value)
+
+
+# --- tackningsgrinden: star den fore anropen? -------------------------------
+#
+# Skriven av den andra parten an den som skrev grinden, enligt AGENTS.md
+# "Nobody checks their own work". Grinden sjalv ar riktig - den stanger den
+# tysta lucka dar deltaE hoppade over saknade rader medan antalet lika
+# primartillstand kraschade pa samma villkor. Fragan testet staller ar en
+# annan: NAR den star.
+
+def test_tackningsgrinden_gar_fore_anropen(tmp_path, monkeypatch):
+    """Batteriet och referensen lases bada innan ett enda anrop gors.
+
+    Tacker referensen inte batteriet ar korningen omojlig att slutfora, och
+    det gar att veta med sakerhet innan den borjar. Star grinden efter
+    anropen ar de 150 begarandena redan betalda nar den faller - for ett
+    resultat som anda inte kan skrivas.
+
+    Projektets egen regel, och den Code anvande mot forfattaren av
+    bygg_referens.py samma dag: grinden gar fore anropen, aldrig efter.
+    """
+    bat = {"meta": {"kalla_dygn": "2026/308", "storlek": 2,
+                    "referensmodell": "claude-opus-5"},
+           "observationer": [
+               {"observation_id": "OBS-A", "tile_index": 1, "neutral_source_claim": "a",
+                "claim_source": "LIVE_FETCH", "review_region": "Europe",
+                "selection_layer": "GLOBAL", "source_tier": "A",
+                "representative_domain": "example.com"},
+               {"observation_id": "OBS-B", "tile_index": 2, "neutral_source_claim": "b",
+                "claim_source": "LIVE_FETCH", "review_region": "Europe",
+                "selection_layer": "GLOBAL", "source_tier": "A",
+                "representative_domain": "example.com"}]}
+    # Referensen tacker bara den ena observationen.
+    referens = {"meta": {}, "rader": [rad("OBS-A")]}
+    bf = tmp_path / "batteri.json"; bf.write_text(json.dumps(bat), encoding="utf-8")
+    rf = tmp_path / V2; rf.write_text(json.dumps(referens), encoding="utf-8")
+    monkeypatch.setattr(calibrate, "BATTERI", bf)
+    monkeypatch.setattr(calibrate, "referensfil", lambda: rf)
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-attrapp")
+
+    anrop = []
+    monkeypatch.setattr(calibrate.classify, "call",
+                        lambda *a, **k: anrop.append("direkt"))
+    monkeypatch.setattr(calibrate, "kor_en_i_taget",
+                        lambda *a, **k: anrop.append("batch") or ([], [], [], 0))
+
+    with pytest.raises(SystemExit):
+        calibrate.kor(["claude-opus-5"], passes=1)
+
+    assert anrop == [], (
+        f"grinden foll forst efter {anrop} — anropen ar da redan betalda")
