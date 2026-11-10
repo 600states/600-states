@@ -338,6 +338,20 @@ def kor(modeller, passes=3, dry=False, en_i_taget=False):
     print(f"    referensmodell {bat['meta']['referensmodell']}")
     print(f"    referens {REFERENS.name}")
 
+    # GRINDEN GAR FORE ANROPEN. Batteriet och referensen lases bada har, sa att
+    # "referensen tacker inte batteriet" gar att veta med sakerhet innan en enda
+    # begaran skickas. Grinden stod forst precis fore jamforelsen, och foll da
+    # efter 150 betalda begaran for ett resultat som anda inte kan skrivas.
+    # Samma regel som for en befintlig referens i bygg_referens.py - den galler
+    # aven den som skrev regeln. Att den stangde den tysta luckan i deltaE var
+    # riktigt; var den stod var det inte.
+    saknas = [o for o in inp if o not in refrad]
+    if saknas:
+        raise SystemExit(
+            f"{REFERENS.name} saknar {len(saknas)} av {len(inp)} av batteriets "
+            f"observationer (forst {saknas[0]}). En jamforelse over en delmangd "
+            f"ar inte jamforbar med en over hela batteriet.")
+
     if dry:
         tkn = len(json.dumps(obs)) // 4
         print(f"\n  TORRKORNING — inget anrop gors")
@@ -416,16 +430,6 @@ def kor(modeller, passes=3, dry=False, en_i_taget=False):
                    for u in usage) / 1e6
         sjalv = {f: sum(1 for oid in P[0] if len({p[oid][f] for p in P}) == 1) / len(P[0])
                  for f in ("primary_emotion", "secondary_emotion")}
-        # Referensen ska tacka hela jamforelsen. Forut hoppade dE tyst over rader
-        # som saknades medan pri_lika kraschade pa samma villkor - raddningen lag
-        # alltsa i att den ena raden INTE hade skyddet. Skyddet star har i stallet,
-        # en gang, och bada raderna rakna over samma mangd.
-        saknas = [r["observation_id"] for r in kon if r["observation_id"] not in refrad]
-        if saknas:
-            raise SystemExit(
-                f"{REFERENS.name} saknar {len(saknas)} av {len(kon)} observationer "
-                f"(forst {saknas[0]}). En jamforelse over en delmangd ar inte "
-                f"jamforbar med en over hela batteriet.")
         dE = [deltaE(color_protocol.hex_of_row(r), color_protocol.hex_of_row(refrad[r["observation_id"]]))
               for r in kon]
         pri_lika = sum(1 for r in kon if r["primary_emotion"] == refrad[r["observation_id"]]["primary_emotion"])
