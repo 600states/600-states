@@ -721,6 +721,7 @@ def kor_i_batch(client, model, prompt, day, todo, d, rec, omgang, slapp=False):
     jobbet i stallet for att ett nytt skickas. Den skrivs fore vantan och
     raderas forst nar svaren ar omhandertagna."""
     parse_fel_totalt = 0
+    per_batch = dict(batches(day))
     for rond in range(1, MAX_TRIES + 1):
         kvar = [t for t in todo if not (d / f"pass{t[0]}_batch_{t[1]:02d}.json").exists()]
         if not kvar:
@@ -745,7 +746,7 @@ def kor_i_batch(client, model, prompt, day, todo, d, rec, omgang, slapp=False):
         for pnr, nnr, msg, felmeddelande in jobbets_svar(client, bid):
             if (d / f"pass{pnr}_batch_{nnr:02d}.json").exists():
                 continue                      # redan omhandertagen i en tidigare rond
-            items = dict((n, it) for n, it in batches(day)).get(nnr)
+            items = per_batch[nnr]
             if felmeddelande:
                 print(f"  pass{pnr} batch{nnr:02d}: {felmeddelande}")
                 continue
@@ -807,6 +808,11 @@ def kor_i_batch_en(client, model, prompt, day, todo, d, rec, omgang, slapp=False
     som saknas."""
     k = endir(d)
     parse_fel_totalt = 0
+    # Indata lases EN gang. Raden lag tidigare inne i svarsloopen, dar den
+    # hade oppnat och tolkat tolv json-filer per svar - 21 600 filoppningar
+    # for ett dygn. Det ar inget fel i utfallet, men en hamtning som tar
+    # minuter nar den kan ta sekunder ar en hamtning man avbryter.
+    per_batch = dict(batches(day))
 
     def saknas():
         ut = []
@@ -867,7 +873,7 @@ def kor_i_batch_en(client, model, prompt, day, todo, d, rec, omgang, slapp=False
             if felmeddelande:
                 print(f"  {cid}: {felmeddelande}")
                 continue
-            items = dict(batches(day))[n]
+            items = per_batch[n]
             it = items[i - 1]
             try:
                 rows, artefakter = parse(msg, [it])
