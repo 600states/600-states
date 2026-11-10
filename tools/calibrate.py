@@ -70,7 +70,18 @@ from config import REMEDIATION
 from vocab import EMOTION_STATES
 
 BATTERI  = REMEDIATION / "600_STATES_KALIBRERINGSBATTERI_v1.0.json"
-REFERENS = REMEDIATION / "600_STATES_KALIBRERINGSBATTERI_v1.0_REFERENS.json"
+def referensfil():
+    """Nyaste referensen, och den star alltid utskriven i resultatet.
+
+    Referens v2.0 ar byggd under formen en observation per begaran (FYND 010).
+    v1.0 ligger kvar, byggd med femtio i samma anrop, och matningar gjorda mot
+    den ar fortfarande lasbara - men en post som inte sager vilken referens den
+    matts mot gar inte att jamfora med en annan post. Det gick inte att se
+    forut, och det ar precis den sortens tysta lucka som kostat projektet mest."""
+    ny = REMEDIATION / "600_STATES_KALIBRERINGSBATTERI_v1.0_REFERENS_v2.0.json"
+    return ny if ny.exists() else REMEDIATION / "600_STATES_KALIBRERINGSBATTERI_v1.0_REFERENS.json"
+
+REFERENS = referensfil()
 
 # Listpris per miljon tokens, USD. Star har och inte i koden som kor, sa att en
 # prisandring aldrig kan paverka ett verk - bara rapporten.
@@ -314,6 +325,7 @@ def kor(modeller, passes=3, dry=False, en_i_taget=False):
     inp = {o["observation_id"]: o for o in obs}
     print(f"=== kalibrering · batteri {len(obs)} observationer ur {bat['meta']['kalla_dygn']} ===")
     print(f"    referensmodell {bat['meta']['referensmodell']}")
+    print(f"    referens {REFERENS.name}")
 
     if dry:
         tkn = len(json.dumps(obs)) // 4
@@ -403,6 +415,8 @@ def kor(modeller, passes=3, dry=False, en_i_taget=False):
             "grindens_skal": skal,
             "tankande": classify.tankande_for(m),
             "korning": stampel,
+            "referens": REFERENS.name,
+            "referens_sha256": classify.sha(REFERENS)[:16],
             "form": ("en observation per begaran, Batch API — matvag FYND 009"
                      if en_i_taget else "femtio per anrop, direkt"),
             "valideringsfel": len(fel_tot), "emissionsartefakter": art_tot,
