@@ -611,6 +611,19 @@ footer .repo a:hover{color:var(--ink)}
         </blockquote>
         <p><b>The consequence is exact.</b> In the published record, a day captured as it happened and a day captured a fortnight later look identical. The distinction the new pipeline exists to make is the one distinction the manifest does not record &mdash; so it cannot be checked by a reader, and it cannot be checked by us.</p>
         <p>Nothing was faked and no work is wrong because of this. What is wrong is the claim: <em>new States carry OBSERVED_AT_CAPTURE</em> is a sentence about a field that is not there. It has been removed from our public copy until the field exists, and the fix is small, because the measurement was never the problem.</p>
+        <p><b>Then we measured it.</b> With the rule written, we ran it over the three days this pipeline has produced, without writing anything:</p>
+        <div class="data">
+          <table>
+            <caption>Evidence basis, applied retroactively to every day the new pipeline has made</caption>
+            <thead><tr><th>Day</th><th class="n">fetched during the day</th><th class="n">fetched later</th><th class="n">no evidence</th></tr></thead>
+            <tbody>
+              <tr><th>2026/308</th><td class="n hit">0</td><td class="n">566</td><td class="n">34</td></tr>
+              <tr><th>2026/309</th><td class="n hit">0</td><td class="n">573</td><td class="n">27</td></tr>
+              <tr><th>2026/310</th><td class="n hit">0</td><td class="n">572</td><td class="n">28</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><b>Zero.</b> The pages were fetched one to two days after the day they describe, every time. So the field was not merely missing from the frozen record &mdash; the claim it would have carried was false for every day this pipeline has made. Nothing was lost by failing to record it, because there was nothing true to record.</p>
         <blockquote class="pull">
           <p>Eighth time. The rule existed, it was documented, it was frozen &mdash; and it was not in the code path that decides.</p>
         </blockquote>
