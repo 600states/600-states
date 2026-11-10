@@ -555,22 +555,28 @@ footer .repo a:hover{color:var(--ink)}
         <blockquote class="pull">
           <p>The rule existed. It was documented. It was frozen. It was never in the code path that decides. Seventh time &mdash; and the first time it points our way.</p>
         </blockquote>
-        <p><b>The form was not neutral, and we measured it.</b> Same battery, same frozen prompt, same three passes &mdash; against a known noise floor: the same instrument run twice on 6&nbsp;November with nothing set differently between them.</p>
+        <p><b>Was the form neutral?</b> We measured, and the first answer we published was wrong. It is worth showing both, because the correction is the more useful finding.</p>
+        <p>What we said on 10&nbsp;November: self&#8209;agreement rose from 0.78 to 0.86 &mdash; five times the noise floor &mdash; and the colour difference tripled. What we did not notice: those two numbers measure different things, and neither is the figure in chapter&nbsp;IX.</p>
+        <p>The correction came from the next measurement, hours later. Rebuilding the reference manifest under the new form gave self&#8209;agreement <b>0.82</b>, not 0.86 &mdash; so two runs of the same form differ more than we had assumed, and a noise floor estimated from two runs was far too narrow to carry multiples.</p>
+        <p>Measured properly, each form against a reference built in its own form:</p>
         <div class="data">
           <table>
-            <caption>The noise floor is the gap between two runs of 6 November with nothing set differently</caption>
-            <thead><tr><th>Measure</th><th class="n">noise floor</th><th class="n">fifty &rarr; one</th></tr></thead>
+            <caption>Each form compared with a reference built in that same form</caption>
+            <thead><tr><th>Measure</th><th class="n">fifty per call</th><th class="n">one per request</th></tr></thead>
             <tbody>
-              <tr><th>Self&#8209;agreement, primary</th><td class="n">0.02</td><td class="n hit">0.76&nbsp;&rarr;&nbsp;0.86</td></tr>
-              <tr><th>Mean deviation, sixteen scores</th><td class="n">0.0013</td><td class="n">0.0192&nbsp;&rarr;&nbsp;0.0197</td></tr>
-              <tr><th>Colour difference, median</th><td class="n">0.07</td><td class="n hit">0.73&nbsp;&rarr;&nbsp;1.96</td></tr>
+              <tr><th>Primary states matching the reference</th><td class="n">42 of 50</td><td class="n">42 of 50</td></tr>
+              <tr><th>Colour difference, median</th><td class="n">0.66</td><td class="n">0.70</td></tr>
+              <tr><th>Self&#8209;agreement, three passes</th><td class="n">0.76&nbsp;&middot;&nbsp;0.78</td><td class="n hit">0.82&nbsp;&middot;&nbsp;0.86</td></tr>
             </tbody>
           </table>
         </div>
-        <p>The three passes agree far more with each other &mdash; five times the noise floor. The reading sits further from the old form&rsquo;s reading &mdash; seventeen times the noise floor. And the measure the colour model actually reads does not move at all.</p>
-        <p>The instrument is <b>as steady, aimed slightly differently.</b></p>
-        <p><b>Two things we will not say.</b> That it is <em>better</em>: there is no ground truth, and the reference is not truth &mdash; it is the old form. <em>More determinate</em> is measured; <em>better</em> is not measurable. And that the difference means anything: it follows from how the question is asked, not from anything in the day.</p>
-        <p>The figure in chapter&nbsp;IX &mdash; eight tiles in fifty &mdash; belongs to the old form. Under the new one it is <b>seven</b>. That chapter is not rewritten; a dated measurement stands as it was.</p>
+        <p><b>Reproducibility is unchanged. Eight tiles in fifty, in both forms.</b> Chapter&nbsp;IX was never wrong, and it stands.</p>
+        <p>What does change: the three passes agree more with each other &mdash; four measurements, no overlap. And the two forms read the same day differently: 37&ndash;38 of 50 primary states matching, colour difference 1.38&ndash;1.96. That last one is why the change had to happen before the series begins, and that reason is unaffected.</p>
+        <p><b>What we withdraw: the multiples.</b> At n&nbsp;=&nbsp;50 the standard error is &plusmn;0.059 &mdash; a number that has been sitting in our own calibration code since the battery was built.</p>
+        <blockquote class="pull">
+          <p>A measure with one measurement behind it does not carry a multiple.</p>
+        </blockquote>
+        <p>The error was public for a day, on a page whose whole claim is that the numbers can be trusted. No reviewer caught it and no gate caught it. The next measurement caught it, which is the only mechanism that could have.</p>
         <blockquote class="pull">
           <p>A change that moves the instrument is made before the series begins, or not at all.</p>
         </blockquote>
