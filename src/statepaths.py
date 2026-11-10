@@ -28,6 +28,7 @@ STATE_001..STATE_010 med den gamla namngivningen och ror inte dessa - en
 efterhandskorning av 2 januari 2026 hamnar i STATE_2026_002 bredvid, aldrig
 ovanpa.
 """
+import re
 from datetime import date
 
 MANIFEST_VERSION = "v3.3"
@@ -70,10 +71,28 @@ def frozen(path):
     Anvands vid LASNING - revision, publicering, batteribygge. Skrivning gar
     aldrig genom den har funktionen: ett nytt dygn ska bara V och ingenting
     annat, annars avgor vad som rakar ligga pa disk vilken form som skrivs.
+
+    DEN SAGER IFRAN NAR DEN BYTER FIL. En tyst substitution ar FYND 011:s form
+    igen: posten sager inte vilken form den laste, och lasaren far gissa.
+
+    TVA VERSIONER AV SAMMA FIL AR ETT FEL, INTE ETT VAL. Den forra versionen
+    tog sorted()[-1] och gick vidare. Ett dygn har en form; bar katalogen tva
+    har nagon kort om halva kedjan, och vilken som galler ar inte kodens beslut.
     """
-    if path.exists():
-        return path
     hits = sorted(path.parent.glob(path.name.replace(V, "v*")))
+    if len(hits) > 1:
+        raise ValueError(
+            f"{path.parent.name} bar {len(hits)} versioner av samma fil: "
+            + ", ".join(h.name for h in hits)
+            + ". Ett dygn har en form. Vilken som galler ar inte kodens val.")
     if not hits:
         raise FileNotFoundError(path)
-    return hits[-1]
+    if hits[0] != path:
+        print(f"        LASER ANNAN VERSION: bad om {path.name}, fick {hits[0].name}")
+    return hits[0]
+
+def version_of(path):
+    """Manifestversionen i ett filnamn. En rapport ska saga vilken form den
+    laste, inte vilken version koden rakar sta pa."""
+    m = re.search(r"_(v\d+\.\d+)[_.]", path.name)
+    return m.group(1) if m else "OKAND"

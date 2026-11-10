@@ -15,9 +15,17 @@ def sha(p): return hashlib.sha256(Path(p).read_bytes()).hexdigest()
 
 def audit(day, data=DATA):
     D = sp.outdir(data, day)
-    # Revisionen laser dygnets egna filer, aven de tre som frystes under v3.2.
-    pre = list(csv.DictReader(open(sp.frozen(sp.pre_manifest(data, day)), encoding="utf-8")))
-    emo = list(csv.DictReader(open(sp.frozen(sp.color_manifest(data, day)), encoding="utf-8")))
+    # DYGNETS EGNA FILER, UPPSLAGNA EN GANG. Revisionen far inte kunna lasa en
+    # form och redovisa en annan, sa samma uppslagning bar bade lasningen och
+    # hashlistan langre ner. frozen() sager ifran nar den byter version.
+    files = {
+        "pre-emotion": sp.frozen(sp.pre_manifest(data, day)),
+        "emotion+farg": sp.frozen(sp.color_manifest(data, day)),
+        "near-duplicate": sp.frozen(sp.near_duplicate(data, day)),
+        "PNG": sp.frozen(sp.png(data, day)),
+    }
+    pre = list(csv.DictReader(open(files["pre-emotion"], encoding="utf-8")))
+    emo = list(csv.DictReader(open(files["emotion+farg"], encoding="utf-8")))
     inp = {}
     for f in sorted(sp.classifier_input(data, day).glob("batch_*.json")):
         for it in json.loads(f.read_text(encoding="utf-8")): inp[it["observation_id"]] = it
@@ -79,12 +87,6 @@ def audit(day, data=DATA):
     for r in pre: caps[r["representative_domain"]] = caps.get(r["representative_domain"], 0) + 1
     chk("publisher cap <= 10", max(caps.values()) <= 10, f"max {max(caps.values())}, {len(caps)} publicister")
 
-    files = {
-        "pre-emotion": sp.frozen(sp.pre_manifest(data, day)),
-        "emotion+farg": sp.frozen(sp.color_manifest(data, day)),
-        "near-duplicate": sp.frozen(sp.near_duplicate(data, day)),
-        "PNG": sp.frozen(sp.png(data, day)),
-    }
     site = json.loads(sp.site_json(data, day).read_text(encoding="utf-8"))
     m = site["meta"]
     chk("sajtens preHash = filen", m["preHash"] == sha(files["pre-emotion"]), "")
@@ -100,8 +102,11 @@ def audit(day, data=DATA):
         print(("  OK   " if ok else "  FEL  ") + f"{name}" + (f": {detail}" if detail else ""))
     for name, detail in matt:
         print(f"  MATT  {name}: {detail}")
-    print("  hashar:")
-    for k, f in files.items(): print(f"    {k:<15} {sha(f)}")
+    # VERSIONEN SOM LASTES, PER FIL. Den star inte i koden utan i filnamnet:
+    # 2026/308 ar fryst som v3.2 och revideras av v3.3-kod, och en lasare ska
+    # se vilken form raderna kom ur utan att gissa.
+    print(f"  filer, med den version som faktiskt lastes (koden star pa {sp.MANIFEST_VERSION}):")
+    for k, f in files.items(): print(f"    {k:<15} {sp.version_of(f):<5} {sha(f)}")
     return all(o for o, _, _ in out)
 
 if __name__ == "__main__":

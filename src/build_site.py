@@ -17,10 +17,14 @@ SRC = {"LIVE_FETCH": "P", "ARCHIVE_SNAPSHOT": "A", "URL_SLUG": "S", "PAGE_TITLE_
 
 def build(day, data=DATA):
     D = sp.outdir(data, day)
-    # Dygnets egna filer, aven de tre som frystes under v3.2. Se statepaths.frozen.
-    pre = {int(r["tile_index"]): r for r in csv.DictReader(
-        open(sp.frozen(sp.pre_manifest(data, day)), encoding="utf-8"))}
-    emo = list(csv.DictReader(open(sp.frozen(sp.color_manifest(data, day)), encoding="utf-8")))
+    # DYGNETS EGNA FILER, UPPSLAGNA EN GANG. Hasharna i sidans meta ska vara av
+    # de filer raderna faktiskt kom ur - tva uppslagningar kan ge tva svar. Se
+    # statepaths.frozen, som sager ifran nar den byter version.
+    preF = sp.frozen(sp.pre_manifest(data, day))
+    emoF = sp.frozen(sp.color_manifest(data, day))
+    ndF = sp.frozen(sp.near_duplicate(data, day))
+    pre = {int(r["tile_index"]): r for r in csv.DictReader(open(preF, encoding="utf-8"))}
+    emo = list(csv.DictReader(open(emoF, encoding="utf-8")))
     inp = {}
     for f in sorted(sp.classifier_input(data, day).glob("batch_*.json")):
         for it in json.loads(f.read_text(encoding="utf-8")): inp[it["tile_index"]] = it
@@ -42,7 +46,7 @@ def build(day, data=DATA):
     # tidigare day till forsta radens first_mention_utc, 14 tecken, vilket fick
     # statepaths att kasta ValueError och steget site att aldrig kunna avslutas.
     sha = lambda f: hashlib.sha256((D / f).read_bytes()).hexdigest()
-    nd = sp.frozen(sp.near_duplicate(data, day)).name
+    nd = ndF.name
     meta = {"id": sp.state_id(day).replace("/", " / "),
             "date": f"{int(day[6:8])} {MONTHS[int(day[4:6])-1]} {day[:4]}",
             "agree3": ag["3/3"], "agree2": ag["2/3"], "agree1": ag["1/3"],
@@ -50,8 +54,8 @@ def build(day, data=DATA):
             "pub": cs["LIVE_FETCH"], "arch": cs["ARCHIVE_SNAPSHOT"],
             "slug": cs["URL_SLUG"], "unver": cs["PAGE_TITLE_UNVERIFIED"],
             "pubs": len({p["representative_domain"] for p in pre.values()}),
-            "preHash": sha(sp.frozen(sp.pre_manifest(data, day)).name),
-            "emoHash": sha(sp.frozen(sp.color_manifest(data, day)).name),
+            "preHash": sha(preF.name),
+            "emoHash": sha(emoF.name),
             "ndRows": sum(1 for _ in open(D / nd, encoding="utf-8")) - 1, "ndHash": sha(nd)}
     out = write_text(sp.site_json(data, day),
                      json.dumps({"meta": meta, "tiles": tiles}, ensure_ascii=False,

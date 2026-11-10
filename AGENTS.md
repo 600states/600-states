@@ -214,6 +214,17 @@ written — while the steps that read a finished day (`audit_state`,
 `build_site`, `build_battery`) go through `statepaths.frozen()`, which takes
 the day's own file. Audit of 2026/308 passes unchanged under v3.3 code.
 
+`frozen()` says so when it substitutes, naming the file asked for and the file
+read, and the audit report prints the version of each file it actually read.
+A silent substitution is FINDING 011's shape again: the record does not say
+which form it read.
+
+Two versions of the same file in one day stop the read. The first version took
+`sorted(...)[-1]` and carried on. A day has one shape; if its directory holds
+two, someone re-ran half the chain, and which one counts is not the code's
+decision. `site/build.py` is the exception and keeps globbing: the pilot days
+carry v3.0 and v3.1 on purpose, because they were re-rendered.
+
 A day that was produced under an older version cannot be half re-run: colour
 and render would write `V` beside its older manifests. Produce it whole, or
 leave it alone.
