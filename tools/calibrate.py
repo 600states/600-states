@@ -53,8 +53,14 @@ EN MATNING FAR ALDRIG RADERA EN ANNAN, och det galler aven samma modell.
   dem ar brusgolvet (FYND 006), och den gar bara att rakna om bada finns kvar.
 
     python3 tools/calibrate.py <modell>[,<modell>...] [--passes 3] [--dry-run]
+                               [--en-i-taget]
+
+--en-i-taget kor batteriet med EN observation per begaran via Batch API.
+Matvag for FYND 009: fragan ar inte om det gar, utan om det ar samma
+lasning. Posten far en egen nyckel och kan aldrig forvaxlas med en post
+kord pa femtio per anrop.
 """
-import json, statistics, sys, time
+import json, re, statistics, sys, time
 from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "src")); sys.path.insert(0, str(HERE.parent))
@@ -212,6 +218,78 @@ def kvantiserad(varden, precision):
                     f"{n} olika varden pa {len(varden)} rader")
     return None
 
+def kor_en_i_taget(client, model, prompt, obs, passes, stampel):
+    """Batteriet med EN observation per begaran. Matvag for FYND 009.
+
+    Fragan den ska svara pa ar inte om det gar - det vet vi sedan 2026/310 -
+    utan om det ar SAMMA LASNING. Ensamlasningen gav 334 output-tokens per
+    observation mot 311 i batch om femtio; modellen skriver mer nar den laser
+    en nyhet ensam, och mer text kan betyda en annan bedomning.
+
+    Darfor kors batteriet pa exakt samma satt som forut i allt utom detta: samma
+    femtio observationer, samma frysta prompt, samma tre pass, samma matt.
+    Skillnaden mot de tva opus-korningarna 2026-11-06 ar da hanforbar till
+    formen - eller till brusgolvet, som vi redan har matt mellan just de tva.
+
+    Leveransen gar via Batch API. Det paverkar inte vad modellen ser; det
+    paverkar vad det kostar och hur lang tid det tar."""
+    rap = REMEDIATION / "kalibrering_rasvar" / f"{model}_en_i_taget_{stampel}"
+    rap.mkdir(parents=True, exist_ok=True)
+    klart, usage, fel_tot, art_tot = {}, [], [], 0
+
+    for rond in range(1, classify.MAX_TRIES + 1):
+        kvar = [(p, i) for p in range(1, passes + 1)
+                for i in range(1, len(obs) + 1) if (p, i) not in klart]
+        if not kvar:
+            break
+        begaran = [{"custom_id": f"pass{p}_obs{i:03d}",
+                    "params": classify.anropsparametrar(model, prompt, [obs[i - 1]])}
+                   for p, i in kvar]
+        jobb = client.messages.batches.create(requests=begaran)
+        print(f"    rond {rond}: {len(begaran)} begaran, jobb {jobb.id}")
+        t0 = time.time()
+        while True:
+            j = client.messages.batches.retrieve(jobb.id)
+            if j.processing_status == "ended":
+                break
+            time.sleep(15)
+        print(f"      klart pa {(time.time() - t0)/60:.1f} minuter")
+        for rad in client.messages.batches.results(jobb.id):
+            p, i = (int(x) for x in re.fullmatch(
+                r"pass(\d+)_obs(\d+)", rad.custom_id).groups())
+            if getattr(rad.result, "type", None) != "succeeded":
+                fel_tot.append(f"{rad.custom_id}: {getattr(rad.result, 'type', 'okant')}")
+                continue
+            msg = rad.result.message
+            it = obs[i - 1]
+            write_text(rap / f"{rad.custom_id}.txt", classify.raw_text(msg))
+            try:
+                rows, art = classify.parse(msg, [it])
+            except json.JSONDecodeError as e:
+                fel_tot.append(f"{rad.custom_id}: {e}")
+                continue
+            f = classify.validate(rows, [it])
+            if f:
+                fel_tot.append(f"{rad.custom_id}: {f[0]}")
+                continue
+            klart[(p, i)] = rows[0]
+            usage.append(classify.usage_fields(msg))
+            art_tot += art
+
+    P = []
+    for p in range(1, passes + 1):
+        rader = [klart.get((p, i)) for i in range(1, len(obs) + 1)]
+        if any(r is None for r in rader):
+            saknas = sum(1 for r in rader if r is None)
+            print(f"    pass{p}: {saknas} observationer saknas efter"
+                  f" {classify.MAX_TRIES} ronder")
+            continue
+        P.append({r["observation_id"]: r for r in rader})
+        dg = classify.diagnostics(rader)
+        print(f"    pass{p}  {len(rader)} rader  {dg['authored_scores_median']:.0f}/16"
+              f" egna poang")
+    return P, usage, fel_tot, art_tot
+
 def ledig_nyckel(namn, upptagna):
     """En modell som redan star i filen ersatts inte - den far en egen nyckel.
 
@@ -227,7 +305,7 @@ def ledig_nyckel(namn, upptagna):
         n += 1
     return f"{namn}#kor{n}"
 
-def kor(modeller, passes=3, dry=False):
+def kor(modeller, passes=3, dry=False, en_i_taget=False):
     prompt, spec = classify.gate_instrument()
     bat = json.loads(BATTERI.read_text(encoding="utf-8"))
     ref = json.loads(REFERENS.read_text(encoding="utf-8"))
@@ -242,8 +320,18 @@ def kor(modeller, passes=3, dry=False):
         print(f"\n  TORRKORNING — inget anrop gors")
         for m in modeller:
             i, u = PRIS.get(m, (0, 0))
-            kost = passes * ((tkn + len(prompt)//4) * i + 50 * 320 * u) / 1e6
-            print(f"    {m:<20} {passes} anrop, uppskattat ${kost:.2f}")
+            if en_i_taget:
+                # En torrkorning som rapporterar fel antal begaran ar varre an
+                # ingen. Siffrorna: 2 409 cachade tokens, 148 egna och 334 ut
+                # per observation, uppmatta pa 2026/310. Batch = halva priset,
+                # cache-lasning = en tiondel av input.
+                n_beg = passes * len(obs)
+                kost = n_beg * (2409 * (i/2) * 0.10 + 148 * (i/2) + 334 * (u/2)) / 1e6
+                print(f"    {m}@en-i-taget   {n_beg} begaran via Batch API,"
+                      f" uppskattat ${kost:.2f}")
+            else:
+                kost = passes * ((tkn + len(prompt)//4) * i + 50 * 320 * u) / 1e6
+                print(f"    {m:<20} {passes} anrop, uppskattat ${kost:.2f}")
         return 0
 
     import anthropic, os
@@ -256,9 +344,13 @@ def kor(modeller, passes=3, dry=False):
     stampel = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
     resultat = {}
     for m in modeller:
-        print(f"\n--- {m} ---")
+        namn = m + ("@en-i-taget" if en_i_taget else "")
+        print(f"\n--- {namn} ---")
         P, usage, fel_tot, art_tot = [], [], [], 0
-        for p in range(1, passes + 1):
+        if en_i_taget:
+            P, usage, fel_tot, art_tot = kor_en_i_taget(
+                client, m, prompt, obs, passes, stampel)
+        for p in ([] if en_i_taget else range(1, passes + 1)):
             for forsok in range(1, classify.MAX_TRIES + 1):
                 t0 = time.time()
                 try:
@@ -285,13 +377,18 @@ def kor(modeller, passes=3, dry=False):
                       f"egna poang  id-rep {dg['stated_id_differs']}  {time.time()-t0:.0f}s")
                 break
         if len(P) != passes:
-            resultat[m] = {"grind": "FALLER", "skal": f"bara {len(P)} av {passes} pass",
-                           "tankande": classify.tankande_for(m),
-                           "forsta_felet": fel_tot[0] if fel_tot else None}
+            resultat[namn] = {"grind": "FALLER", "skal": f"bara {len(P)} av {passes} pass",
+                              "tankande": classify.tankande_for(m),
+                              "forsta_felet": fel_tot[0] if fel_tot else None}
             print(f"    GRIND: FALLER — bara {len(P)} av {passes} pass"); continue
 
         kon = consensus.rows(P, inp)
         inn, ut = PRIS.get(m, (0, 0))
+        # Batch API kostar halva listpriset. Priset pa raden ska vara det som
+        # faktiskt betalades, annars jamfors tva poster i samma fil pa olika
+        # grund - och leveransen star utskriven i posten.
+        if en_i_taget:
+            inn, ut = inn / 2, ut / 2
         kost = sum(u.get("input_tokens", 0) * inn + u.get("output_tokens", 0) * ut
                    for u in usage) / 1e6
         sjalv = {f: sum(1 for oid in P[0] if len({p[oid][f] for p in P}) == 1) / len(P[0])
@@ -301,11 +398,13 @@ def kor(modeller, passes=3, dry=False):
         pri_lika = sum(1 for r in kon if r["primary_emotion"] == refrad[r["observation_id"]]["primary_emotion"])
         med = [classify.diagnostics(list(p.values()))["authored_scores_median"] for p in P]
         grind, skal = grind_ur_spec(P, spec, fel_tot)
-        resultat[m] = {
+        resultat[namn] = {
             "grind": "KLARAR" if grind else "FALLER",
             "grindens_skal": skal,
             "tankande": classify.tankande_for(m),
             "korning": stampel,
+            "form": ("en observation per begaran, Batch API — matvag FYND 009"
+                     if en_i_taget else "femtio per anrop, direkt"),
             "valideringsfel": len(fel_tot), "emissionsartefakter": art_tot,
             "egna_poang_median": med,
             "poang_over_0_05_median": [statistics.median(
@@ -322,7 +421,7 @@ def kor(modeller, passes=3, dry=False):
             "kostnad_usd_batteriet": round(kost, 4),
             "kostnad_usd_per_verk": round(kost * (1800 / (len(obs) * passes)), 2),
         }
-        r = resultat[m]
+        r = resultat[namn]
         print(f"    GRIND: {r['grind']}   sjalv-primary {sjalv['primary_emotion']:.1%}   "
               f"lika referensen {r['primary_lika_referensen']}   "
               f"MAD egna {r['mad_over_passen'].get('mad_poang_egna')}   "
@@ -366,4 +465,5 @@ if __name__ == "__main__":
     a = sys.argv[2:]
     sys.exit(kor(sys.argv[1].split(","),
                  int(a[a.index("--passes") + 1]) if "--passes" in a else 3,
-                 "--dry-run" in a))
+                 "--dry-run" in a,
+                 "--en-i-taget" in a))
