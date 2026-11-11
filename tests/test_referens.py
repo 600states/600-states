@@ -209,7 +209,7 @@ def test_tackningsgrinden_gar_fore_anropen(tmp_path, monkeypatch):
     monkeypatch.setattr(calibrate.classify, "call",
                         lambda *a, **k: anrop.append("direkt"))
     monkeypatch.setattr(calibrate, "kor_en_i_taget",
-                        lambda *a, **k: anrop.append("batch") or ([], [], [], 0))
+                        lambda *a, **k: anrop.append("batch") or ([], [], [], 0, 0))
 
     with pytest.raises(SystemExit):
         calibrate.kor(["claude-opus-5"], passes=1)

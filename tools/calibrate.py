@@ -183,6 +183,13 @@ def grind_ur_spec(P, spec, fel):
       batch_sparsity_and_numeric_resolution_must_be_reported
     De star darfor bland de rapporterade matten och inte i grinden.
 
+"fel" AR RADER SOM FORTFARANDE AR OGILTIGA EFTER SISTA RONDEN, inte
+    forsok. Ett forsok som lyckades i en senare rond finns inte har; det
+    rapporteras i stallet som atervunna_forsok. Grinden fallde
+    opus-5-korningen 2026-11-11 pa tva forsok som omforsoket redan hade
+    lakt, och det ar samma felform som bandet 13-15: ett matt som inte mater
+    det grinden pastar att den provar. Rattat 2026-11-11, se kor_en_i_taget().
+
     KVANTISERINGSFORBUDET SAKNADES I GRINDEN till 2026-11-06. Specen satter
     intensity_confidence_template_quantization_prohibited och prompten sager
     det i klartext: "Do not quantize intensity to a small preferred set of
@@ -190,7 +197,7 @@ def grind_ur_spec(P, spec, fel):
     var ett onskemal. Se kvantiserad() for hur den provas utan trosklar."""
     skal = []
     if fel:
-        skal.append(f"{len(fel)} valideringsfel, forst: {fel[0][:70]}")
+        skal.append(f"{len(fel)} ogiltiga rader kvar, forst: {fel[0][:70]}")
     if spec.get("mechanical_zero_fill_prohibited"):
         glesa = sum(classify.diagnostics(list(p.values()))["rows_with_two_or_fewer"] for p in P)
         if glesa:
@@ -256,7 +263,8 @@ def kor_en_i_taget(client, model, prompt, obs, passes, stampel):
     paverkar vad det kostar och hur lang tid det tar."""
     rap = REMEDIATION / "kalibrering_rasvar" / f"{model}_en_i_taget_{stampel}"
     rap.mkdir(parents=True, exist_ok=True)
-    klart, usage, fel_tot, art_tot = {}, [], [], 0
+    klart, usage, art_tot = {}, [], 0
+    misslyck = []       # [((pass, obs), orsak)] - en post per misslyckat FORSOK
 
     for rond in range(1, classify.MAX_TRIES + 1):
         kvar = [(p, i) for p in range(1, passes + 1)
@@ -278,24 +286,50 @@ def kor_en_i_taget(client, model, prompt, obs, passes, stampel):
         for rad in client.messages.batches.results(jobb.id):
             p, i = (int(x) for x in re.fullmatch(
                 r"pass(\d+)_obs(\d+)", rad.custom_id).groups())
+            # ETT MISSLYCKAT FORSOK LAMNAR LIKA MYCKET SPAR SOM ETT LYCKAT.
+            # Omforsoket skrev tidigare over rasvaret pa samma namn, sa texten
+            # som orsakade felet fanns inte kvar att undersoka - ett parsefel
+            # 2026-11-11 gick forlorat den vagen. Nu bar det misslyckade
+            # forsoket rondens nummer i namnet och rors inte av omforsoket.
+            spar = rap / f"{rad.custom_id}_rond{rond}_MISSLYCKAT.txt"
             if getattr(rad.result, "type", None) != "succeeded":
-                fel_tot.append(f"{rad.custom_id}: {getattr(rad.result, 'type', 'okant')}")
+                write_text(spar, repr(rad.result))
+                misslyck.append(((p, i), f"{rad.custom_id} rond{rond}: "
+                                         f"{getattr(rad.result, 'type', 'okant')}"))
                 continue
             msg = rad.result.message
             it = obs[i - 1]
-            write_text(rap / f"{rad.custom_id}.txt", classify.raw_text(msg))
             try:
                 rows, art = classify.parse(msg, [it])
+                f = classify.validate(rows, [it])
             except json.JSONDecodeError as e:
-                fel_tot.append(f"{rad.custom_id}: {e}")
-                continue
-            f = classify.validate(rows, [it])
+                rows, art, f = None, 0, [str(e)]
             if f:
-                fel_tot.append(f"{rad.custom_id}: {f[0]}")
+                write_text(spar, classify.raw_text(msg))
+                misslyck.append(((p, i), f"{rad.custom_id} rond{rond}: {f[0]}"))
                 continue
+            write_text(rap / f"{rad.custom_id}.txt", classify.raw_text(msg))
             klart[(p, i)] = rows[0]
             usage.append(classify.usage_fields(msg))
             art_tot += art
+
+    # GRINDEN PROVAR RADER SOM FORTFARANDE AR OGILTIGA, inte forsok.
+    # Opus-korningen 2026-11-11 hade tva forsok som foll i rond 1 och lyckades
+    # i rond 2. Alla 150 rader var kompletta och giltiga, men fel_tot bar de
+    # tva forsoken vidare och grinden fallde korningen pa fel som inte langre
+    # fanns i matningen. Omforsoket finns for att laka just det; grinden
+    # raknade det som ett haveri. En rad som aldrig blev giltig bidrar med EN
+    # post, dess sista orsak - annars faller en rad hardare an en annan bara
+    # for att den fick fler ronder pa sig.
+    kvar_fel = {}
+    for k, orsak in misslyck:
+        if k not in klart:
+            kvar_fel[k] = orsak
+    fel_tot = [kvar_fel[k] for k in sorted(kvar_fel)]
+    # Instrumentets halsa, aldrig en grind: en korning som behovde tva
+    # omforsok ar inte samma korning som en som behovde noll, aven nar bada
+    # slutar med samma femtio rader.
+    atervunna = sum(1 for k, _ in misslyck if k in klart)
 
     P = []
     for p in range(1, passes + 1):
@@ -309,7 +343,7 @@ def kor_en_i_taget(client, model, prompt, obs, passes, stampel):
         dg = classify.diagnostics(rader)
         print(f"    pass{p}  {len(rader)} rader  {dg['authored_scores_median']:.0f}/16"
               f" egna poang")
-    return P, usage, fel_tot, art_tot
+    return P, usage, fel_tot, art_tot, atervunna
 
 def ledig_nyckel(namn, upptagna):
     """En modell som redan star i filen ersatts inte - den far en egen nyckel.
@@ -383,17 +417,19 @@ def kor(modeller, passes=3, dry=False, en_i_taget=False):
     for m in modeller:
         namn = m + ("@en-i-taget" if en_i_taget else "")
         print(f"\n--- {namn} ---")
-        P, usage, fel_tot, art_tot = [], [], [], 0
+        P, usage, fel_tot, art_tot, atervunna = [], [], [], 0, 0
         if en_i_taget:
-            P, usage, fel_tot, art_tot = kor_en_i_taget(
+            P, usage, fel_tot, art_tot, atervunna = kor_en_i_taget(
                 client, m, prompt, obs, passes, stampel)
         for p in ([] if en_i_taget else range(1, passes + 1)):
+            lokala = 0
             for forsok in range(1, classify.MAX_TRIES + 1):
                 t0 = time.time()
                 try:
                     msg = classify.call(client, m, prompt, obs)
                     rows, art = classify.parse(msg, obs)
                 except Exception as e:
+                    lokala += 1
                     print(f"    pass{p} forsok {forsok}: {type(e).__name__}: {e}")
                     if not classify.ska_forsoka_igen(e):
                         print("      INGET OMFORSOK — felet uppstod innan begaran accepterades")
@@ -403,12 +439,14 @@ def kor(modeller, passes=3, dry=False, en_i_taget=False):
                 fel = classify.validate(rows, obs)
                 dg = classify.diagnostics(rows)
                 if fel and forsok < classify.MAX_TRIES:
+                    lokala += 1
                     print(f"    pass{p} forsok {forsok}: {len(fel)} fel, forst: {fel[0][:70]}")
                     continue
                 rap = REMEDIATION / "kalibrering_rasvar"
                 rap.mkdir(parents=True, exist_ok=True)
                 write_text(rap / f"{m}_{stampel}_pass{p}.txt", classify.raw_text(msg))
                 P.append({r["observation_id"]: r for r in rows})
+                atervunna += lokala     # forsok som ledde fram till ett pass
                 usage.append(classify.usage_fields(msg)); fel_tot += fel; art_tot += art
                 print(f"    pass{p}  {len(rows)} rader  {dg['authored_scores_median']:.0f}/16 "
                       f"egna poang  id-rep {dg['stated_id_differs']}  {time.time()-t0:.0f}s")
@@ -444,6 +482,7 @@ def kor(modeller, passes=3, dry=False, en_i_taget=False):
             "form": ("en observation per begaran, Batch API — matvag FYND 009"
                      if en_i_taget else "femtio per anrop, direkt"),
             "valideringsfel": len(fel_tot), "emissionsartefakter": art_tot,
+            "atervunna_forsok": atervunna,
             "egna_poang_median": med,
             "poang_over_0_05_median": [statistics.median(
                 [sum(1 for v in r["scores"].values() if v >= 0.05) for r in p.values()])

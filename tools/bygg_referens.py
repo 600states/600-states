@@ -115,7 +115,8 @@ def main():
     client = anthropic.Anthropic(api_key=key)
     stampel = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
 
-    P, usage, fel, art = calibrate.kor_en_i_taget(client, MODELL, prompt, obs, PASS, stampel)
+    P, usage, fel, art, atervunna = calibrate.kor_en_i_taget(
+        client, MODELL, prompt, obs, PASS, stampel)
     if len(P) != PASS:
         print(f"\n  bara {len(P)} av {PASS} pass kom hela. Ingen referens skrivs."); return 1
 
@@ -134,7 +135,11 @@ def main():
     print(f"\n  {NY.name}")
     print(f"    sha256 {sha[:16]}")
     print(f"    enighet 3/3: {enighet[3]}, 2/3: {enighet[2]}, 1/3: {enighet[1]}")
-    print(f"    kastade emissionsartefakter: {art}, fallna begaran: {len(fel)}")
+    # "fallna" ar rader som aldrig blev giltiga; atervunna ar forsok som
+    # omforsoket lakte. Bada hor till instrumentets halsa och ska synas aven
+    # nar referensen blev komplett.
+    print(f"    kastade emissionsartefakter: {art}, fallna rader: {len(fel)}, "
+          f"atervunna forsok: {atervunna}")
     return 0
 
 if __name__ == "__main__":
