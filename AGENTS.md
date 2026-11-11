@@ -389,6 +389,41 @@ Neither gate nor reviewer caught that one. The next measurement did, which is
 the only mechanism that could have — and is the reason this rule is about
 measuring twice rather than about reading more carefully.
 
+## No attribution trailer goes into a commit — binding from 2026-11-11
+
+Commit messages carry no `Co-Authored-By:` line, no `Claude-Session:` line, no
+bare link to the session that produced the work, and no personal name.
+
+This repository is public, and a commit message is as public as a source file.
+"This repository is public" above already said that for personal names. It was
+followed in file content and not in commit messages, which is why the history
+had to be rewritten rather than corrected going forward.
+
+It is written down because it happened. Measured on 2026-11-11 over all 115
+commits: 72 carried `Co-Authored-By`, 23 carried a `Claude-Session` link, and 9
+named the owner by first name. File content was clean. The scan that was meant
+to catch this before a push read blobs only and skipped commit objects, so it
+reported zero and the push was cleared. The history was rewritten the same day;
+all 115 tree hashes were unchanged and no byte of file content moved.
+
+Two consequences, both binding:
+
+- **A scan that does not read commit objects has not scanned the repository.**
+  `git cat-file --batch-all-objects --batch` reads every object. `git rev-list
+  --objects` lists blobs and trees, and misses exactly the class of leak found
+  here. Whatever `fore_push.py` ends up doing, it reads commit objects, and it
+  reads unreachable ones too: three of the 75 trailers sat in commit objects
+  that no branch pointed at.
+- **The rule is about the next commit, not about the rewrite.** One commit with
+  a trailer puts the string back in the object database, and the only way out
+  is another rewrite of every commit after it.
+
+Open, and deliberately not resolved here: `COPYRIGHT.md` states that commits
+carry `Co-Authored-By` trailers where AI assistance applies. After the rewrite
+that sentence is no longer true of this history. Whether the file changes or
+the provenance is stated some other way is the owner's call; see "Where
+documentation and code disagree".
+
 ## Tests
 
 Dependencies live in a virtual environment inside the repository, with locked
