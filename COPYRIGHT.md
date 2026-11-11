@@ -31,7 +31,20 @@ Rights are held by Myolc AB. The project publishes under the name 600 STATES.
 
 ## A note on how this code was written
 
-Parts of this codebase were written with AI assistance, and commits carry
-`Co-Authored-By` trailers where that applies. This is stated because the
-project asks to be taken at its word on provenance; that has to include its
-own provenance.
+The instrument is built with AI assistance. That is stated here, and on
+600 LABS, and it is not recorded per commit.
+
+It was recorded per commit until 2026-11-11, in `Co-Authored-By` trailers and
+session links. The history was rewritten that day to remove them, together
+with the owner's first name, from the commit messages: this repository is
+public, which makes a commit message as public as a source file, and names
+and session links had no business being in one. No file content changed in
+that rewrite — all 115 tree hashes are unchanged — and
+`docs/HISTORIK_OMSKRIVNING_2026-11-11.md` maps every old commit id to its new
+one and records what was verified.
+
+Said here, the claim is stronger than it was in seventy-two trailers. A
+trailer records which tool was in the room for one commit. This says what the
+instrument is: machine-written and human-decided, from the first line to the
+last. The project asks to be taken at its word on provenance, and that has to
+include its own.
