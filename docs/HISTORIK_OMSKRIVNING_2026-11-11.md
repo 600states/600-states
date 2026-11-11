@@ -67,6 +67,32 @@ Citat i COMMITMEDDELANDEN star kvar doda, med avsikt. Att ratta dem kraver en
 andra omskrivning, och den andrar alla hashar igen. Kartan nedan ar svaret pa
 dem i stallet.
 
+## Det som lag kvar lokalt, och som nu ar borta
+
+Omskrivningen bytte historia, men den lokala objektdatabasen bar kvar 123
+objekt fran fore bytet. Ingen gren pekade pa dem; reflogen holl dem vid liv.
+De gick bort 2026-11-11 med `git reflog expire --expire=now --all` och
+`git gc --prune=now`. Databasen gick fran 762 objekt till 639, och
+`tools/fore_push.py` gar sedan ren pa den.
+
+Innan rensningen paketerades databasen som den da stod, med `git bundle create
+--all` och en tillfallig ref per commitobjekt, sa att ingenting foll utanfor
+paketet. Paketet ligger i dataarkivet och aldrig i repot; en klon far det inte
+med sig.
+
+| | |
+|---|---|
+| fil | `600_STATES_REPO_FORE_OMSKRIVNING_2026-11-11.bundle` |
+| plats | dataarkivet, `03_VALIDATION_REMEDIATION/` |
+| storlek | 383 517 byte |
+| sha256 | `5339edfe44d38dbb279fadb37b0ead8c3da6b0cd44d6fc33a1b19854b1d0eb13` |
+| `git bundle verify` | "The bundle records a complete history", okay |
+| omfang | 762 objekt, alltsa databasen precis som den stod fore rensningen |
+
+Skalet ar FYND 012:s sidofynd en gang till: en reparation som utplanar sparet
+efter vad som reparerades gor nasta granskning omojlig. Kartan nedan bar
+hasharna. Paketet bar objekten.
+
 ## Kartan
 
 Alla 115 commits i rev-list-ordning, aldst forst: gammalt id, nytt id,
