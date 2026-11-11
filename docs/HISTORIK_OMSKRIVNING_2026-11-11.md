@@ -54,8 +54,14 @@ ovanpa omskrivningen, inte i en andra omskrivning:
 | `site/build.py` | `9a1f3ba` | `831632f` |
 | `site/labs.html` | `f32bd75` | `11f7b66` |
 
-`tests/test_rent_trad.py` lamnades. Strangen `53cf395` dar ar ett argument till
-`gate_rent_trad`, alltsa ett provvarde, inte en hanvisning till en commit.
+I `site/build.py` star stampelstrangen `"9a1f3ba-dirty"` kvar ordagrant - den
+ar ett citat av vad bygget faktiskt skrev, inte en hanvisning att folja - och
+det nya namnet star bredvid den i texten.
+
+`tests/test_rent_trad.py` lamnades helt. Strangarna `53cf395` och
+`"9a1f3ba-dirty"` dar ar argument till `gate_rent_trad`, alltsa provvarden som
+lika garna kunde vara vilken strang som helst, och inte hanvisningar. Samma
+citat star i filens egen docstring, av samma skal som i `site/build.py`.
 
 Citat i COMMITMEDDELANDEN star kvar doda, med avsikt. Att ratta dem kraver en
 andra omskrivning, och den andrar alla hashar igen. Kartan nedan ar svaret pa
