@@ -275,8 +275,41 @@ This applies to history as much as to the current tree — a deleted file still
 carries its content in the object database. The path to the data archive comes
 from `STATES_DATA` and is never hardcoded; see `config.py`.
 
-Before any push, scan the whole object database, not just the latest version,
-and search spelling variants rather than only the obvious words.
+Before any push, run the gate:
+
+```
+python tools/fore_push.py
+```
+
+It reads the whole object database with `git cat-file --batch-all-objects
+--batch` — commit objects included, unreachable ones included — and it exits
+non-zero on a hit, naming the pattern, the object, the file or commit, and the
+line. A report that cannot stop a push is a wish; this is why the gate exits
+with a code rather than printing a summary. A push does not go out on a red
+gate, and a gate is never edited to make a push go out.
+
+What it looks for: personal names with spelling variants, an employer's name,
+any email address outside `600states.com`, local filesystem paths, attribution
+lines in commit messages, and the commercial terms of the first public offering
+of the work — the floor, the form, the chain, the rights share. The floor must
+not be known in advance, and those documents live in the archive, never here.
+
+This paragraph names none of those terms, and that is deliberate. The gate
+tests attribution on the line, `^Co-Authored-By:`, so that the rules can quote
+what they forbid; there is no line to anchor for the commercial terms, so a
+rule book that spelled them out would be the first thing the gate stopped.
+
+The words it matches — names, organisations, and the commercial terms — live in
+the data archive as `fore_push_ordlista.txt`, read through `STATES_DATA`, and
+never in this repository. A list of what must stay hidden is itself a leak once
+it is published, and a pattern that spells out what it forbids fails on itself
+on the next run. Without that file the gate exits 2 and says what was not
+tested. It never reports "clean" without it.
+
+Its allowlist stands on content, not on filenames: an entry is a pattern, the
+exact text matched, and the reason. The same string elsewhere passes; another
+string under the same pattern falls. A filename allowlisted once stays
+allowlisted on the day the file contains something else.
 
 ## Where documentation and code disagree, code wins — and say so
 
