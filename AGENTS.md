@@ -295,7 +295,7 @@ One open divergence and two resolved. Do not "fix" the code to match the documen
 - ~~**Two different `v2.2`.**~~ Resolved 2026-11-05. The Execution Spec exists
   only as v2.1, `600_STATES_Emotion_Classification_Execution_Spec_v2.1_FROZEN.json`.
   A reference to "Execution Spec v2.2" is an error; it came from the parameter
-  registry, since corrected, and `src/consensus.py` said it until f80494a.
+  registry, since corrected, and `src/consensus.py` said it until e31ce22.
   `FROZEN_PRE_EMOTION_PACKAGE_v2.2` is a different artefact and that version is
   right. **Never search and replace on `v2.2`**: it would corrupt
   `docs/MATNINGAR.md`, `tests/test_candidates.py` and `tests/test_evidence_hash.py`.

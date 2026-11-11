@@ -177,7 +177,8 @@ def gate_rent_trad(out: Path, stamp: str) -> None:
 
     Felet som gav upphov till grinden, 2026-11-06: bygget kordes fore
     commiten, stampeln blev "9a1f3ba-dirty", och filerna lag kvar i dist
-    redo att laddas upp. En sida som pastar sig byggd ur ingen kand commit
+    redo att laddas upp. Stampelstrangen star kvar som bygget skrev den;
+    commiten heter 831632f efter omskrivningen 2026-11-11. En sida som pastar sig byggd ur ingen kand commit
     hor inte hemma pa en sajt vars hela tes ar sparbarhet - och stampeln
     finns just for att den sidan ska kunna bindas till en version.
 

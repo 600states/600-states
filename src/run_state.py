@@ -108,7 +108,7 @@ def step_select(day):
 
     # GRINDEN GAR FORE SKRIVNINGEN. Raderna finns fardiga i minnet, sa att
     # "manifestet saknar datering" gar att veta innan filen ar skriven i stallet
-    # for efterat, nar den redan ar den frysta posten. Jamfor b6aeab0.
+    # for efterat, nar den redan ar den frysta posten. Jamfor 8f065a8.
     gates.gate_evidence_time(rader, pool_evidence.BEVISNIVAER)
 
     pre = sp.pre_manifest(DATA, day)
