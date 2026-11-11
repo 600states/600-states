@@ -593,13 +593,13 @@ footer .repo a:hover{color:var(--ink)}
         <p>The whole argument for rebuilding this instrument was a single distinction. Works from the pilot series carry evidence that was fetched long after the day it describes. Works from the new pipeline fetch the page <em>while the day is being observed</em>, and that is what makes the chain worth anything. We named the levels, wrote them into the evidence specification, and said in our own public copy that new States carry the fourth one.</p>
         <div class="data">
           <table>
-            <caption>Evidence basis, as documented</caption>
+            <caption>Evidence basis, as the rule now stands</caption>
             <thead><tr><th>Level</th><th>Meaning</th></tr></thead>
             <tbody>
               <tr><th>NO_EVIDENCE</th><td>nothing retrievable</td></tr>
               <tr><th>RETROSPECTIVE</th><td>fetched later, not during the observed day</td></tr>
               <tr><th>CONTEMPORANEOUS_ARCHIVE</th><td>a third&#8209;party archive copy from that month</td></tr>
-              <tr><th class="hit">OBSERVED_AT_CAPTURE</th><td class="hit">fetched during the observed day &mdash; the new pipeline&rsquo;s claim</td></tr>
+              <tr><th class="hit">CAPTURED_IN_WINDOW</th><td class="hit">fetched after the story&rsquo;s first mention and within three hours of the day closing &mdash; the new pipeline&rsquo;s claim</td></tr>
             </tbody>
           </table>
         </div>
@@ -630,7 +630,14 @@ footer .repo a:hover{color:var(--ink)}
         <p><b>And it answered a question we had not asked properly.</b> Looking for where the stamp was lost meant walking the pipeline stage by stage, and that showed something about the series itself: <b>exactly one stage is time&#8209;critical</b>. Acquiring the raw feed can be done from an archive. Selection, classification, colour and rendering all run over material that is already frozen, and give the same result whenever they run.</p>
         <p>Only the fetch depends on <em>when</em> it happens. Everything else can be late without being wrong.</p>
         <blockquote class="pull">
-          <p>A daily series does not need a machine running every day. It needs the page fetched on the day. The reading can wait.</p>
+          <p>A daily series does not need a machine running every day. It needs the page fetched close to the day. The reading can wait.</p>
+        </blockquote>
+        <p><b>A correction to this chapter &mdash; 11 November.</b> The rule we wrote first said: captured during the same UTC calendar day. That boundary was ours, and it was arbitrary. A page fetched at 00:30 the next morning has had thirty minutes longer than one fetched at 23:50, and nothing else separates them &mdash; yet one counted and the other did not. A cliff at midnight that means nothing.</p>
+        <p>We also considered going the other way and fetching <em>during</em> the day, on a loop. We measured what that would catch, and rejected it: a loop running hourly reads each article nought to sixty minutes after it first appears, which is precisely the window in which headlines are rewritten and stubs become articles. It would systematically capture the least settled version of every page, and it would require a machine to not miss an hour, for years.</p>
+        <p>So the rule now has two sides. The page must be fetched <b>after the story&rsquo;s first mention</b> &mdash; a page read before the story existed does not carry the story &mdash; and <b>no later than three hours after the day closes</b>. The run is meant to begin at 00:05 UTC and finish by 00:30; three hours is the margin, not the target. Measured: a day&rsquo;s four thousand candidates are fetched in seven to eleven minutes.</p>
+        <p>The level is now called <code>CAPTURED_IN_WINDOW</code>. The earlier name said <em>during the day</em>, which is not what it means any more, and <b>a name that describes the wrong thing is a claim.</b></p>
+        <blockquote class="pull">
+          <p>What matters is not which calendar square the capture lands in. It is how little time passed &mdash; and every row carries its own timestamp, so anyone can count it themselves.</p>
         </blockquote>
       </div>
     </article>
