@@ -233,7 +233,7 @@ footer .repo a:hover{color:var(--ink)}
       <p class="sub">Every method error found while building the instrument, what the measurement was, and what changed because of it.</p>
     </div>
     <div class="tile hero-say lift">
-      <p class="lead">The instrument has been wrong fourteen times. This is the list.</p>
+      <p class="lead">The instrument has been wrong fifteen times. This is the list.</p>
 
       <ol class="toc">
         <li><a href="#hash"><span>I</span>The hash that could not be reproduced</a></li>
@@ -250,6 +250,7 @@ footer .repo a:hover{color:var(--ink)}
         <li><a href="#delivery"><span>XII</span>The delivery path never built</a></li>
         <li><a href="#slip"><span>XIII</span>The identifiers slipped</a></li>
         <li><a href="#capture"><span>XIV</span>The timestamp that died at the freeze</a></li>
+        <li><a href="#attempts"><span>XV</span>The gate that counted attempts</a></li>
       </ol>
       <p class="note">Most of these have the same shape: the rule existed, and no line of code enforced it. That is the lesson the whole project now runs on &mdash; <b>a rule that cannot stop a run is a wish.</b></p>
     </div>
@@ -639,6 +640,44 @@ footer .repo a:hover{color:var(--ink)}
         <blockquote class="pull">
           <p>What matters is not which calendar square the capture lands in. It is how little time passed &mdash; and every row carries its own timestamp, so anyone can count it themselves.</p>
         </blockquote>
+      </div>
+    </article>
+
+    <article class="ch r" id="attempts">
+      <div class="ch-head">
+        <p class="ch-num">XV</p>
+        <div><h2>The gate that counted attempts, not rows</h2><p class="when">11 November 2026</p></div>
+      </div>
+      <div class="ch-body">
+        <p>The classifier model had been chosen in early November, under a delivery form we have since abandoned &mdash; fifty news items read in a single request. A cheaper model might have been judged unfairly by that form, since a weaker reader is exactly what forty&#8209;nine neighbours would hurt most. So we measured again, and we wrote the decision rule down <em>before</em> the measurement, because a rule written afterwards is a rationalisation.</p>
+        <blockquote>
+          <p>Models that fail the gate are out. Among those that pass, take the cheapest whose self&#8209;agreement lies inside the reference model&rsquo;s band.</p>
+        </blockquote>
+        <p>Then the production model failed the gate.</p>
+        <div class="data">
+          <table>
+            <caption>The run that failed</caption>
+            <thead><tr><th>Measure</th><th class="n">value</th></tr></thead>
+            <tbody>
+              <tr><th>Gate</th><td class="n hit">FAILS</td></tr>
+              <tr><th>Reason</th><td class="n">2 validation errors</td></tr>
+              <tr><th>Self&#8209;agreement</th><td class="n">0.90 &mdash; the highest ever recorded</td></tr>
+              <tr><th>Raw answers present and valid</th><td class="n">150 of 150</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p><b>Nothing was wrong with the run.</b> Two requests had failed on the first round and succeeded on the retry. The retry exists precisely to heal that. But the error list was never cleared between rounds, so the gate counted two attempts that no longer corresponded to anything in the measurement.</p>
+        <blockquote class="pull">
+          <p>The gate counted attempts. The run is made of rows.</p>
+        </blockquote>
+        <p>Applied literally, the rule we had just written down would have eliminated the production model on an error the code itself repaired &mdash; and left the cheaper candidate as the only survivor. The saving would have been about $1,800 a year, decided by a counter that was looking at the wrong thing.</p>
+        <p>The eight findings before this one share a shape: a rule that existed in a document and not in the code path that decides. This one is its mirror image. <b>The rule was in the code, and it measured the wrong thing.</b></p>
+        <blockquote class="pull">
+          <p>A gate that can fail a flawless run is not stricter than one that lets things through. It is unreliable in the other direction.</p>
+        </blockquote>
+        <p><b>And the evidence had already destroyed itself.</b> The raw answer was written before parsing, under the request&rsquo;s own name &mdash; so the retry overwrote it. The text that caused the parse error no longer exists. We had a rule for that too: <em>a call that fails must leave as much trace as one that succeeds.</em> It was not in this code path either. Failed attempts now keep their own file, with the round number in the name.</p>
+        <p>The gate now counts rows that are still invalid after the last round, and a recovered retry is reported as its own measure &mdash; never as a gate. A run that needed two retries is not the same run as one that needed none, even when both end with the same fifty rows.</p>
+        <p><b>The measurement itself stands.</b> Re&#8209;run cleanly, three times per model, the choice came out the same: the more expensive model is measurably steadier on the sixteen scores the colour model actually reads &mdash; its worst run better than the cheaper model&rsquo;s best, on eight hundred values per run rather than fifty labels. What changed is that the decision no longer rests on a verdict that was wrong.</p>
       </div>
     </article>
   </div>
