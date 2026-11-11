@@ -232,18 +232,30 @@ leave it alone.
 ## Two `basis()`, and only one of them is the series
 
 `capture_state.basis()` belongs to the pilot path. It can return three levels
-and `OBSERVED_AT_CAPTURE` is not among them, because that path fetches long
+and `CAPTURED_IN_WINDOW` is not among them, because that path fetches long
 after the day it describes. It is still called by `repair_evidence.py`. Leave
 it alone; do not "complete" it.
 
 `pool_evidence.basis(candidate, day)` is the v3.0 path and the only producer of
-`OBSERVED_AT_CAPTURE`. Two lines in it are decisions, not implementation:
+`CAPTURED_IN_WINDOW`. Three lines in it are decisions, not implementation:
 
-- **The boundary is the UTC calendar day of the fetch**, compared with the day
-  the whole chain is already parameterised on. No tolerance either way.
+- **The window has two sides**: after the observation's own `first_mention_utc`,
+  and at most `FONSTER_TIMMAR` after the observation day closed at 24:00 UTC.
+  The upper bound is a margin for a run that starts at `KORNING_START_UTC`, not
+  a target. The lower bound is deliberate: a page fetched before the story
+  existed does not carry the story, however early we were. The level that
+  misses either side is `RETROSPECTIVE`.
+- **Both numbers live in exactly one place**, the two constants at the top of
+  `pool_evidence.py`, never inside `basis()` and never repeated in a scheduler.
+  The batch size showed what two copies of one number cost: 60 in the code, 50
+  in the spec, for months.
 - **The evidence is the hashed page, not the attempt.** `fetch_one` stamps
   `retrieved_at_utc` even when the fetch fails, so a row without
   `content_sha256` is `NO_EVIDENCE` however promptly we tried.
+
+The level was called `OBSERVED_AT_CAPTURE` while the boundary was the fetch's
+own calendar day. That boundary was wrong - a fetch at 00:30 the next day is
+methodologically identical to one at 23:50 - and the name went with it.
 
 `gate_evidence_time` stops the freeze when a row carries no timestamp or no
 level, and it runs on the rows in memory, before the manifest is written. The

@@ -8,7 +8,7 @@ Cachen ar nycklad pa URL och delas mellan dygn: overlapp hamtas aldrig om.
 Resumerbar - kan avbrytas och startas om.
 """
 import json, sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -55,22 +55,47 @@ def attach(pool, path=CACHE):
         c["evidence_retrieved_at"] = r.get("retrieved_at_utc")
     return pool
 
+# BEVISFONSTRET. EN DEFINITION, OCH DEN LIGGER HAR - inte i basis(), inte i ett
+# schema, inte i en docstring. Ett varde som star inuti en funktion gar inte att
+# andra utan att lasa kod, och batchstorleken visade vad som hander nar samma
+# tal skrivs pa tva stallen: 60 i koden, 50 i specen, i manader.
+#
+# GRANSEN VAR TIDIGARE HAMTNINGENS KALENDERDYGN I UTC. Den var fel. En hamtning
+# 00:30 dygnet efter ar metodologiskt identisk med en 23:50 samma dygn - sidan
+# har haft trettio minuter extra pa sig - och klippkanten vid midnatt betyder
+# ingenting. Att i stallet hamta UNDER dygnet ar provat och forkastat: det
+# fangar varje artikel noll till sextio minuter efter first mention, alltsa
+# precis i fonstret dar rubriker skrivs om och stubbar blir artiklar, och det
+# kraver en slinga som maste ga i aratal utan att missa en natt. Rotrisken den
+# skulle skydda mot ar uppmatt till noll: 600 piloturler, atta manader, inga
+# doda lankar.
+#
+# Beslut 2026-11-11. Hela kedjan acquire -> pool tar 15-20 minuter; tre timmar
+# ar marginalen om nagot gar fel, inte malet.
+FONSTER_TIMMAR = 3            # efter att observationsdygnet stangde, 24:00 UTC
+KORNING_START_UTC = "00:05"   # avsedd start, klart fore 00:30; schemalaggningen byggs senare
+
 BEVISNIVAER = ("NO_EVIDENCE", "RETROSPECTIVE", "CONTEMPORANEOUS_ARCHIVE",
-               "OBSERVED_AT_CAPTURE")
+               "CAPTURED_IN_WINDOW")
 
 def basis(c, day):
     """Bevisnivan for EN kandidat i v3.0-vagen. day ar observationsdygnet, YYYYMMDD.
 
-    GRANSEN FOR "UNDER OBSERVATIONSDYGNET" ar hamtningens kalenderdygn i UTC,
-    jamfort med dygnet som hela kedjan redan ar parametriserad pa. Ingen
-    tolerans at nagot hall: en sida last 00:04 dygnet efter ar hamtad efter
-    dygnet, och det ar hela skillnaden v3.0 finns till for att gora.
+    CAPTURED_IN_WINDOW galler nar hamtningen skedde EFTER observationens first
+    mention och senast FONSTER_TIMMAR efter att dygnet stangde. Nivan het
+    tidigare OBSERVED_AT_CAPTURE, vilket betydde "under dygnet" och inte langre
+    ar sant om fonstret. Ett namn som beskriver fel sak ar ett pastaende.
+
+    DEN UNDRE GRANSEN AR MED AVSIKT. En sida som hamtades innan historien fanns
+    bar inte historien, hur tidigt vi an var. Saknas first_mention_utc gar den
+    gransen inte att visa, och da far raden den svagare nivan - aldrig den
+    starkare. Att faltet finns vaktas av gate_candidates, fore urvalet.
 
     BEVISET AR DEN HASHADE SIDAN, inte forsoket. fetch_one stamplar
     retrieved_at_utc aven nar hamtningen misslyckas, sa tidsstampeln ensam
     sager bara nar vi lasade. Utan content_sha256 finns inget bevis att datera.
 
-    capture_state.basis() hor till pilotvagen, kan inte na OBSERVED_AT_CAPTURE
+    capture_state.basis() hor till pilotvagen, kan inte na den starka nivan
     och anropas aldrig harifran. Se FYND 011.
     """
     t = c.get("evidence_retrieved_at")
@@ -79,8 +104,13 @@ def basis(c, day):
     d = datetime.fromisoformat(t)
     if d.tzinfo is None:
         # Utan tidszon skulle astimezone() tolka stampeln i maskinens lokala tid
-        # och ge ett dygn som beror pa var programmet kors. Hellre stopp.
+        # och ge ett svar som beror pa var programmet kors. Hellre stopp.
         raise ValueError(f"evidence_retrieved_at saknar tidszon: {t!r}")
-    return ("OBSERVED_AT_CAPTURE"
-            if d.astimezone(timezone.utc).strftime("%Y%m%d") == day
+    fm = c.get("first_mention_utc")
+    if not fm:
+        return "RETROSPECTIVE"
+    forst = datetime.strptime(fm, "%Y%m%d%H%M%S").replace(tzinfo=timezone.utc)
+    stangde = datetime.strptime(day, "%Y%m%d").replace(tzinfo=timezone.utc) + timedelta(days=1)
+    return ("CAPTURED_IN_WINDOW"
+            if forst < d.astimezone(timezone.utc) <= stangde + timedelta(hours=FONSTER_TIMMAR)
             else "RETROSPECTIVE")

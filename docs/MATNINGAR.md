@@ -109,7 +109,7 @@ retrospektivt. v0.2 var for pessimistisk. Tre nivaer galler:
 
 | Varde | Betydelse |
 |---|---|
-| `OBSERVED_AT_CAPTURE` | hamtad under observationsdygnet (nya dygn) |
+| `CAPTURED_IN_WINDOW` | hamtad i bevisfonstret (nya dygn) - het OBSERVED_AT_CAPTURE till 2026-11-11, se pool_evidence.py |
 | `CONTEMPORANEOUS_ARCHIVE` | arkivkopia fran observationsdygnet (manga pilotrader) |
 | `RETROSPECTIVE` | hamtad i efterhand, manader senare |
 
