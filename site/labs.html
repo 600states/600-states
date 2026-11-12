@@ -233,7 +233,7 @@ footer .repo a:hover{color:var(--ink)}
       <p class="sub">Every method error found while building the instrument, what the measurement was, and what changed because of it.</p>
     </div>
     <div class="tile hero-say lift">
-      <p class="lead">The instrument has been wrong fifteen times. This is the list.</p>
+      <p class="lead">The instrument has been wrong sixteen times. This is the list.</p>
 
       <ol class="toc">
         <li><a href="#hash"><span>I</span>The hash that could not be reproduced</a></li>
@@ -251,6 +251,7 @@ footer .repo a:hover{color:var(--ink)}
         <li><a href="#slip"><span>XIII</span>The identifiers slipped</a></li>
         <li><a href="#capture"><span>XIV</span>The timestamp that died at the freeze</a></li>
         <li><a href="#attempts"><span>XV</span>The gate that counted attempts</a></li>
+        <li><a href="#twoformulas"><span>XVI</span>Two formulas for one cost</a></li>
       </ol>
       <p class="note">Most of these have the same shape: the rule existed, and no line of code enforced it. That is the lesson the whole project now runs on &mdash; <b>a rule that cannot stop a run is a wish.</b></p>
     </div>
@@ -678,6 +679,40 @@ footer .repo a:hover{color:var(--ink)}
         <p><b>And the evidence had already destroyed itself.</b> The raw answer was written before parsing, under the request&rsquo;s own name &mdash; so the retry overwrote it. The text that caused the parse error no longer exists. We had a rule for that too: <em>a call that fails must leave as much trace as one that succeeds.</em> It was not in this code path either. Failed attempts now keep their own file, with the round number in the name.</p>
         <p>The gate now counts rows that are still invalid after the last round, and a recovered retry is reported as its own measure &mdash; never as a gate. A run that needed two retries is not the same run as one that needed none, even when both end with the same fifty rows.</p>
         <p><b>The measurement itself stands.</b> Re&#8209;run cleanly, three times per model, the choice came out the same: the more expensive model is measurably steadier on the sixteen scores the colour model actually reads &mdash; its worst run better than the cheaper model&rsquo;s best, on eight hundred values per run rather than fifty labels. What changed is that the decision no longer rests on a verdict that was wrong.</p>
+      </div>
+    </article>
+
+    <article class="ch r" id="twoformulas">
+      <div class="ch-head">
+        <p class="ch-num">XVI</p>
+        <div><h2>Two formulas for one cost</h2><p class="when">12 November 2026</p></div>
+      </div>
+      <div class="ch-body">
+        <p>Before the series begins we ran the whole chain once, on a day outside it, to see whether it holds end to end. It did. It also cost fifteen per cent more than we had estimated, and the explanation we reached for first was wrong.</p>
+        <p>The estimate came from a calibration battery of 150 requests, scaled up to the 1,800 a full day needs. The obvious reading was that a small sample had not scaled. <b>It had.</b> Measured on the same basis, the battery predicted the day to within 1.5 per cent.</p>
+        <p>The gap was somewhere else. The calibration tool carries <b>two formulas for the same quantity</b>.</p>
+        <div class="data">
+          <table>
+            <caption>Both in the same file</caption>
+            <thead><tr><th>Where</th><th>Counts the cached prefix?</th></tr></thead>
+            <tbody>
+              <tr><th>The figure written to the archive</th><td class="hit">no &mdash; input and output only</td></tr>
+              <tr><th>The figure the dry run prints</th><td>yes, explicitly</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>The data was never missing. The function that collects usage returns <em>all</em> of it, cache fields included, and its own comment says why: sixteen thousand tokens once disappeared without a character of text to show for it. The fields were gathered. They simply never entered the sum that gets written down.</p>
+        <blockquote class="pull">
+          <p>The instrument could predict the day&rsquo;s cost to six parts in a thousand. The one of its two figures that it wrote into the archive could not.</p>
+        </blockquote>
+        <p>That is not a rounding problem. The written figure is the one quoted in the parameter register, where the model comparison lives &mdash; so the cost column for <em>every</em> model was understated, and the annual budget with it.</p>
+        <p><b>And the formula that remembers the item gets it wrong a second way.</b> It prices the cached prefix at one tenth of input for every model. That is right for the model we use and <em>twice</em> the real figure for the cheaper one we tested against it. A constant that happens to be correct for the reference model, applied to the comparison the tool exists to make.</p>
+        <blockquote class="pull">
+          <p>A rule that cannot stop a run is a wish. A value computed in two places is two values.</p>
+        </blockquote>
+        <p>This is the shape of the fourth finding on this page, eleven findings later: one quantity, two definitions, drifting apart until something forces them together. What forced them this time was a day that cost more than the number said it would.</p>
+        <p><b>The fix is one formula, not two corrected ones.</b> Writing both carefully is what we did the first time. The dry run and the written record have to compute through the same function, and the cache price has to sit beside each model&rsquo;s other prices rather than inside a formula as a constant.</p>
+        <p>It is reported and not yet repaired, which is deliberate: a divergence gets written down before it gets fixed, so that the next reader can see what was true and not only what was corrected.</p>
       </div>
     </article>
   </div>
