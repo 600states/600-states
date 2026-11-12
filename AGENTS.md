@@ -457,6 +457,20 @@ that sentence is no longer true of this history. Whether the file changes or
 the provenance is stated some other way is the owner's call; see "Where
 documentation and code disagree".
 
+## Reference environment — binding from 2026-11-13
+
+The instrument runs in the container described in `deploy/`. That container is
+the reference environment: Python is pinned there, by digest, and nowhere else.
+Per 2026-11-13 it is Python 3.13.18 on Debian trixie; `deploy/Dockerfile` is
+the authority for the exact image.
+
+The Windows venv is a development copy and follows the container, never the
+other way round. Same minor version is required; a patch-level difference is
+expected and is not a defect. When the two disagree on a result, the container
+is right and the venv is what gets fixed. When the reference version changes,
+it changes in `deploy/Dockerfile` first, on purpose, in its own commit, and the
+venv is brought after it.
+
 ## Tests
 
 Dependencies live in a virtual environment inside the repository, with locked
@@ -468,13 +482,22 @@ noticing.
     .venv\Scripts\python -m pip install -r requirements.txt
     .venv\Scripts\python -m pytest -q
 
-57 tests with the data archive present. Without it, 47 pass and 10 skip: a
-clone without the archive must skip, never crash, because the README promises
-an outside reader it can.
+A clone without the data archive must skip, never crash, because the README
+promises an outside reader it can. That rule stands.
+
+Test counts are not written here. A count in prose is a value kept in two
+places, and the second copy goes stale the day a test is added; the suite is
+the authority for how many tests there are.
+
+**Known deviation, 2026-11-13:** in a clone without the archive a number of
+tests fail instead of skipping, so the rule above is currently broken in the
+code. It is the tests that get fixed, not the rule, and it is fixed before
+1 December 2026.
 
 `requirements.txt` is a lock file, and that was verified rather than assumed on
 2026-11-05: a second environment built from it in an empty venv froze to an
-identical list, 23 packages, no differences, and ran 57 and 47/10. Installing
+identical list, 23 packages, no differences, and ran the suite to the same
+result as the primary environment. Installing
 it against an environment that already satisfies it proves only that the
 conditions hold, not that a restoration reproduces the instrument. Whoever
 restores this in a year has the file and nothing else. A rule that cannot stop a run is not a rule: gates

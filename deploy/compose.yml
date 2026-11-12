@@ -1,0 +1,59 @@
+# Bevisfangstens korningsmiljo pa den alltid pasatta varden. Se deploy/README.md.
+#
+# Inga vardsokvagar och inga vardspecifika id:n star i den har filen. De kommer
+# ur .env bredvid den, som aldrig committas (se .env.exempel). Containerns INRE
+# sokvagar ar fasta.
+#
+# Tva roller, tva monteringar:
+#   uppdatera  drar koden. Repot skrivbart, ingen data, ingen nyckel.
+#   kedja      kor koden. Repot SKRIVSKYDDAT, datan skrivbar.
+# Den som kor matningen kan inte rora instrumentet som utfor den - varken en
+# bugg eller en komprometterad korning.
+#
+# Ingen tjanst gor nagot nar projektet startas. Imagen saknar standardkorning,
+# och uppdatera ligger i en profil som bara kors nar den namns:
+#   docker compose run --rm uppdatera
+#   docker compose run --rm kedja python -m <steg> ...
+
+x-bas: &bas
+  image: 600-states-kedja:lokal
+  init: true
+  restart: "no"
+  # En egen anvandare pa varden med atkomst enbart till kedjans mapp - inte en
+  # administrator. Kedjan hamtar och parsar tusentals sidor fran frammande
+  # domaner; den ska ha minsta mojliga behorighet.
+  user: "${KEDJA_UID:?KEDJA_UID saknas - se deploy/.env.exempel}:${KEDJA_GID:?KEDJA_GID saknas - se deploy/.env.exempel}"
+  read_only: true
+  tmpfs:
+    - /tmp
+  working_dir: /srv/repo
+
+services:
+  kedja:
+    <<: *bas
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    environment:
+      # Balte och hangslen, inte mekanismen. Kedjan laser KORNING_START_UTC sjalv
+      # och raknar dygnet i UTC; den ska stanna av egen kraft aven om TZ ar fel.
+      TZ: UTC
+      STATES_DATA: /srv/data
+      HOME: /tmp
+      PYTHONDONTWRITEBYTECODE: "1"
+      # Nyckeln kommer ur .env vid start. Aldrig i imagen, aldrig i ett lager,
+      # aldrig i repot.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    volumes:
+      - ${REPO_DIR:?REPO_DIR saknas - se deploy/.env.exempel}:/srv/repo:ro
+      - ${DATA_DIR:?DATA_DIR saknas - se deploy/.env.exempel}:/srv/data
+
+  uppdatera:
+    <<: *bas
+    profiles: ["uppdatera"]
+    environment:
+      TZ: UTC
+      HOME: /tmp
+    volumes:
+      - ${REPO_DIR:?REPO_DIR saknas - se deploy/.env.exempel}:/srv/repo
+    command: ["git", "-C", "/srv/repo", "pull", "--ff-only"]
