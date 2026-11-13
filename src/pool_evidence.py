@@ -7,12 +7,13 @@ klassificerarens input. Darfor maste detta steg ligga fore urvalet, sa att de
 Cachen ar nycklad pa URL och delas mellan dygn: overlapp hamtas aldrig om.
 Resumerbar - kan avbrytas och startas om.
 """
-import json, sys
-from datetime import datetime, timedelta, timezone
+import csv, hashlib, json, re, sys
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from fetch_evidence import fetch_one, load_registry
+import statepaths as sp
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from config import DATA
 
@@ -114,3 +115,140 @@ def basis(c, day):
     return ("CAPTURED_IN_WINDOW"
             if forst < d.astimezone(timezone.utc) <= stangde + timedelta(hours=FONSTER_TIMMAR)
             else "RETROSPECTIVE")
+
+
+# GOLVET FOR KANONISKT MEDLEMSKAP. Beslut 2026-11-13, PARAMETER_REGISTER 1.15
+# och EVIDENCE_AND_PUBLICATION_SPEC 3.1.
+#
+# Uppmatt andel rader med innehallshash i de fyra v3-dygnen, samtliga
+# retrospektiva: 94,3 % (2026/308), 95,5 % (309), 95,3 % (310), 94,2 % (315).
+#
+# TALET AR SATT MOT HAMTNINGENS FRAMGANGSGRAD, MEN MATT PA FEL FALT OM MAN
+# MATER INNEHALLSHASHEN. I skarp drift hamtas dygnet 00:05-00:25, alltsa inne i
+# fonstret: varje rad som far en innehallshash far da ocksa CAPTURED_IN_WINDOW,
+# och de fyra talen ovan galler fortfarande som matt pa hur manga sidor som gar
+# att hamta alls. Ett dygn hamtat i efterhand har daremot hog hashandel och noll
+# fonsterandel - och det ar precis den skillnaden golvet finns till for att se.
+# En innehallshash sager att vi HAR sidan, inte att vi hade den i tid.
+#
+# TALET AR RUNT MED AVSIKT, och det ar sjalva beviset. 0,90 ligger fyra
+# procentenheter under den samsta uppmatta kvoten, alltsa klart under utfallen
+# men inte anpassat till dem. Hade golvet statt pa 0,941 eller 0,94 hade det
+# varit ett tal som lasts av mataren: en troskel trimmad sa att allt man redan
+# producerat ramlar in ovanfor den. Ett runt tal gar inte att trimma i efterhand
+# utan att synas.
+#
+# GOLVET HOJS ALDRIG. En hojning skulle gora redan numrerade dygn okanoniska i
+# efterhand, och ordningstalet ar hashat och darmed permanent. Visar det sig for
+# lagt ar svaret ett nytt kriterium med eget namn, aldrig ett nytt varde har.
+GOLV_KANONISK = 0.90
+
+# COMMISSIONED kan inte raknas fram ur rader; den satts for verk utanfor den
+# lopande serien och star da i filen. serie() avgor de tva den kan avgora.
+SERIER = ("CANONICAL", "COMMISSIONED", "UNQUALIFIED")
+
+
+def serie(rader):
+    """CANONICAL eller UNQUALIFIED for ett dygns manifestrader.
+
+    Andelen ar rader med evidence_basis == CAPTURED_IN_WINDOW delat med antalet
+    rader. Serien ar 600 verk fangade i fonstret, inte 600 verk vi rakar ha
+    sidorna till: en innehallshash sager att vi HAR sidan, inte att vi hade den
+    i tid. Ett retrospektivt dygn far aldrig vara ett av de 600, och pa
+    hashandelen ar det omojligt att skilja fran ett dygn hamtat 00:05.
+
+    INGET ANNAT INGAR. Inte http_status, inte evidence_sha256, inte orsaken
+    till bortfallet, inte vems fel det var: skuldfragan hor inte hemma i
+    berakningen. En rad ar fangad i fonstret eller inte.
+
+    Noll rader ger UNQUALIFIED. Ett tomt dygn ar inte ett kanoniskt dygn, och
+    ett undantag har skulle gora det till ett. Likasa ett dygn vars form inte
+    bar faltet alls: det som inte sager nar det fangades sager inte att det
+    fangades i tid.
+    """
+    if not rader:
+        return "UNQUALIFIED"
+    i_fonstret = sum(1 for r in rader
+                     if (r.get("evidence_basis") or "").strip() == "CAPTURED_IN_WINDOW")
+    return "CANONICAL" if i_fonstret / len(rader) >= GOLV_KANONISK else "UNQUALIFIED"
+
+
+def _sha(path):
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def _nyckel(namn):
+    """(ar, dagnummer) ur ett katalognamn, eller None.
+
+    Pilotserien heter STATE_001..STATE_010 och matchar darfor inte: den ar
+    ersatt for validering och hor inte till den kanoniska serien.
+    """
+    m = re.fullmatch(r"STATE_(\d{4})_(\d{3})", namn)
+    return (int(m.group(1)), int(m.group(2))) if m else None
+
+
+def _dygn(ar, nr):
+    return (date(ar, 1, 1) + timedelta(days=nr - 1)).strftime("%Y%m%d")
+
+
+def _serie_i_fil(rader):
+    """Serien for ett redan skrivet manifest.
+
+    Star den i filen galler den: det ar den frysta posten, och COMMISSIONED gar
+    inte att rakna fram. Saknas kolumnen - dygnen fore beslutet - raknas den
+    fram ur raderna, for serie() ar en ren funktion av just dem och ger samma
+    svar idag som den dagen.
+    """
+    stod = (rader[0].get("series") or "").strip() if rader else ""
+    return stod or serie(rader)
+
+
+def kedja(DATA, day):
+    """Arkivets kanoniska kedja fram till, men inte med, day.
+
+    Returnerar (antal_kanoniska_fore, prev_canonical_sha256, brott).
+
+    ORDNINGSTALET RAKNAS FRAM UR ARKIVET och skrivs sedan in i ett manifest som
+    hashas, alltsa permanent. Darfor gar lanken bakat med: utan den skulle ett
+    saknat manifest bara gora talet ett for litet, tyst, och felet skulle
+    frysas in. Med den gar kedjan inte ihop och korningen stannar.
+
+    Brott ar allt som gor arkivet otolkat: ett dygn utan manifest, ett dygn med
+    tva former, en lagrad lank som inte stammer mot filen fore den, ett lagrat
+    ordningstal som inte ar sin egen plats i serien. Grinden avgor vad de
+    kostar - den har funktionen rakna och rapporterar.
+    """
+    # Lasningen gar genom frozen(), som bade haller fast "ett dygn har en form"
+    # och sager ifran nar den byter version. Den sista raden skrivs ut en gang
+    # per aldre dygn, alltsa en gang per dygn i serien efter ett versionsbyte.
+    # shortcut: brus i utskriften, inte i talen; gor frozen() tystbar om listan
+    # blir lang nog att dolja grindarnas rader.
+    gransen = (sp.year(day), sp.ordinal(day))
+    brott, kanoniska = [], []
+    for d in sorted((Path(DATA) / sp.GENERATION_DIR).glob("STATE_*")):
+        nyckel = _nyckel(d.name)
+        if not nyckel or nyckel >= gransen:
+            continue
+        try:
+            fil = sp.frozen(sp.pre_manifest(Path(DATA), _dygn(*nyckel)))
+        except (FileNotFoundError, ValueError) as e:
+            brott.append(f"{d.name}: {e if not isinstance(e, FileNotFoundError) else 'inget pre-manifest'}")
+            continue
+        rader = list(csv.DictReader(open(fil, encoding="utf-8")))
+        if _serie_i_fil(rader) == "CANONICAL":
+            kanoniska.append((d.name, fil, rader))
+
+    forra = None
+    for plats, (namn, fil, rader) in enumerate(kanoniska, 1):
+        huvud = rader[0] if rader else {}
+        vantad = _sha(forra) if forra else ""
+        if "prev_canonical_sha256" in huvud:
+            star = (huvud.get("prev_canonical_sha256") or "").strip()
+            if star != vantad:
+                brott.append(f"{namn}: lanken bakat ar {star[:16] or 'tom'}, "
+                             f"filen fore ar {vantad[:16] or 'ingen'}")
+        if (huvud.get("canonical_index") or "").strip() not in ("", f"{plats:03d}"):
+            brott.append(f"{namn}: bar ordningstal {huvud['canonical_index']}, "
+                         f"men ar nummer {plats:03d} i arkivet")
+        forra = fil
+    return len(kanoniska), (_sha(forra) if forra else ""), brott

@@ -16,8 +16,10 @@ ARET ar aldrig hardkodat. Serien ar oppen over ar; 2027/001 kommer.
 
 MANIFESTVERSIONEN NAMNER EN FORM, inte en smak. v3.2 har 17 kolumner i
 pre-emotionsmanifestet, v3.3 har 19: evidence_retrieved_at och evidence_basis
-kom till med FYND 011. Tva former under ett versionsnamn ar precis det som
-gjorde "Execution Spec v2.2" oanvandbart som referens - se AGENTS.md.
+kom till med FYND 011. v3.4 har 22: series, canonical_index och
+prev_canonical_sha256 kom till med beslutet om kanoniskt medlemskap
+2026-11-13. Tva former under ett versionsnamn ar precis det som gjorde
+"Execution Spec v2.2" oanvandbart som referens - se AGENTS.md.
 
 SKRIVNING ANVANDER ALLTID V. LASNING TAR DYGNETS EGEN FIL. De tre dygn som
 redan ar frysta bar v3.2 och ska fortsatta gora det; de ska anda ga att
@@ -31,7 +33,7 @@ ovanpa.
 import re
 from datetime import date
 
-MANIFEST_VERSION = "v3.3"
+MANIFEST_VERSION = "v3.4"
 GENERATION_DIR = "08_V3_STATES"
 
 def _d(day):

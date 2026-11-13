@@ -92,7 +92,8 @@ def step_select(day):
             "first_mention_utc", "representative_url", "representative_domain", "source_tier",
             "selection_layer", "review_region", "action_geo_country", "mention_rows",
             "registry_version", "evidence_http_status", "evidence_sha256",
-            "evidence_retrieved_at", "evidence_basis"]
+            "evidence_retrieved_at", "evidence_basis",
+            "series", "canonical_index", "prev_canonical_sha256"]
     rader = [{"state_id": c["state_id"], "tile_index": c["tile_index"],
               "grid_row": c["grid_row"], "grid_column": c["grid_column"],
               "observation_id": c["observation_id"], "family_key": c["family_key"],
@@ -105,6 +106,26 @@ def step_select(day):
               "evidence_sha256": c.get("content_sha256") or "",
               "evidence_retrieved_at": c.get("evidence_retrieved_at") or "",
               "evidence_basis": pool_evidence.basis(c, day)} for c in chosen]
+
+    # KANONISKT MEDLEMSKAP. Beslut 2026-11-13. Rakningen sker pa raderna i
+    # minnet, av samma skal som grinden nedan: talet ska vara avgjort innan
+    # filen som gor det permanent finns pa disk.
+    #
+    # Golvet stoppar ingenting. Ett dygn under det fryses och publiceras som
+    # alla andra och far bara inget nummer; serien ar numrerad, inte urvald.
+    s = pool_evidence.serie(rader)
+    fore, prev_sha, brott = pool_evidence.kedja(DATA, day)
+    index = fore + 1 if s == "CANONICAL" else None
+    gates.gate_kanonisk_kedja(s, index, brott)
+    for r in rader:
+        r["series"] = s
+        r["canonical_index"] = f"{index:03d}" if index else ""
+        r["prev_canonical_sha256"] = prev_sha
+    med = sum(1 for r in rader if r["evidence_basis"] == "CAPTURED_IN_WINDOW")
+    print(f"        series: {s} ({med}/{len(rader)} i fonstret = {med/len(rader):.1%}, golv "
+          f"{pool_evidence.GOLV_KANONISK:.0%})"
+          + (f", nummer {index:03d}" if index else "")
+          + (f", bakat {prev_sha[:16]}" if prev_sha else ", forst i serien"))
 
     # GRINDEN GAR FORE SKRIVNINGEN. Raderna finns fardiga i minnet, sa att
     # "manifestet saknar datering" gar att veta innan filen ar skriven i stallet

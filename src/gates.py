@@ -119,3 +119,27 @@ def gate_registry(cands, registry_path, version, allowed):
     bad = doms - set(allowed)
     _say("varje kandidat ligger i registret", not bad, f"{len(bad)} utanfor")
     print(f"        registret har {len(allowed)} domaner, {len(doms)} av dem forekommer i dygnet")
+
+
+def gate_kanonisk_kedja(serie, index, brott, tak=600):
+    """Kedjan bakat ska ga ihop, och ordningstalet ska rymmas i serien.
+
+    DETTA AR INTE GOLVETS GRIND. Ett dygn under golvet produceras anda -
+    klassificeras, fryses och hashas som alla andra - det far bara inget
+    nummer. Att hoppa over dygnet skulle bryta "en dag, en korning, ett
+    utfall", och ett dygn som saknas av metodskal gar inte att skilja fran ett
+    som saknas av slarv.
+
+    Det som DAREMOT stoppar korningen ar ett arkiv som inte gar att lasa
+    ordningstalet ur. Talet skrivs in i ett manifest som hashas, alltsa
+    permanent: raknas det fram ur ett arkiv dar ett manifest saknas eller en
+    lank inte stammer blir felet fryst, och enda vagen ut ar att skriva om
+    varje dygn efter det.
+
+    Taket likasa. Serien ar 600 dygn. Ett 601:a nummer ar inte ett stort tal,
+    det ar ett pastaende om att serien inte ar slut.
+    """
+    _say("kedjan bakat gar ihop", not brott,
+         "; ".join(brott) if brott else "arkivets kanoniska dygn lanker i foljd")
+    _say("ordningstalet ryms i serien", index is None or index <= tak,
+         f"{index:03d} av {tak}" if index else f"inget ordningstal ({serie})")
