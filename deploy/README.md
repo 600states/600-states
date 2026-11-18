@@ -115,3 +115,22 @@ kommandon med jamna mellanrum; tiden ager programmet.
 
 Data flyttar till varden forst nar lagringspoolen har dataskydd. RAID ar inte
 backup - kopia utanfor varden ar obligatorisk (1.13).
+
+### Kvoter - regel, beslutad 2026-11-18
+
+**Ingen ny delad mapp skapas utan kvot, satt vid skapandet och inte efterat.**
+
+En kvot pa kedjans mapp begransar kedjan; den reserverar ingenting at den.
+Det som hindrar att nagot annat fyller volymen och svalter bevisfangsten ar
+kvoter pa allt annat, plus ett larm. Volymen delas inte upp; separationen
+gors med delade mappar och kvoter.
+
+| Vad | Varde |
+|---|---|
+| Kvot, kedjans mapp | 200 GB (serien behover 20-50 GB over 600 dygn) |
+| Kvot, varje annan delad mapp | satt vid skapandet; Container Managers mapp 500 GB |
+| Larm, anvand volym | 85 % |
+
+Larmet sager till i efterhand. Kedjans forkontroll ska dessutom vagra starta
+ett dygn om det lediga utrymmet understiger en troskel, sa att ett dygn aldrig
+borjar skrivas och tar slut halvvags.
