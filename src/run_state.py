@@ -68,10 +68,12 @@ def _luckor(day):
     kalenderdygn, sa en missad dag bryter den inte - och att stoppa nasta dygn
     skulle gora ett haveri till tva. Luckan ska synas, inte blockera.
     """
-    kataloger = _dygnskataloger()
-    if not kataloger:
-        return []
-    d, slut = _dag(kataloger[0].name), _dag("STATE_" + sp.state_key(day))
+    # SERIENS FORSTA DYGN AR EN PARAMETER, inte den aldsta katalogen pa disk.
+    # Den har listan borjade forut vid det aldsta dygnet som rakade finnas, och
+    # det ar samma tal som pool_evidence.SERIESTART - uttryckt en andra gang,
+    # av arkivets innehall. Luckor finns bara inne i serien.
+    d = datetime.strptime(pool_evidence.SERIESTART, "%Y%m%d").date()
+    slut = _dag("STATE_" + sp.state_key(day))
     ut = []
     while d < slut:
         dygn = d.strftime("%Y%m%d")
@@ -244,7 +246,19 @@ def step_select(day):
     #
     # Golvet stoppar ingenting. Ett dygn under det fryses och publiceras som
     # alla andra och far bara inget nummer; serien ar numrerad, inte urvald.
-    s = pool_evidence.serie(rader)
+    med = sum(1 for r in rader if r["evidence_basis"] == "CAPTURED_IN_WINDOW")
+    andel = (f"{med}/{len(rader)} i fonstret = {med / len(rader):.1%}, "
+             f"golv {pool_evidence.GOLV_KANONISK:.0%}")
+    # TVA SKAL, INTE ETT. Ett dygn som fick for fa bevis i tid och ett dygn som
+    # ligger utanfor serien ar inte samma utfall, och den som laser loggen ska
+    # inte behova gissa vilket av dem som intraffade.
+    if not pool_evidence.i_serien(day):
+        s = "UNQUALIFIED"
+        skal = (f"fore seriens start {pool_evidence.SERIESTART} - inkorning, "
+                f"aldrig ett av de 600; {andel}")
+    else:
+        s = pool_evidence.serie(rader)
+        skal = andel
     fore, prev_sha, brott = pool_evidence.kedja(DATA, day)
     index = fore + 1 if s == "CANONICAL" else None
     gates.gate_kanonisk_kedja(s, index, brott)
@@ -252,11 +266,10 @@ def step_select(day):
         r["series"] = s
         r["canonical_index"] = f"{index:03d}" if index else ""
         r["prev_canonical_sha256"] = prev_sha
-    med = sum(1 for r in rader if r["evidence_basis"] == "CAPTURED_IN_WINDOW")
-    print(f"        series: {s} ({med}/{len(rader)} i fonstret = {med/len(rader):.1%}, golv "
-          f"{pool_evidence.GOLV_KANONISK:.0%})"
-          + (f", nummer {index:03d}" if index else "")
-          + (f", bakat {prev_sha[:16]}" if prev_sha else ", forst i serien"))
+    print(f"        series: {s} ({skal})"
+          + (f", nummer {index:03d}"
+             + (f", bakat {prev_sha[:16]}" if prev_sha else ", forst i serien")
+             if index else ""))
 
     # GRINDEN GAR FORE SKRIVNINGEN. Raderna finns fardiga i minnet, sa att
     # "manifestet saknar datering" gar att veta innan filen ar skriven i stallet

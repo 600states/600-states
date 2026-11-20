@@ -148,6 +148,35 @@ GOLV_KANONISK = 0.90
 SERIER = ("CANONICAL", "COMMISSIONED", "UNQUALIFIED")
 
 
+# SERIENS FORSTA OBSERVATIONSDYGN. Serien startar 2026-12-01, State 2026/335.
+#
+# ETT DYGN FORE DETTA KAN ALDRIG BLI CANONICAL, hur hog andelen i fonstret an
+# ar. Inkorningskorningarna gors mot det riktiga arkivet, och utan den har
+# parametern blir den forsta av dem som rakar klara golvet verk nummer ett -
+# varpa 1 december blir nummer tva. Ordningstalet hashas med manifestet, sa
+# felet ar oaterkalleligt i samma ogonblick filen fryses, och enda vagen ut ar
+# att skriva om varje dygn efter det.
+#
+# Skyddet lag tidigare i att inkorningen schemalagts efter bevisfonstret. Det
+# ar en installning i en schemalaggare, inte en regel i koden: den som flyttar
+# korningen en halvtimme ser inte vad hen flyttar.
+#
+# TALET STAR HAR, EN GANG. Bade korningen som skapar dygnet och kedjan som
+# laser arkivet i efterhand gar genom i_serien(). Tva kontroller som bar var
+# sitt datum ar tva datum den dag nagon andrar det ena.
+SERIESTART = "20261201"           # 2026/335
+
+
+def i_serien(dygn):
+    """Hor dygnet till serien alls? YYYYMMDD i UTC, jamfort som strang.
+
+    Strangjamforelsen ar ingen genvag: YYYYMMDD sorterar kronologiskt och ar
+    formatet hela kedjan redan bar. Ett date()-objekt har vore ett andra satt
+    att uttrycka samma ordning.
+    """
+    return str(dygn) >= SERIESTART
+
+
 def serie(rader):
     """CANONICAL eller UNQUALIFIED for ett dygns manifestrader.
 
@@ -165,6 +194,10 @@ def serie(rader):
     ett undantag har skulle gora det till ett. Likasa ett dygn vars form inte
     bar faltet alls: det som inte sager nar det fangades sager inte att det
     fangades i tid.
+
+    SERIESTARTEN PROVAS INTE HAR. Funktionen ar ren i raderna och vet inte
+    vilket dygn de kommer fran; i_serien() ar den fragan, och bada vagarna -
+    korningen i run_state och kedja() har - staller den fore denna.
     """
     if not rader:
         return "UNQUALIFIED"
@@ -213,6 +246,8 @@ def kedja(DATA, day):
     saknat manifest bara gora talet ett for litet, tyst, och felet skulle
     frysas in. Med den gar kedjan inte ihop och korningen stannar.
 
+    Dygn fore SERIESTART ingar inte, varken i talet eller i brotten.
+
     Brott ar allt som gor arkivet otolkat: ett dygn utan manifest, ett dygn med
     tva former, en lagrad lank som inte stammer mot filen fore den, ett lagrat
     ordningstal som inte ar sin egen plats i serien. Grinden avgor vad de
@@ -228,6 +263,12 @@ def kedja(DATA, day):
     for d in sorted((Path(DATA) / sp.GENERATION_DIR).glob("STATE_*")):
         nyckel = _nyckel(d.name)
         if not nyckel or nyckel >= gransen:
+            continue
+        # FORE SERIENS START RAKNAS INGENTING, inte ens en fil som sjalv sager
+        # CANONICAL: den kan vara skriven innan parametern fanns. Dygnet lases
+        # darfor inte alls, och det ar med avsikt aven for brotten - ett
+        # avbrutet inkorningsdygn ska inte kunna stoppa seriens forsta dygn.
+        if not i_serien(_dygn(*nyckel)):
             continue
         try:
             fil = sp.frozen(sp.pre_manifest(Path(DATA), _dygn(*nyckel)))
