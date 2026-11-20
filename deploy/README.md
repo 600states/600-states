@@ -134,3 +134,13 @@ gors med delade mappar och kvoter.
 Larmet sager till i efterhand. Kedjans forkontroll ska dessutom vagra starta
 ett dygn om det lediga utrymmet understiger en troskel, sa att ett dygn aldrig
 borjar skrivas och tar slut halvvags.
+
+### Kontroller - regel, beslutad 2026-11-18
+
+**En kontroll ska koras pa den vag som faktiskt kommer att anvandas, inte pa
+en angransande.**
+
+Ett test pa filsystemet ar inget bevis om atkomsten sker over SMB, och ett
+test i File Station ar inget bevis om hotet kommer over SMB. Gar vagen inte
+att testa darifran ar kontrollen inte gjord, och det ska skrivas ut i
+rapporten.
