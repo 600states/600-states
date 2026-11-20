@@ -395,6 +395,48 @@ the operator explicitly that it goes to the other agent. The operator carries
 it; the two agents do not talk directly. Disagreements go to the operator only
 when they are real disagreements.
 
+## What a report must state — binding from 2026-11-20
+
+Separation of duties catches the author's assumptions. It does not catch a
+check aimed at the wrong object, because in that case the author did run a
+check, the check did pass, and the report said so truthfully.
+
+That failure has now appeared five times in this project:
+
+- FINDING 012: the day gate counted attempts instead of rows, and would have
+  disqualified a model over an error the code itself had already repaired.
+- The membership floor was first specified against rows carrying a content
+  hash instead of rows carrying the window. A retrospective day scored 94 per
+  cent on that measure and would have entered the series.
+- A storage quota was put on the folder it was meant to protect rather than on
+  the folders that could starve it. The quota was real and protected nothing.
+- An SMB permission was verified on the filesystem. SMB does not consult the
+  filesystem for an account in the administrators group, and the write went
+  through.
+- A raw API field was read as a protocol version when it was a list index.
+
+In every one of them the work was competent and a check was run. It was aimed
+one step to the side of the thing that decides.
+
+**Every report of completed work states three things.**
+
+1. **Which path decides.** Not the path that was convenient to test.
+2. **What was verified, and on which path it was run.**
+3. **What was NOT verified, and why.**
+
+Point 3 is the one that works. It costs the author nothing, because the author
+already knows it, and it is the only part a reviewer cannot reconstruct from
+the diff. Both errors found on 2026-11-18 were found because the author wrote
+it down without being asked.
+
+*Verified in both directions* is not a report. *Verified on the filesystem;
+the SMB path could not be reached from here* is.
+
+**This binds measurements as much as code.** A number is reported together
+with the population it was measured on. The four v3 days were measured for
+content hash, not for capture in the window, and on a retrospective day those
+are not the same number.
+
 ## No figure is published on one measurement — binding from 2026-11-10
 
 A number that has been measured once does not go on the public site, into the
