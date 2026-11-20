@@ -143,3 +143,53 @@ def gate_kanonisk_kedja(serie, index, brott, tak=600):
          "; ".join(brott) if brott else "arkivets kanoniska dygn lanker i foljd")
     _say("ordningstalet ryms i serien", index is None or index <= tak,
          f"{index:03d} av {tak}" if index else f"inget ordningstal ({serie})")
+
+
+def gate_korningsfonster(nu_utc, dygn):
+    """Far korningen borja an? Grinden for KORNING_START_UTC.
+
+    Vardet stod i pool_evidence och lastes ingenstans i hela src/. Ett tal som
+    ingen kod laser ar ett onskemal, inte en regel; hela skillnaden mellan de
+    tva ar att nagot stannar nar det bryts.
+
+    DEN HINDRAR FOR TIDIGT, INTE FOR SENT. Ett dygn vars bevisfonster redan
+    hunnit stanga gar fortfarande att kora. Det landar da under golvet och blir
+    UNQUALIFIED av sig sjalvt, vilket ar ratt utfall och en matning vard att ha.
+    En ovre grans har skulle i stallet gora ett missat dygn till ett dygn som
+    aldrig funnits.
+
+    Grinden galler bara det harledda laget. Anges dygnet explicit ar det arkiv-
+    eller reparationsvagen, och den fragar aldrig vad klockan ar.
+
+    nu_utc kommer fran anroparen, aldrig ur en egen klockavlasning har: en
+    grind som laser klockan sjalv gar inte att prova med en forstalld klocka,
+    och en grind som inte gar att prova ar ingen grind.
+    """
+    from datetime import datetime, timedelta, timezone
+    from pool_evidence import KORNING_START_UTC       # en definition, aldrig en kopia
+
+    stangde = datetime.strptime(dygn, "%Y%m%d").replace(tzinfo=timezone.utc) + timedelta(days=1)
+    h, m = (int(x) for x in KORNING_START_UTC.split(":"))
+    tidigast = stangde + timedelta(hours=h, minutes=m)
+    _say("dygnet har stangt", nu_utc >= stangde,
+         f"{dygn} stanger {stangde:%Y-%m-%d %H:%M}, klockan ar {nu_utc:%Y-%m-%d %H:%M} UTC")
+    _say(f"klockan har passerat {KORNING_START_UTC}", nu_utc >= tidigast,
+         f"tidigast {tidigast:%Y-%m-%d %H:%M}, klockan ar {nu_utc:%Y-%m-%d %H:%M} UTC")
+
+
+def gate_frirymd(behov, fri, matt_pa):
+    """Ett dygn far inte borja skrivas nar det inte finns plats for det.
+
+    INGET TAL STAR HAR. Behovet mats pa de senast fardiga dygnen, sa att
+    grinden foljer med nar dygnen vaxer; en hardkodad troskel blir fel atta
+    manader in, och det marks forst nar halva manifestet ar skrivet.
+
+    Finns inget fardigt dygn att mata pa provas ingenting - och det STAR i
+    utskriften. En kontroll som tyst hoppas over ser likadan ut som en som gick
+    igenom.
+    """
+    if behov is None:
+        print(f"        FRIRYMDEN PROVADES INTE: {matt_pa}")
+        return
+    _say("fri rymd racker for dygnet", fri >= behov,
+         f"{fri / 2**30:.2f} GiB fria, behover {behov / 2**30:.2f} GiB ({matt_pa})")

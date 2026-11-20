@@ -1,16 +1,27 @@
 """Urval och klassificeringsinput for ett dygn. SEPARAT PROGRAM.
 
-    python3 src/run_state.py 20261201 [--stage NAMN] [--budget N]
+    python3 src/run_state.py [dygn] [--stage NAMN] [--budget N]
 
-Dygnet ar enda indata. Ingen kod har laser systemklockan: daglig korning och
-efterhandskorning av en aldre dag gar genom exakt samma kodvag, annars ar
-dagarna inte jamforbara.
+PROGRAMMET AGER DYGNET. Utan dygnargument harleder main() det UTC-dygn som
+senast stangde och kor en forkontroll fore forsta steget. Den som startar
+korningen bestammer alltsa inte langre vilket dygn det ar, och en feltryckning
+kan inte bli ett felaktigt verk. Schemalaggaren knackar pa; tiden ager
+programmet.
+
+Anges dygnet gar korningen precis som forut. Det ar arkiv- och
+reparationsvagen, och den far aldrig bero pa vad klockan ar.
+
+KLOCKAN LASES PA ETT STALLE, i main(), och nar aldrig berakningen. Den valjer
+vilket dygn som ska koras och provas mot forkontrollens fonster; darefter ar
+dygnet en strang som alla andra. Daglig korning och efterhandskorning av en
+aldre dag gar genom exakt samma kodvag, annars ar dagarna inte jamforbara.
 
 DETTA PROGRAM NAR ALDRIG FARGEN. Det importerar inte color_protocol och far
 aldrig gora det. Farg och rendering ligger i run_color.py, som kors forst nar
 emotionsmanifestet ar fryst. Separationen ar funktionen, inte stadning.
 
 Steg, i ordning:
+    preflight   bara i det harledda laget         grind: frirymd, korningsfonster
     candidates  GDELT -> kandidatlista            grind: dygn, mention_rows, register
     pool        bevisfangst pa hela poolen        grind: rubriktackning
     select      600 valda bland lasbara           grind: 600, regionkvoter, cap
@@ -23,19 +34,89 @@ Steg, i ordning:
 Avbryter med felkod nar en grind stoppar. En regel som inte kan stoppa en
 korning ar inte en regel.
 """
-import csv, json, sys
+import csv, json, shutil, sys
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE)); sys.path.insert(0, str(HERE.parent))
 import statepaths as sp
 from atomic import atomic_write, write_text
 from config import (DATA, RAW_GDELT, REGISTRY_FILE as REGISTRY, registry_version,
-                    raw_day_dir, canonical_batch_size)
+                    raw_day_dir, canonical_batch_size, require_data)
 import candidates, ranking, select_day, pool_evidence, gates
 from vocab import EMOTION_STATES
 from build_classifier_input import claim_of, readable, is_digest
 
 STAGES = ["candidates", "pool", "select", "input", "emotion"]
+
+LUCKLOGG = "_LUCKOR.log"
+
+def senast_stangda_dygnet(nu_utc):
+    """Det UTC-dygn som senast stangde. Enda stallet dar en klocka blir ett dygn."""
+    return (nu_utc.date() - timedelta(days=1)).strftime("%Y%m%d")
+
+def _dag(katalognamn):
+    """STATE_2026_308 -> date(2026, 11, 4). Aret ar aldrig hardkodat."""
+    return date(int(katalognamn[6:10]), 1, 1) + timedelta(days=int(katalognamn[11:14]) - 1)
+
+def _dygnskataloger():
+    """Seriens kataloger, aldst forst. Pilotserien heter STATE_001 och matchar inte."""
+    return sorted((DATA / sp.GENERATION_DIR).glob("STATE_[0-9][0-9][0-9][0-9]_[0-9][0-9][0-9]"))
+
+def _luckor(day):
+    """Kalenderdygn utan fryst pre-manifest, fran seriens forsta dygn till dygnet fore day.
+
+    EN LUCKA STOPPAR INGENTING. Kedjan ar en kedja av kanoniska dygn, inte av
+    kalenderdygn, sa en missad dag bryter den inte - och att stoppa nasta dygn
+    skulle gora ett haveri till tva. Luckan ska synas, inte blockera.
+    """
+    kataloger = _dygnskataloger()
+    if not kataloger:
+        return []
+    d, slut = _dag(kataloger[0].name), _dag("STATE_" + sp.state_key(day))
+    ut = []
+    while d < slut:
+        dygn = d.strftime("%Y%m%d")
+        if not sp.har_pre_manifest(DATA, dygn):
+            ut.append(dygn)
+        d += timedelta(days=1)
+    return ut
+
+def _logga_luckor(nu_utc, day, luckor):
+    """Loggen skrivs aven nar det inte finns nagra luckor: en logg som bara
+    skrivs nar nagot ar fel gar inte att skilja fran en som aldrig kordes."""
+    rad = (f"{nu_utc:%Y-%m-%dT%H:%M:%SZ}  korning {day}  "
+           + (f"luckor {len(luckor)}: " + ", ".join(luckor) if luckor else "inga luckor"))
+    with open(DATA / sp.GENERATION_DIR / LUCKLOGG, "a", encoding="utf-8") as fh:
+        fh.write(rad + "\n")
+
+def _frirymd():
+    """(behov, fri, matt_pa). Behovet ar tre ganger det storsta av de fem senast
+    fardiga dygnen. Fardig = har ett fryst pre-manifest; ett paborjat dygn
+    sager inget om vad ett helt tar."""
+    fardiga = [d for d in _dygnskataloger()
+               if sp.har_pre_manifest(DATA, _dag(d.name).strftime("%Y%m%d"))][-5:]
+    fri = shutil.disk_usage(DATA).free
+    if not fardiga:
+        return None, fri, "inget fardigt dygn att mata pa"
+    storsta = max(sum(f.stat().st_size for f in d.rglob("*") if f.is_file()) for d in fardiga)
+    return 3 * storsta, fri, (f"tre ganger det storsta av de {len(fardiga)} senast fardiga "
+                              f"dygnen, {storsta / 2**30:.2f} GiB")
+
+def step_preflight(day, nu_utc):
+    """Forkontrollen, fore allt annat och bara i det harledda laget.
+
+    Ordningen ar avsiktlig: luckorna skrivs ut aven nar nagot langre ner
+    stoppar korningen, for det ar da de ar som mest varda att se.
+    """
+    print(f"\n[preflight] {day}")
+    require_data()
+    luckor = _luckor(day)
+    print(f"        luckor: {len(luckor)} kalenderdygn utan fryst pre-manifest"
+          + (" (" + ", ".join(luckor) + ")" if luckor else ""))
+    _logga_luckor(nu_utc, day, luckor)
+    gates.gate_frirymd(*_frirymd())
+    gates.gate_korningsfonster(nu_utc, day)
 
 def step_candidates(day, mentions):
     print(f"\n[candidates] {day}")
@@ -191,23 +272,30 @@ def step_emotion(day):
     return rows
 
 def main():
-    if len(sys.argv) < 2:
+    args = sys.argv[1:]
+    if "--help" in args or "-h" in args:
         sys.exit(__doc__)
-    day = sys.argv[1]
+    # ENDA KLOCKAVLASNINGEN I KEDJAN. Harifran ar dygnet en strang.
+    nu = datetime.now(timezone.utc)
+    harlett = not args or args[0].startswith("-")
+    day = senast_stangda_dygnet(nu) if harlett else args.pop(0)
     sp.state_id(day)                      # validerar formatet, kastar vid fel
-    args = sys.argv[2:]
     start = args[args.index("--stage") + 1] if "--stage" in args else "candidates"
     budget = int(args[args.index("--budget") + 1]) if "--budget" in args else None
 
-    hits = (sorted(raw_day_dir(day).glob(f"*{day}*MENTIONS.zip"))
-            or sorted(RAW_GDELT.glob(f"*{day}*MENTIONS.zip")))
-    if not hits:
-        print(f"hittar inget rasnapshot for {day} — kor forst: python3 src/acquire.py {day}")
-        sys.exit(4)
-
     todo = STAGES[STAGES.index(start):]
-    print(f"=== {sp.state_id(day)} — urval och klassificeringsinput ===")
+    print(f"=== {sp.state_id(day)} — urval och klassificeringsinput ==="
+          + ("  (dygnet harlett ur klockan)" if harlett else ""))
     try:
+        # FORE RASNAPSHOTET. Ar det for tidigt saknas snapshotet ocksa, och da
+        # ska svaret vara att klockan inte ar slagen - inte att filen saknas.
+        if harlett:
+            step_preflight(day, nu)
+        hits = (sorted(raw_day_dir(day).glob(f"*{day}*MENTIONS.zip"))
+                or sorted(RAW_GDELT.glob(f"*{day}*MENTIONS.zip")))
+        if not hits:
+            print(f"hittar inget rasnapshot for {day} — kor forst: python3 src/acquire.py {day}")
+            sys.exit(4)
         if "candidates" in todo: step_candidates(day, hits[0])
         if "pool" in todo: step_pool(day, budget)
         if "select" in todo: step_select(day)

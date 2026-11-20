@@ -93,6 +93,16 @@ def frozen(path):
         print(f"        LASER ANNAN VERSION: bad om {path.name}, fick {hits[0].name}")
     return hits[0]
 
+def har_pre_manifest(DATA, day):
+    """Om dygnet har ett fryst pre-manifest, i vilken form som helst.
+
+    Lasvagens fraga utan lasvagens fallback. Produktionsstegen far inte ga
+    genom frozen() - den valjer form at skrivningen - men de maste kunna se
+    om ett dygn ar gjort, och den fragan ska inte stavas pa tva stallen.
+    """
+    p = pre_manifest(DATA, day)
+    return bool(list(p.parent.glob(p.name.replace(V, "v*"))))
+
 def version_of(path):
     """Manifestversionen i ett filnamn. En rapport ska saga vilken form den
     laste, inte vilken version koden rakar sta pa."""
