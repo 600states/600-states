@@ -42,14 +42,12 @@ sys.path.insert(0, str(HERE)); sys.path.insert(0, str(HERE.parent))
 import statepaths as sp
 from atomic import atomic_write, write_text
 from config import (DATA, RAW_GDELT, REGISTRY_FILE as REGISTRY, registry_version,
-                    raw_day_dir, canonical_batch_size, require_data)
+                    raw_day_dir, canonical_batch_size, require_data, LUCKLOGG)
 import candidates, ranking, select_day, pool_evidence, gates
 from vocab import EMOTION_STATES
 from build_classifier_input import claim_of, readable, is_digest
 
 STAGES = ["candidates", "pool", "select", "input", "emotion"]
-
-LUCKLOGG = "_LUCKOR.log"
 
 def senast_stangda_dygnet(nu_utc):
     """Det UTC-dygn som senast stangde. Enda stallet dar en klocka blir ett dygn."""
@@ -87,21 +85,73 @@ def _logga_luckor(nu_utc, day, luckor):
     skrivs nar nagot ar fel gar inte att skilja fran en som aldrig kordes."""
     rad = (f"{nu_utc:%Y-%m-%dT%H:%M:%SZ}  korning {day}  "
            + (f"luckor {len(luckor)}: " + ", ".join(luckor) if luckor else "inga luckor"))
-    with open(DATA / sp.GENERATION_DIR / LUCKLOGG, "a", encoding="utf-8") as fh:
+    with open(LUCKLOGG, "a", encoding="utf-8") as fh:
         fh.write(rad + "\n")
 
-def _frirymd():
-    """(behov, fri, matt_pa). Behovet ar tre ganger det storsta av de fem senast
-    fardiga dygnen. Fardig = har ett fryst pre-manifest; ett paborjat dygn
-    sager inget om vad ett helt tar."""
-    fardiga = [d for d in _dygnskataloger()
-               if sp.har_pre_manifest(DATA, _dag(d.name).strftime("%Y%m%d"))][-5:]
+def _fardiga_dygn():
+    """Dygn med fryst pre-manifest, aldst forst. Fardig = formen finns pa disk;
+    ett paborjat dygn sager inget om vad ett helt tar."""
+    return [d for d in (_dag(k.name).strftime("%Y%m%d") for k in _dygnskataloger())
+            if sp.har_pre_manifest(DATA, d)]
+
+def _katalogstorlek(p):
+    return sum(f.stat().st_size for f in p.rglob("*") if f.is_file()) if p.exists() else 0
+
+def _rastorlek(dygn, minne):
+    """Dygnets filer i rasnapshotkatalogen - aven de i dess arbetskatalog.
+
+    Katalogen bar hela arets filer, sa den listas en gang per ar och inte en
+    gang per dygn: fem rglob over en katalog som vaxer till 600 dygn ar fem
+    katalogtraversaler i en forkontroll som ska ta sekunder.
+    """
+    rot = raw_day_dir(dygn)
+    if rot not in minne:
+        minne[rot] = ([(str(f), f.stat().st_size) for f in rot.rglob("*") if f.is_file()]
+                      if rot.exists() else [])
+    return sum(n for s, n in minne[rot] if dygn in s)
+
+def _bevisandel(antal_fardiga):
+    """Ett dygns del av bevisfilerna, som SNITT - och ordet star i utskriften.
+
+    PA V3-VAGEN FINNS INGEN BEVISKATALOG PER DYGN. Bevisen gar i en cache
+    nycklad pa URL och delad mellan dygn, sa att overlapp aldrig hamtas om, och
+    raderna bar ingen dygnsmarkning. Vad ett enskilt dygn lade dit gar inte att
+    lasa ut i efterhand; bara snittet gar att mata. Att presentera det som en
+    matning per dygn vore samma fel en gang till.
+
+    Katalogen tas ur pool_evidence.CACHE, dar bevisen faktiskt skrivs, aldrig ur
+    en egen strang: tva definitioner av samma sokvag ar hur FYND 004 borjade.
+    """
+    bevis = pool_evidence.CACHE.parent
+    return _katalogstorlek(bevis) // max(antal_fardiga, 1) if bevis.exists() else 0
+
+def _dygnets_avtryck(dygn, minne, bevisandel):
+    """Allt ett dygn lagger i arkivet, pa alla tre stallen det vaxer:
+    STATE-katalogen, dygnets rasnapshot, och dess del av bevisen."""
+    return (_katalogstorlek(sp.outdir(DATA, dygn))
+            + _rastorlek(dygn, minne)
+            + bevisandel)
+
+def _frirymdsbehov():
+    """(behov, fri, matt_pa). Tre ganger det storsta HELA avtrycket bland de fem
+    senast fardiga dygnen.
+
+    INGET TAL AR HARDKODAT och inget tal bars vidare mellan korningar: troskeln
+    raknas ut pa nytt varje gang, av arkivet som det ser ut da. Den forra
+    versionen matte bara STATE-katalogen och kravde darfor mindre fri rymd an
+    ett dygn kostar - en grind som inte kunde stoppa det den fanns till for.
+    """
+    fardiga = _fardiga_dygn()
     fri = shutil.disk_usage(DATA).free
     if not fardiga:
         return None, fri, "inget fardigt dygn att mata pa"
-    storsta = max(sum(f.stat().st_size for f in d.rglob("*") if f.is_file()) for d in fardiga)
-    return 3 * storsta, fri, (f"tre ganger det storsta av de {len(fardiga)} senast fardiga "
-                              f"dygnen, {storsta / 2**30:.2f} GiB")
+    minne, andel = {}, _bevisandel(len(fardiga))
+    senaste = fardiga[-5:]
+    storsta = max(_dygnets_avtryck(d, minne, andel) for d in senaste)
+    return 3 * storsta, fri, (
+        f"tre ganger det storsta hela avtrycket bland de {len(senaste)} senast fardiga "
+        f"dygnen, {storsta / 2**30:.3f} GiB: STATE-katalog + rasnapshot + bevisandel "
+        f"({andel / 2**20:.0f} MiB, snitt over {len(fardiga)} dygn)")
 
 def step_preflight(day, nu_utc):
     """Forkontrollen, fore allt annat och bara i det harledda laget.
@@ -115,7 +165,7 @@ def step_preflight(day, nu_utc):
     print(f"        luckor: {len(luckor)} kalenderdygn utan fryst pre-manifest"
           + (" (" + ", ".join(luckor) + ")" if luckor else ""))
     _logga_luckor(nu_utc, day, luckor)
-    gates.gate_frirymd(*_frirymd())
+    gates.gate_frirymd(*_frirymdsbehov())
     gates.gate_korningsfonster(nu_utc, day)
 
 def step_candidates(day, mentions):

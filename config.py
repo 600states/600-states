@@ -38,6 +38,13 @@ def raw_day_dir(day: str) -> Path:
 FROZEN = DATA / "00_CANONICAL_PROJECT_DOCS" / "01_FROZEN_PROTOCOL_LIBRARY_v1.0"
 REMEDIATION = DATA / "03_VALIDATION_REMEDIATION"
 
+# Korningsloggen. Den star har av samma skal som allt annat i den har filen:
+# sokvagen ska ga att peka om med STATES_DATA, sa att en provkorning skriver i
+# sitt eget arkiv och inte i det riktiga. Ett arkiv som bar spar av sina egna
+# provkorningar ar inte ett arkiv.
+LUCKLOGG = DATA / "_LUCKOR.log"
+
+
 def raw_day_zip(yyyymmdd: str) -> Path:
     return RAW_GDELT / f"600_STATES_{yyyymmdd}_GDELT2_MENTIONS.zip"
 

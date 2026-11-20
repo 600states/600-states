@@ -36,9 +36,29 @@ interpreter and fails if either side reaches the other.
 
 ## The day is always a parameter
 
-Every step takes the observation day as an argument (`YYYYMMDD`, UTC). No code
-may read the system clock in computation logic. A daily run and a run of an
-older day must take exactly the same path, or the days are not comparable.
+Every step takes the observation day as an argument (`YYYYMMDD`, UTC). A daily
+run and a run of an older day must take exactly the same path, or the days are
+not comparable.
+
+**The clock is read in exactly one place — binding from 2026-11-20.** `main()`
+in `src/run_state.py` reads it once per run, and only to choose which day to
+run when no day was given on the command line. It becomes the `YYYYMMDD` string
+immediately, and every step, gate and module downstream is handed that string.
+A gate that needs the time takes it as an argument: a gate that reads the clock
+itself cannot be tried against a forged one, and a check that cannot be tried
+is not a check.
+
+No other function, gate or module calls `datetime.now`, `time.time` or anything
+equivalent to decide what is being measured. Two places read the clock for
+something else, and neither of them chooses a day:
+
+- `src/fetch_evidence.py` stamps `retrieved_at_utc` on a fetch. That stamp is a
+  measurement of the world, not a choice of day, and the evidence level is
+  computed from it against the day the step was given.
+- `src/classify.py` measures elapsed time against its own limits and stamps the
+  run record. Neither value reaches a manifest row.
+
+A third exception needs its reason written here before the call is written.
 
 Never write a separate backfill script.
 
