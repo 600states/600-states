@@ -551,10 +551,21 @@ Test counts are not written here. A count in prose is a value kept in two
 places, and the second copy goes stale the day a test is added; the suite is
 the authority for how many tests there are.
 
-**Known deviation, 2026-11-13:** in a clone without the archive a number of
-tests fail instead of skipping, so the rule above is currently broken in the
-code. It is the tests that get fixed, not the rule, and it is fixed before
-1 December 2026.
+~~**Known deviation, 2026-11-13:**~~ Resolved 2026-11-20. The suite was run in
+a fresh clone with `STATES_DATA` unset: 36 tests failed instead of skipping.
+Every one of them failed on the same two lines, and neither is what those tests
+are about — `classify.validate()` reads the decimal requirement from the frozen
+spec on every call, and the delivery path hashes the frozen prompt to give a job
+its identity. Both are now pinned in `tests/conftest.py`, in every environment,
+so the suite answers the same in both places; a value pinned only on the machine
+without the archive would make the suite prove one thing here and another there.
+That the pinned decimal is the spec's own is a test of its own, and that one
+skips without the archive.
+
+Five tests needed the archive to mean anything — the instrument gate, and the
+calibration gate derived from the spec's own fields — and they skip with
+`kraver_arkiv` rather than being watered down to assert something else against a
+fabricated spec.
 
 `requirements.txt` is a lock file, and that was verified rather than assumed on
 2026-11-05: a second environment built from it in an empty venv froze to an

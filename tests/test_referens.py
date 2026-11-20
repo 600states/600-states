@@ -175,6 +175,7 @@ def test_annan_modell_an_batteriets_stoppar_bygget(tmp_path, monkeypatch):
 # primartillstand kraschade pa samma villkor. Fragan testet staller ar en
 # annan: NAR den star.
 
+@kraver_arkiv
 def test_tackningsgrinden_gar_fore_anropen(tmp_path, monkeypatch):
     """Batteriet och referensen lases bada innan ett enda anrop gors.
 

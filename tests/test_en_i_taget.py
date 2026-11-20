@@ -19,8 +19,19 @@ from pathlib import Path
 
 ROT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROT / "src"))
+import pytest
+
 import classify
 from test_batchleverans import _Klient, _Msg, GILTIGT          # delade attrapper
+from conftest import pinna_prompten, pinna_specens_decimalkrav
+
+
+@pytest.fixture(autouse=True)
+def _pinna_instrumentet(monkeypatch, tmp_path):
+    """Samma skal som i test_batchleverans.py: matvagen hashar prompten for
+    jobbets identitet, och det ar inte vad de har testerna provar."""
+    pinna_prompten(monkeypatch, tmp_path)
+    pinna_specens_decimalkrav(monkeypatch)
 
 
 def _obs(i):

@@ -6,6 +6,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import pytest
 import classify
 from vocab import EMOTION_STATES
+from conftest import SPEC_PRECISION, kraver_arkiv, pinna_specens_decimalkrav
+
+
+@pytest.fixture(autouse=True)
+def _pinna_decimalkravet(monkeypatch):
+    """validate() laser decimalkravet ur den frysta specen vid varje anrop.
+    Inget test i den har filen handlar om decimaler. Se conftest.py."""
+    pinna_specens_decimalkrav(monkeypatch)
 
 def rad(oid, pri, sec):
     s = {e: 0.05 + i * 0.01 for i, e in enumerate(EMOTION_STATES)}
@@ -199,6 +207,16 @@ def test_nollfyllning_syns_i_diagnostiken():
     assert classify.validate(noll, INP) == []          # passerar formell validering
     assert classify.diagnostics(noll)["authored_scores_median"] <= 2
     assert classify.diagnostics(OK)["authored_scores_median"] == 16
+
+@kraver_arkiv
+def test_pinnade_decimalkravet_ar_specens():
+    """Sviten pinnar decimalkravet sa att tester om helt andra pastaenden gar
+    att kora utan arkivet. Ett pinnat varde ar vardelost om det inte ar
+    specens, och har knyts de ihop. Filen lases direkt, forbi den pinnade
+    funktionen - annars provar testet sin egen attrapp."""
+    spec = json.loads(classify.SPEC_FILE.read_text(encoding="utf-8"))
+    assert spec["score_precision"] == SPEC_PRECISION
+
 
 def test_instrumentgrinden_kraver_ratt_prompt():
     if not classify.PROMPT_FILE.exists():

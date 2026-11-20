@@ -26,6 +26,14 @@ sys.path.insert(0, str(ROT / "tools"))
 import classify
 import calibrate
 from test_batchleverans import _Msg, GILTIGT
+from conftest import kraver_arkiv, pinna_specens_decimalkrav
+
+
+@pytest.fixture(autouse=True)
+def _pinna_decimalkravet(monkeypatch):
+    """Valideringen mitt i _kor() laser decimalkravet ur den frysta specen.
+    Testerna nedan handlar om omforsok, inte om decimaler. Se conftest.py."""
+    pinna_specens_decimalkrav(monkeypatch)
 
 
 def _obs(i):
@@ -93,6 +101,7 @@ def test_atervunnet_omforsok_ger_inga_ogiltiga_rader(tmp_path, monkeypatch):
     assert len(P) == 1, "passet ska vara fullstandigt"
 
 
+@kraver_arkiv
 def test_grinden_slapper_igenom_en_korning_som_lakte_sig_sjalv(tmp_path, monkeypatch):
     _, fel, atervunna, _ = _kor(tmp_path, monkeypatch, {"pass1_obs002": (1,)})
     prompt, spec = classify.gate_instrument()
@@ -101,6 +110,7 @@ def test_grinden_slapper_igenom_en_korning_som_lakte_sig_sjalv(tmp_path, monkeyp
     assert atervunna == 1, "men omforsoket ska synas som eget matt"
 
 
+@kraver_arkiv
 def test_atervunna_forsok_grindar_aldrig(tmp_path, monkeypatch):
     """Instrumentets halsa rapporteras. Den faller inte en korning."""
     _, fel, atervunna, _ = _kor(tmp_path, monkeypatch,
@@ -130,6 +140,7 @@ def test_en_rad_bidrar_med_en_post_oavsett_antal_ronder(tmp_path, monkeypatch):
 
 
 # ---- 3. grind_ur_spec:s felgren lever (direktvagen) ---------------------
+@kraver_arkiv
 def test_grind_ur_spec_faller_pa_en_ogiltig_rad():
     prompt, spec = classify.gate_instrument()
     grind, skal = calibrate.grind_ur_spec([], spec, ["pass1_obs002: Extra data"])
@@ -137,6 +148,7 @@ def test_grind_ur_spec_faller_pa_en_ogiltig_rad():
     assert "ogiltiga rader" in " ".join(skal).lower() or "rader" in " ".join(skal).lower()
 
 
+@kraver_arkiv
 def test_grind_ur_spec_klarar_med_tom_fellista():
     prompt, spec = classify.gate_instrument()
     assert calibrate.grind_ur_spec([], spec, [])[0]

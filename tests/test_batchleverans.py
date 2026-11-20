@@ -20,7 +20,19 @@ from pathlib import Path
 
 ROT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROT / "src"))
+import pytest
+
 import classify
+from conftest import pinna_prompten, pinna_specens_decimalkrav
+
+
+@pytest.fixture(autouse=True)
+def _pinna_instrumentet(monkeypatch, tmp_path):
+    """Leveransvagen hashar den frysta prompten for att ge ett jobb identitet.
+    Testerna nedan handlar om jobbfilen, inte om vilken fil prompten ar.
+    Se conftest.py."""
+    pinna_prompten(monkeypatch, tmp_path)
+    pinna_specens_decimalkrav(monkeypatch)
 
 
 class _Usage:
