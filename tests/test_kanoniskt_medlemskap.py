@@ -194,3 +194,148 @@ def test_dygn_under_golvet_stoppar_inte_korningen():
     """GOLVET AR INGEN GRIND. Dygnet produceras anda, det far bara inget
     nummer. Att hoppa over det bryter en dag, en korning, ett utfall."""
     gates.gate_kanonisk_kedja("UNQUALIFIED", None, [])
+
+
+# =========================================================================
+# 5. SERIESTARTEN  (tillagt for 4ed215c)
+#
+# Golvet sager hur bra ett dygn blev. Seriestarten sager om dygnet alls kan
+# vara ett av de 600. Tva villkor for samma medlemskap, och det andra skyddar
+# mot det som inte gar att ta tillbaka: inkorningsdygnen kors mot det riktiga
+# arkivet, och ett av dem som klarar golvet skulle bli verk nummer ett och
+# frysas in som det.
+#
+# Fore 4ed215c fanns talet pa tva stallen: konstanten, och _luckor som borjade
+# vid den aldsta katalogen pa disk. Det ar FYND 004:s form, och testerna nedan
+# provar bade beteendet och att talet star en gang.
+# =========================================================================
+import ast
+import inspect
+
+import run_state
+
+
+def skriv_dygn_utan_seriekolumner(rot, day, rads):
+    """Ett dygn vars form inte bar series alls - da raknar kedjan om ur raderna."""
+    d = sp.outdir(rot, day)
+    d.mkdir(parents=True, exist_ok=True)
+    fil = sp.pre_manifest(rot, day)
+    falt = ["state_id", "tile_index", "evidence_basis", "evidence_sha256"]
+    with open(fil, "w", newline="", encoding="utf-8") as fh:
+        w = csv.DictWriter(fh, fieldnames=falt)
+        w.writeheader()
+        for r in rads:
+            w.writerow({k: r.get(k, "") for k in falt})
+    return fil
+
+
+def test_gransen_for_seriens_start():
+    assert pe.i_serien("20261201")
+    assert pe.i_serien("20261202")
+    assert not pe.i_serien("20261130")
+    assert not pe.i_serien("20261129")
+
+
+def test_i_serien_tar_bade_strang_och_tal():
+    """Dygnet reser som strang genom kedjan men kan komma som tal fran ett
+    testverktyg eller ett skript. Gransen ska vara densamma."""
+    assert pe.i_serien(20261201)
+    assert not pe.i_serien(20261130)
+
+
+def test_golvet_vet_inte_vilket_dygn_raderna_kommer_fran():
+    """serie() ska forbli ren i raderna. Blandas seriestarten in dar far vi
+    ett matt som svarar pa tva fragor, och da gar det inte att saga vilken av
+    dem som fallde ett dygn."""
+    assert list(inspect.signature(pe.serie).parameters) == ["rader"]
+    assert pe.serie(rader(600, 600)) == "CANONICAL"
+
+
+def test_forserie_dygn_som_sager_canonical_i_sin_fil_raknas_inte(tmp_path):
+    """Filen kan ha skrivits innan parametern fanns. Kedjan far inte tro den."""
+    skriv_dygn(tmp_path, "20261130", serie="CANONICAL", index=1)
+    assert _serie_i_fil_sager_canonical(tmp_path, "20261130")
+    assert pe.kedja(tmp_path, "20261201") == (0, "", [])
+
+
+def _serie_i_fil_sager_canonical(rot, day):
+    rader_ = list(csv.DictReader(open(sp.pre_manifest(rot, day), encoding="utf-8")))
+    return pe._serie_i_fil(rader_) == "CANONICAL"
+
+
+def test_forserie_dygn_som_raknas_om_ur_radata_raknas_inte(tmp_path):
+    """Utan series-kolumn raknar kedjan om, och 600/600 i fonstret ger CANONICAL
+    pa raderna. Den far anda inte bli ett av de 600."""
+    rads = rader(600, 600)
+    skriv_dygn_utan_seriekolumner(tmp_path, "20261129", rads)
+    assert pe.serie(rads) == "CANONICAL"
+    assert pe.kedja(tmp_path, "20261201") == (0, "", [])
+
+
+def test_halvfardigt_forserie_dygn_ar_inget_brott(tmp_path):
+    """Inkorningen ar just de dygn som kan vara avbrutna. En katalog utan
+    pre-manifest fore seriestarten far inte stoppa seriens forsta dygn."""
+    sp.outdir(tmp_path, "20261130").mkdir(parents=True, exist_ok=True)
+    assert pe.kedja(tmp_path, "20261201") == (0, "", [])
+
+
+def test_seriens_forsta_dygn_blir_ett_trots_forserie_dygn(tmp_path):
+    """Hela poangen. Tva inkorningsdygn, ett av dem kanoniskt i sin egen fil,
+    och 1 december ska anda bli nummer 001."""
+    skriv_dygn(tmp_path, "20261129", serie="CANONICAL", index=1)
+    skriv_dygn(tmp_path, "20261130", serie="CANONICAL", index=2)
+    skriv_dygn(tmp_path, "20261201", serie="CANONICAL", index=1)
+    fore, _, brott = pe.kedja(tmp_path, "20261202")
+    assert fore == 1, "seriens forsta dygn ska vara det enda kanoniska"
+    assert brott == []
+
+
+def test_luckor_listar_inte_forserie_dygn(tmp_path, monkeypatch):
+    monkeypatch.setattr(run_state, "DATA", tmp_path)
+    skriv_dygn(tmp_path, "20261201", serie="CANONICAL", index=1)
+    assert run_state._luckor("20261205") == ["20261202", "20261203", "20261204"]
+
+
+# ---- mutationen: talet star pa ett stalle --------------------------------
+def test_gransen_foljer_konstanten_i_i_serien(monkeypatch):
+    monkeypatch.setattr(pe, "SERIESTART", "20270115")
+    assert not pe.i_serien("20270114")
+    assert pe.i_serien("20270115")
+
+
+def test_kedjans_filter_foljer_konstanten(monkeypatch, tmp_path):
+    """Flyttas seriestarten ska kedjan sluta rakna ett dygn den nyss raknade."""
+    skriv_dygn(tmp_path, "20261201", serie="CANONICAL", index=1)
+    assert pe.kedja(tmp_path, "20261210")[0] == 1
+    monkeypatch.setattr(pe, "SERIESTART", "20261205")
+    assert pe.kedja(tmp_path, "20261210")[0] == 0
+
+
+def test_luckornas_start_foljer_konstanten(tmp_path, monkeypatch):
+    """_luckor borjade forut vid den aldsta katalogen pa disk - samma tal,
+    uttryckt en andra gang. Flyttas konstanten ska listan folja med."""
+    monkeypatch.setattr(run_state, "DATA", tmp_path)
+    monkeypatch.setattr(pe, "SERIESTART", "20261203")
+    assert run_state._luckor("20261205") == ["20261203", "20261204"]
+
+
+def test_datumet_star_pa_ett_stalle_i_koden():
+    """EN DEFINITION, ETT STALLE. Doktranger och anvandningsexempel raknas inte
+    - de kan inte driva isar fran konstanten, for de styr ingenting."""
+    src = ROT / "src"
+    traffar = []
+    for fil in sorted(src.glob("*.py")):
+        trad = ast.parse(fil.read_text(encoding="utf-8"))
+        doktexter = set()
+        for nod in ast.walk(trad):
+            if isinstance(nod, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                d = ast.get_docstring(nod, clean=False)
+                if d is not None:
+                    doktexter.add(id(nod.body[0].value))
+        for nod in ast.walk(trad):
+            if (isinstance(nod, ast.Constant) and isinstance(nod.value, str)
+                    and id(nod) not in doktexter and pe.SERIESTART in nod.value):
+                traffar.append(f"{fil.name}:{nod.lineno}")
+    assert len(traffar) == 1 and traffar[0].startswith("pool_evidence.py:"), (
+        "seriestarten ska finnas som literal pa exakt ett stalle i src/, "
+        f"men star pa: {traffar}")
