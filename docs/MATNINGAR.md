@@ -113,6 +113,10 @@ retrospektivt. v0.2 var for pessimistisk. Tre nivaer galler:
 | `CONTEMPORANEOUS_ARCHIVE` | arkivkopia fran observationsdygnet (manga pilotrader) |
 | `RETROSPECTIVE` | hamtad i efterhand, manader senare |
 
+> `[RATTAT 2026-11-20]` `CONTEMPORANEOUS_ARCHIVE` raknar **manad**, inte dygn.
+> Raden ovan sager "fran observationsdygnet" och koden gor inte det. Matning och
+> siffror sist i filen.
+
 Wayback ar fortfarande inte kritisk vag och far aldrig blockera ett dygn — men
 for pilotdagarna ar den mer varde an v0.2 antog.
 
@@ -376,3 +380,48 @@ hanteras som egen uppgift.
 Bada ar ofarliga for en manniska vid tangentbordet och stoppar ett
 schemalagt jobb helt. Schemalaggningen byggs annu inte, men forkontrollen
 maste finnas innan den gor det.
+
+## Pilotens bevisniva ar manadsgrov (2026-11-20)
+
+`CONTEMPORANEOUS_ARCHIVE` later som "arkivkopia fran observationsdygnet". Den
+raknar manad. `capture_state.basis()` jamfor arkivets tidsstampel med
+`ts.startswith(day[:6])`, alltsa YYYYMM, sa en kopia fran 31 januari far samma
+niva som en fran sjalva dygnet nar dygnet ar 2 januari.
+
+**Sa har matte jag.** `07_EVIDENCE/STATE_001/evidence.jsonl`, 1 200 poster,
+deduplicerade pa `url` med den **sista** posten per URL som gallande: en
+omhamtning ersatter en tidigare. Ordningen spelar roll och det ar en del av
+matningen - med den forsta posten i stallet blir det 125 i stallet for 117
+arkivkopior, och den skillnaden ar atta rader som hamtades om.
+
+| Niva | Unika URL:er |
+|---|---|
+| `RETROSPECTIVE` | 874 |
+| `CONTEMPORANEOUS_ARCHIVE` | 117 |
+| `NO_EVIDENCE` | 30 |
+| **Summa** | **1 021** |
+
+**Grovheten biter redan.** Dygn 001 ar 1 januari 2026. Av de 117 arkivkopiorna
+ar 80 tagna den dagen och **37 dagen efter**, 2 januari - och alla 117 bar ett
+namn som sager att de ar fran observationsdygnet.
+
+| Arkivets datum | Rader |
+|---|---|
+| 2026-01-01, sjalva dygnet | 80 |
+| 2026-01-02, dygnet efter | 37 |
+
+Dygn 001 ar enda dygnet med ett bevisspar i `07_EVIDENCE`; 002-004 har ingen
+katalog alls, sa matningen galler det dygn som gar att mata.
+
+**Varfor det star har.** Nivan sager nagot svagare an den later, och det ska
+nasta lasare se utan att ga till koden. Den stod i ett utkast till publik text
+som skal for att pilotdygnen inte kan bli verk: "evidence fetched months later
+is retrospective". Det ar osant for 117 av 1 021 rader - de ar arkivkopior,
+inte retrospektiva hamtningar. Slutsatsen holl anda, av ett annat skal: ingen
+av de tva nivaerna ar fonsternivan.
+
+**Galler pilotvagen, inte v3.** `pool_evidence.basis()` har ingen
+manadsjamforelse och kan inte na `CONTEMPORANEOUS_ARCHIVE` - den vagen hamtar
+inte ur arkiv. `capture_state.basis()` ska inte kompletteras; se AGENTS.md,
+"Two `basis()`, and only one of them is the series". Det som star har ar en
+matning av vad pilotens niva betyder, inte ett forslag att andra den.
