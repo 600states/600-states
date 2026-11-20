@@ -87,13 +87,13 @@ TILLATET = [
     ("lokal sokvag", r"C:\dev\600-states",
      "README.md, docs/MATNINGAR.md och config.py i aldre versioner: namnger ingen "
      "person och ingen organisation, forklarar varfor kod och data ligger isar."),
-    ("kommersiell strategi",
-     "person a royalty-free, non transferable, non sublicensable, non exclusive,",
-     "protocols/LICENSE: CC0 1.0 Universal i klartext. Raden ar licensens egen "
-     "fallback-formulering nar en rattighet inte gar att avsaga sig, inte ett villkor "
-     "projektet stallt. Posten star pa HELA raden och inte pa ordet, sa samma ord i en "
-     "egen text faller som forut. En licens som inte far innehalla sina egna ord gar "
-     "inte att publicera."),
+    ("kommersiell strategi", "royalty",
+     "protocols/LICENSE: CC0 1.0 Universal i klartext. Ordet star i licensens egen "
+     "fallback-formulering nar en rattighet inte gar att avsaga sig, inte i nagot "
+     "villkor projektet stallt. Posten star pa ORDET och inte pa raden, av samma skal "
+     "som posten for sell: en post som star pa raden kan inte slappa igenom sig sjalv "
+     "har i filen, och inte heller commiten som forklarar den. Priset ar att ordet ar "
+     "fritt i hela repot; vad verket ska kosta stavas inte sa."),
     ("lokal sokvag", "OneDrive",
      "Samma skal som ovan: ordet star som exempel pa en synkad mapp, inte som nagons sokvag."),
 ]
