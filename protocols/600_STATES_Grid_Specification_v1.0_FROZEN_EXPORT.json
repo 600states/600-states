@@ -1,0 +1,39 @@
+{
+  "project": "600 STATES",
+  "specification": "Grid Specification",
+  "version": "1.0",
+  "status": "FROZEN_EXPORT_COPY",
+  "authority_note": "Machine-readable export of the already-frozen Grid Specification recorded in the canonical project checkpoint. This file does not create or modify methodology. If it conflicts with an earlier cryptographically hashed frozen source file, the earlier frozen source file wins.",
+  "grid": {
+    "columns": 30,
+    "rows": 20,
+    "observations": 600,
+    "native_cell_px": [
+      100,
+      100
+    ],
+    "master_px": [
+      3000,
+      2000
+    ],
+    "solid_rgb_per_observation": true,
+    "internal_separator_px": 3,
+    "internal_separator_hex": "#0B0E12",
+    "external_border": false
+  },
+  "chronology": {
+    "direction": "left_to_right_top_to_bottom",
+    "tile_001": "earliest selected observation of the UTC day",
+    "tile_600": "latest selected observation of the UTC day"
+  },
+  "prohibitions": [
+    "no gradients",
+    "no transparency",
+    "no texture",
+    "no text",
+    "no logo",
+    "no date",
+    "no aesthetic tile substitution or rebalancing"
+  ],
+  "separator_note": "The separator is canvas structure, not an observation."
+}

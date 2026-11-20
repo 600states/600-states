@@ -1,0 +1,85 @@
+{
+  "name": "600 STATES Observation Verification Protocol",
+  "version": "0.1",
+  "principle": "If it cannot be verified, it cannot become a tile.",
+  "scope": "Historical Reconstruction for State 2026/001",
+  "rules": [
+    {
+      "id": "V01",
+      "rule": "A GDELT row or cluster is discovery evidence only and is never sufficient by itself for final tile admission."
+    },
+    {
+      "id": "V02",
+      "rule": "Each admitted News Observation must have at least one accessible high-quality journalistic or primary official source that directly supports the neutral observation."
+    },
+    {
+      "id": "V03",
+      "rule": "Contested, partisan, wartime, casualty, accusation or intelligence claims must be explicitly attributed unless independently established by stronger evidence."
+    },
+    {
+      "id": "V04",
+      "rule": "Where the underlying claim cannot be independently verified, the observation may describe the verified fact that the claim was made, but not convert the claim into fact."
+    },
+    {
+      "id": "V05",
+      "rule": "The observation must belong to the information state observable on the target UTC day. Publication, update and event timestamps must not be conflated."
+    },
+    {
+      "id": "V06",
+      "rule": "Multiple articles reporting the same material fact state collapse into one News Observation."
+    },
+    {
+      "id": "V07",
+      "rule": "A single Event Cluster may yield multiple News Observations only when each represents a materially distinct development or knowledge state."
+    },
+    {
+      "id": "V08",
+      "rule": "No candidate may be admitted to fill a quota, improve geographic balance, alter emotion mix or improve the artwork if verification is insufficient."
+    },
+    {
+      "id": "V09",
+      "rule": "The final 600-observation selection is frozen before emotion classification or color generation."
+    },
+    {
+      "id": "V10",
+      "rule": "Rejected candidates and rejection reasons are retained in the audit trail."
+    }
+  ],
+  "admission_statuses": [
+    "VERIFIED",
+    "VERIFIED_WITH_ATTRIBUTION",
+    "PENDING_SECOND_SOURCE",
+    "PENDING_TIMESTAMP",
+    "REJECT_DUPLICATE",
+    "REJECT_DATE_MISMATCH",
+    "REJECT_UNVERIFIABLE",
+    "REJECT_LOW_QUALITY_SOURCE"
+  ],
+  "required_manifest_fields": [
+    "tile_id",
+    "observation_id",
+    "cluster_id",
+    "neutral_observation",
+    "target_utc_date",
+    "observation_timestamp_utc",
+    "verification_status",
+    "evidence_source_1",
+    "evidence_url_1",
+    "evidence_source_2",
+    "evidence_url_2",
+    "publisher",
+    "publisher_country",
+    "region",
+    "event_cluster_id",
+    "source_protocol_version",
+    "verification_protocol_version",
+    "selection_layer",
+    "selection_reason",
+    "manifest_hash"
+  ],
+  "color_gate": {
+    "emotion_classification_allowed_only_after_final_600_frozen": true,
+    "color_protocol": "v0.4 Golden Master",
+    "color_protocol_may_not_influence_selection": true
+  }
+}

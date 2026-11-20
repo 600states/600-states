@@ -1,10 +1,11 @@
 # Copyright and licensing
 
-600 STATES has three layers, and they are deliberately licensed differently.
+600 STATES has four layers, and they are deliberately licensed differently.
 
 | Layer | What it is | Terms |
 |---|---|---|
 | **Instrument** | The code in this repository | MIT — see `LICENSE` |
+| **Protocols** | The frozen constants in `protocols/` | CC0 1.0 — see `protocols/LICENSE` |
 | **Evidence** | Manifests, hashes, selection reports | CC0 1.0 (public domain dedication) |
 | **Artwork** | The rendered States (PNG) and the series | All rights reserved |
 
@@ -15,10 +16,22 @@ finished State is composed, tuned or corrected to look better — is only worth
 something if anyone can check it. A verification you are not allowed to run is
 not a verification.
 
-The evidence is CC0 for the same reason, one step further. A proof held under
-licence is not a proof. Manifests and hashes are released into the public
-domain so that reproduction, citation and audit carry no conditions at all.
-They are published in a separate repository.
+The protocols are CC0 because they are what the instrument is held to. The day
+rule, the colour protocol, the classification protocol and the grid
+specification decide what a State is before a line of code runs, and a constant
+nobody can read is a constant you have to take on trust. The twelve documents
+in `protocols/` are copies: the instrument reads them from the archive, and the
+copy exists so that whoever clones this repository holds the same constants the
+run was held to. Their SHA-256 hashes are published beside them.
+
+The colour protocol is CC0 here like the other three. `src/color_protocol.py`,
+the code that implements it, stays MIT with the rest of the instrument: the
+document and its implementation are different things and carry different terms.
+
+The evidence is CC0 for the same reason as the protocols, one step further. A
+proof held under licence is not a proof. Manifests and hashes carry no
+conditions at all on reproduction, citation or audit. None of it is published
+yet. The terms are settled; the publication is not.
 
 The artwork is not free. The images are the work. Reproducing them from a
 manifest and the instrument is trivially possible and that is by design — it is

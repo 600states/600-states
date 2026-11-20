@@ -1,0 +1,16 @@
+{
+  "project": "600 STATES",
+  "protocol": "Macro-State Naming Protocol",
+  "version": "1.0",
+  "status": "FROZEN",
+  "inputs": "Aggregate frozen emotion metrics only; no color values, PNG, HEX distribution or visual inspection.",
+  "rules": [
+    "Generate exactly 3 candidate titles.",
+    "Each title must be 1-3 words.",
+    "No named event, person, place, date or publisher.",
+    "Avoid sensationalism and generic sentiment labels.",
+    "Title should express dominant state plus counter-pressure in the distribution.",
+    "Store all candidates and selected title with model identifier and input hash."
+  ],
+  "canonical_sha256": "7475c8b19fa37a15b99908bf1ba04b0e570a38c3bd350248bc0313e26d02f663"
+}

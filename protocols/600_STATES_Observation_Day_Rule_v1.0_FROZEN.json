@@ -1,0 +1,26 @@
+{
+  "project": "600 STATES",
+  "protocol": "Observation Day Rule",
+  "version": "1.0",
+  "status": "FROZEN",
+  "state_id": "2026/001",
+  "day_basis": "INFORMATION_DAY",
+  "timezone": "UTC",
+  "rule": "A News Observation belongs to the UTC day in which its qualifying information state is observed in the monitored news flow. The underlying real-world event may have occurred earlier.",
+  "rationale": "600 STATES interprets the emotional state of the world's observed news/information flow. An event cannot contribute to the observed state until information about it is present in that flow.",
+  "inclusion": {
+    "window_start": "2026-01-01T00:00:00Z",
+    "window_end": "2026-01-01T23:59:59Z",
+    "timestamp_basis": "qualifying MentionTimeDate / independently verified publication or observation timestamp",
+    "earlier_underlying_event_allowed": true
+  },
+  "constraints": [
+    "An old event merely reprinted without a materially qualifying information state is not automatically a new observation.",
+    "Duplicate reporting of the same information state remains one News Observation.",
+    "Materially distinct developments within an Event Cluster may qualify as separate News Observations.",
+    "The timestamp must be auditable; it may not be inferred for aesthetic or chronological convenience.",
+    "Selection is frozen before emotion classification.",
+    "Color Protocol v0.4 remains inaccessible until the final 600-observation manifest is frozen."
+  ],
+  "canonical_sha256": "acdd566df04c445448b93a30d7720474d3bf0cc91d09ffc57de4340b3eb062f4"
+}

@@ -1,0 +1,108 @@
+domain,source_tier,primary_region,added_in,eligibility
+abc.net.au,A,East & Southeast Asia,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+abcnews.go.com,A,East & Southeast Asia,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+africanews.com,B,Africa,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+al-monitor.com,B,Middle East & North Africa,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+aljazeera.com,A,Africa,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+bostonglobe.com,B,East & Southeast Asia,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+bworldonline.com,B,East & Southeast Asia,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+canberratimes.com.au,B,East & Southeast Asia,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+cbc.ca,A,East & Southeast Asia,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+cbsnews.com,A,Latin America & Caribbean,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+channelstv.com,B,Africa,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+cnn.com,A,East & Southeast Asia,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+dailypost.ng,B,Africa,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+dailytrust.com,B,Africa,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+dhakatribune.com,B,South & Central Asia,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+dw.com,A,East & Southeast Asia,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+economictimes.indiatimes.com,B,East & Southeast Asia,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+en.antaranews.com,B,East & Southeast Asia,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+en.vietnamplus.vn,B,East & Southeast Asia,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+english.aawsat.com,B,Africa,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+freemalaysiatoday.com,B,East & Southeast Asia,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+graphic.com.gh,B,Africa,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+guardian.co.tt,B,Latin America & Caribbean,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+gulfnews.com,B,East & Southeast Asia,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+haaretz.com,B,Europe,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+hindustantimes.com,B,Europe,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+hurriyetdailynews.com,B,East & Southeast Asia,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+i24news.tv,B,Europe,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+independent.co.uk,B,Africa,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+independent.ie,B,Africa,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+indianexpress.com,A,North America,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+irishtimes.com,A,Europe,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+jamaica-gleaner.com,B,East & Southeast Asia,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+jamaicaobserver.com,B,Europe,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+kathmandupost.com,B,East & Southeast Asia,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+koreatimes.co.kr,B,East & Southeast Asia,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+latimes.com,A,North America,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+leadership.ng,B,Africa,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+livemint.com,B,East & Southeast Asia,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+manilatimes.net,B,East & Southeast Asia,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+middleeasteye.net,B,Middle East & North Africa,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+moroccoworldnews.com,B,Middle East & North Africa,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+myjoyonline.com,B,Africa,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+newcastleherald.com.au,B,Africa,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+newindianexpress.com,B,North America,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+newsday.co.tt,B,Europe,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+npr.org,A,Europe,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+nzherald.co.nz,B,East & Southeast Asia,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+pakistantoday.com.pk,B,East & Southeast Asia,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+perthnow.com.au,B,East & Southeast Asia,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+philstar.com,B,East & Southeast Asia,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+premiumtimesng.com,B,Africa,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+punchng.com,B,Africa,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+scmp.com,A,East & Southeast Asia,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+scoop.co.nz,B,Africa,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+smh.com.au,A,East & Southeast Asia,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+stabroeknews.com,B,Latin America & Caribbean,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+standardmedia.co.ke,B,Africa,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+straitstimes.com,A,East & Southeast Asia,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+the-star.co.ke,B,Africa,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+theborneopost.com,B,East & Southeast Asia,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+thecable.ng,B,Africa,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+thedailystar.net,B,Middle East & North Africa,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+theglobeandmail.com,A,East & Southeast Asia,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+theguardian.com,A,Europe,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+thehindu.com,A,East & Southeast Asia,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+thenews.com.pk,B,East & Southeast Asia,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+thepeninsulaqatar.com,B,East & Southeast Asia,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+thestar.com.my,B,Europe,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+thetimes.com,B,East & Southeast Asia,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+thisdaylive.com,B,Africa,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+tribune.com.pk,B,Middle East & North Africa,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+tribuneindia.com,B,East & Southeast Asia,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+trinidadexpress.com,B,Europe,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+vietnamnet.vn,B,East & Southeast Asia,v1.1,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+havanatimes.org,B,Latin America & Caribbean,v2.0,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+riotimesonline.com,B,Latin America & Caribbean,v2.0,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+batimes.com.ar,B,Latin America & Caribbean,v2.0,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+dominicantoday.com,B,Latin America & Caribbean,v2.0,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+mexiconewsdaily.com,B,Latin America & Caribbean,v2.0,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+buenosairesherald.com,B,Latin America & Caribbean,v2.0,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+colombiareports.com,B,Latin America & Caribbean,v2.0,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+en.tempo.co,B,East & Southeast Asia,v2.0,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+taipeitimes.com,B,East & Southeast Asia,v2.0,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+channelnewsasia.com,B,East & Southeast Asia,v2.0,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+koreaherald.com,B,East & Southeast Asia,v2.0,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+asahi.com,B,East & Southeast Asia,v2.0,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+rappler.com,B,East & Southeast Asia,v2.0,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+vietnamnews.vn,B,East & Southeast Asia,v2.0,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+thejakartapost.com,B,East & Southeast Asia,v2.0,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+bangkokpost.com,B,East & Southeast Asia,v2.0,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+japantimes.co.jp,B,East & Southeast Asia,v2.0,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+newsghana.com.gh,B,Africa,v2.0,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+dailymaverick.co.za,B,Africa,v2.0,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+ewn.co.za,B,Africa,v2.0,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+ghanaweb.com,B,Africa,v2.0,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+citizen.co.za,B,Africa,v2.0,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+thehimalayantimes.com,B,South & Central Asia,v2.0,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+dailysabah.com,B,Middle East & North Africa,v2.0,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+egyptindependent.com,B,Middle East & North Africa,v2.0,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+thenationalnews.com,B,Middle East & North Africa,v2.0,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+jordantimes.com,B,Middle East & North Africa,v2.0,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+euronews.com,B,Europe,v2.0,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+politico.eu,B,Europe,v2.0,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+balkaninsight.com,B,Europe,v2.0,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+rnz.co.nz,B,Oceania & Pacific,v2.0,ALLOWED_FOR_OBSERVED_INFORMATION_STATE
+postcourier.com.pg,B,Oceania & Pacific,v2.0,ALLOWED_FOR_OBSERVED_INFORMATION_STATE

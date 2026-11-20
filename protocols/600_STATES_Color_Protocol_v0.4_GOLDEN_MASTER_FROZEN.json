@@ -1,0 +1,149 @@
+{
+  "project": "600 STATES",
+  "color_protocol": "v0.4 GOLDEN MASTER",
+  "status": "FROZEN",
+  "grid_specification": "v1.0",
+  "states": {
+    "Joy": {
+      "h": 45,
+      "s": 0.76,
+      "l": 0.62,
+      "range": 0.16
+    },
+    "Hope": {
+      "h": 145,
+      "s": 0.31,
+      "l": 0.56,
+      "range": 0.15
+    },
+    "Relief": {
+      "h": 166,
+      "s": 0.3,
+      "l": 0.56,
+      "range": 0.14
+    },
+    "Calm": {
+      "h": 178,
+      "s": 0.34,
+      "l": 0.56,
+      "range": 0.15
+    },
+    "Curiosity": {
+      "h": 205,
+      "s": 0.52,
+      "l": 0.48,
+      "range": 0.17
+    },
+    "Awe": {
+      "h": 244,
+      "s": 0.25,
+      "l": 0.61,
+      "range": 0.13
+    },
+    "Resolve": {
+      "h": 211,
+      "s": 0.48,
+      "l": 0.34,
+      "range": 0.16
+    },
+    "Surprise": {
+      "h": 326,
+      "s": 0.38,
+      "l": 0.65,
+      "range": 0.13
+    },
+    "Uncertainty": {
+      "h": 226,
+      "s": 0.21,
+      "l": 0.48,
+      "range": 0.15
+    },
+    "Concern": {
+      "h": 28,
+      "s": 0.5,
+      "l": 0.55,
+      "range": 0.17
+    },
+    "Tension": {
+      "h": 23,
+      "s": 0.73,
+      "l": 0.5,
+      "range": 0.18
+    },
+    "Fear": {
+      "h": 9,
+      "s": 0.61,
+      "l": 0.43,
+      "range": 0.18
+    },
+    "Anger": {
+      "h": 2,
+      "s": 0.61,
+      "l": 0.37,
+      "range": 0.17
+    },
+    "Grief": {
+      "h": 350,
+      "s": 0.4,
+      "l": 0.3,
+      "range": 0.15
+    },
+    "Disillusion": {
+      "h": 20,
+      "s": 0.17,
+      "l": 0.38,
+      "range": 0.14
+    },
+    "Fatigue": {
+      "h": 213,
+      "s": 0.11,
+      "l": 0.45,
+      "range": 0.12
+    }
+  },
+  "formula": {
+    "secondary_hue_weight": "0.055 + 0.105 * (1 - confidence)",
+    "hue_mix": "shortest circular hue path from primary to secondary",
+    "saturation": "primary_s * (0.62 + 0.31*intensity + 0.10*confidence)",
+    "awe_surprise_saturation_multiplier": 0.78,
+    "uncertainty_disillusion_fatigue_saturation_multiplier": 0.88,
+    "positive_lightness": "primary_l + (intensity-0.45)*range*1.18 + (confidence-0.76)*0.055",
+    "negative_lightness": "primary_l - (intensity-0.38)*range*1.32 + (confidence-0.76)*0.035",
+    "resolve_lightness": "primary_l - (intensity-0.52)*range*0.72 + (confidence-0.76)*0.04",
+    "saturation_clamp": [
+      0.09,
+      0.78
+    ],
+    "lightness_clamp": [
+      0.175,
+      0.79
+    ],
+    "rgb_conversion": "HLS -> RGB, round(channel*255)"
+  },
+  "grid": {
+    "matrix": [
+      30,
+      20
+    ],
+    "cell_geometry_px": [
+      100,
+      100
+    ],
+    "master_px": [
+      3000,
+      2000
+    ],
+    "separator_px": 3,
+    "separator_hex": "#0B0E12",
+    "external_border": false
+  },
+  "prohibitions": [
+    "no gradients",
+    "no transparency",
+    "no texture",
+    "no text",
+    "no per-tile aesthetic correction",
+    "no post-hoc composition balancing"
+  ],
+  "canonical_sha256": "2cb60245400636663c1c4ff349f4cf2b263efe2deb2214413f056604ef4c854d"
+}

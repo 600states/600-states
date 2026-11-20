@@ -282,6 +282,27 @@ level, and it runs on the rows in memory, before the manifest is written. The
 field existed in the working file and was dropped at the freeze for three days
 before anyone looked; see FINDING 011.
 
+## `protocols/` is a copy; the archive is the source
+
+The twelve frozen constants are published in `protocols/` so that whoever
+clones the repository to check the instrument holds the documents the run was
+held to. **No code reads them.** `config.FROZEN` points into the archive and
+every reader goes there: `canonical_batch_size()`, the prompt check in
+`classify.py`, `REGISTRY_FILE`. A copy that is allowed to be the source for
+somebody becomes a second truth, and then the world audits a document the
+instrument does not run.
+
+Never edit a file in `protocols/` by hand. Change the document in the archive
+and run `python tools/publicera_protokoll.py`, which copies the bytes and
+rewrites `MANIFEST_SHA256__600_STATES_PROTOCOLS_v1.0.{json,txt}`.
+
+The manifest carries no timestamp, deliberately: it is then a pure function of
+the documents, so a clean tree after running the tool means the published
+hashes match the published files. `.gitattributes` holds `protocols/** -text`
+because the source registry is CRLF and the rest LF - normalised line endings
+would give a Windows clone and a Linux clone different bytes, and one published
+SHA-256 could match at most one of them.
+
 ## This repository is public
 
 Never commit, in code, comments, documentation, test fixtures or commit

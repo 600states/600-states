@@ -1,3 +1,9 @@
 * text=auto
 *.png binary
 *.zip binary
+
+# De frysta protokollen ar kopior ur arkivet och deras hashar ar publicerade.
+# text=auto skulle normalisera radsluten: kallregistret ar CRLF och de ovriga
+# LF, sa en klon pa Windows och en pa Linux skulle fa olika bytes och samma
+# publicerade SHA-256 skulle stamma pa hogst en av dem.
+protocols/** -text

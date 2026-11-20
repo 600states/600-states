@@ -1,0 +1,68 @@
+{
+  "project": "600 STATES",
+  "protocol": "Emotion Classification Protocol",
+  "version": "1.0",
+  "status": "FROZEN",
+  "model_role": "Interpretive classifier over neutral factual News Observations.",
+  "input_fields": [
+    "observation_id",
+    "source_claim_raw",
+    "source_claim_normalized",
+    "representative_domain",
+    "review_region",
+    "selection_layer",
+    "observation_timestamp_utc"
+  ],
+  "required_preprocessing": [
+    "Create a neutral factual Event Representation from the observable claim.",
+    "Preserve attribution and uncertainty; do not convert allegations into facts.",
+    "Do not use GDELT AvgTone or sentiment fields.",
+    "Do not infer facts not present in the observation evidence."
+  ],
+  "emotion_states": [
+    "Joy",
+    "Hope",
+    "Relief",
+    "Calm",
+    "Curiosity",
+    "Awe",
+    "Resolve",
+    "Surprise",
+    "Uncertainty",
+    "Concern",
+    "Tension",
+    "Fear",
+    "Anger",
+    "Grief",
+    "Disillusion",
+    "Fatigue"
+  ],
+  "output_schema": {
+    "neutral_event_representation": "string",
+    "scores": "object with all 16 states, each 0.0-1.0",
+    "primary_emotion": "one of 16 states",
+    "secondary_emotion": "one of 16 states",
+    "intensity": "0.0-1.0",
+    "confidence": "0.0-1.0",
+    "classification_note": "short rationale tied only to observable facts"
+  },
+  "scoring_rules": [
+    "Scores represent the likely emotional character of the information state, not measured public opinion.",
+    "Primary emotion is the highest-scoring state.",
+    "Secondary emotion is the second-highest distinct state.",
+    "Intensity reflects emotional force/severity of the observation.",
+    "Confidence reflects certainty that the selected emotional interpretation fits the observation.",
+    "No balancing toward positive/negative outcomes.",
+    "No aesthetic feedback from color or rendered mosaic."
+  ],
+  "audit_rules": [
+    "Store exact protocol version.",
+    "Store model identifier.",
+    "Store input hash and output hash per observation.",
+    "Store all 16 scores.",
+    "No manual post-hoc alteration for visual appearance.",
+    "Reclassification requires a new protocol/model version and a new manifest."
+  ],
+  "color_access": "DENIED during classification; v0.4 may only consume frozen emotion outputs later.",
+  "canonical_sha256": "406e3a44cfcf9a5a82d1443030819ec9f890ef5e00ea3f0536fb75047f3ea863"
+}

@@ -1,0 +1,68 @@
+{
+ "project": "600 STATES",
+ "library": "protocols",
+ "version": "v1.0",
+ "file_count": 12,
+ "entries": [
+  {
+   "path": "600_STATES_Color_Protocol_v0.4_GOLDEN_MASTER_FROZEN.json",
+   "size_bytes": 2935,
+   "sha256_file_bytes": "e5d23fa17cd731ca722b39b30eb5ec2170f9dbf4f8b99210d5029b7eaa3f076f"
+  },
+  {
+   "path": "600_STATES_Emotion_Classification_Execution_Prompt_v2.1_FROZEN.txt",
+   "size_bytes": 5742,
+   "sha256_file_bytes": "7928a2c0ca720f48b2d4a1a834031c50237a9cb63577b72a1f16ed0de798a8a9"
+  },
+  {
+   "path": "600_STATES_Emotion_Classification_Execution_Spec_v2.1_FROZEN.json",
+   "size_bytes": 2337,
+   "sha256_file_bytes": "1d005b036cf91a3ca4afd1cc37c06e869b2de407235c0eb9a43751b4811b9102"
+  },
+  {
+   "path": "600_STATES_Emotion_Classification_Protocol_v1.0_FROZEN.json",
+   "size_bytes": 2382,
+   "sha256_file_bytes": "59d58873a8f42dbebdaf45e4017438dd3debf6996085f693da8816517ec17f09"
+  },
+  {
+   "path": "600_STATES_Grid_Specification_v1.0_ADDENDUM_A_MASTER_PX.md",
+   "size_bytes": 3436,
+   "sha256_file_bytes": "6dff3fee620037dec8750041bd36efc9400f564c9e2f272cef7aba9328359f63"
+  },
+  {
+   "path": "600_STATES_Grid_Specification_v1.0_FROZEN_EXPORT.json",
+   "size_bytes": 1198,
+   "sha256_file_bytes": "15560499676b14140e7b20a2765b2adb441f6b26ad869142cb35892515806913"
+  },
+  {
+   "path": "600_STATES_Macro_State_Naming_Protocol_v1.0_FROZEN.json",
+   "size_bytes": 705,
+   "sha256_file_bytes": "0d83622728ae7d273ef2ee07bc0528f99027acdc9d9afce2e96836bbb114a89b"
+  },
+  {
+   "path": "600_STATES_Observation_Day_Rule_v1.0_FROZEN.json",
+   "size_bytes": 1561,
+   "sha256_file_bytes": "72e41c0b38e14d5289144d2f06748276da51291ed9a148808467c4b5db771792"
+  },
+  {
+   "path": "600_STATES_Observation_Verification_Protocol_v0.1.json",
+   "size_bytes": 2964,
+   "sha256_file_bytes": "20b00206d946ada9d33ddb481a4fa78ce8739156c18887c3e3cb90231475f875"
+  },
+  {
+   "path": "600_STATES_PreEmotion_Duplicate_Materiality_Gate_v1.0_FROZEN.md",
+   "size_bytes": 2470,
+   "sha256_file_bytes": "5a728a21c5d958f125fd0fe9201c4f0b753149a3b239c83844f8475fca9159e2"
+  },
+  {
+   "path": "600_STATES_Reflection_Protocol_v1.0_FROZEN.json",
+   "size_bytes": 720,
+   "sha256_file_bytes": "893e6add911d0caa2bc72c617b14245eb1e63908273d7a6569e6d5bd057083a2"
+  },
+  {
+   "path": "600_STATES_Source_Registry_v2.0_FROZEN.csv",
+   "size_bytes": 8647,
+   "sha256_file_bytes": "8df6fdb0f860f8d6a30063d19d240921a2b7b9f34ef24e2394bdca0d9593167e"
+  }
+ ]
+}

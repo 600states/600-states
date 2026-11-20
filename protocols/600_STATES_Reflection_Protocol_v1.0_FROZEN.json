@@ -1,0 +1,16 @@
+{
+  "project": "600 STATES",
+  "protocol": "Reflection Protocol",
+  "version": "1.0",
+  "status": "FROZEN",
+  "input": "Frozen aggregate emotion metrics + macro-state only. No image/HEX inspection.",
+  "output": "Exactly 600 Unicode characters, including spaces and punctuation.",
+  "rules": [
+    "Describe the observed information flow, not measured human emotion.",
+    "No invented facts or named events not present in the manifest.",
+    "No claim that the text measures how the world literally feels.",
+    "No aesthetic description of the mosaic.",
+    "Store character count, model id, protocol hash and input hash."
+  ],
+  "canonical_sha256": "97dc14f3c908140de623986f2de5a9271ca2641b66deca1cde3f48256ac8f4dd"
+}
