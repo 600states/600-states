@@ -332,7 +332,7 @@ h2{font-size:var(--step-head)}
       <div class="seg s1 r"><p class="q">24 hours</p><p class="c">of the monitored global news flow, reviewed for qualifying information states.</p></div>
       <div class="seg s2 r"><p class="q">600 observations</p><p class="c">frozen before any colour exists. The same event is allowed. The same information state is not.</p></div>
       <div class="seg s3 r"><p class="q">1&thinsp;800 readings</p><p class="c">every observation classified three times, independently. The tile carries the consensus.</p></div>
-      <div class="seg s4 r"><p class="q">1 image</p><p class="c">rendered deterministically, its manifest hashed and published the same day.</p></div>
+      <div class="seg s4 r"><p class="q">1 image</p><p class="c">rendered deterministically, its manifest hashed after the day closes.</p></div>
     </div>
     <p class="cap r">The colour model is unreachable until the 600-observation manifest is frozen. A chain that <em>can</em> reach colour at any point cannot show that it did not.</p>
   </div>
@@ -469,12 +469,12 @@ h2{font-size:var(--step-head)}
         <tr class="r"><td>v1.0</td><td>Emotion Classification Protocol</td><td>Sixteen states, one fixed vocabulary</td><td>CC0</td></tr>
         <tr class="r"><td>v1.0</td><td>Grid Specification</td><td>30 × 20, chronological, no exceptions</td><td>CC0</td></tr>
         <tr class="r"><td></td><td>Consensus over three passes</td><td>Rebuilt field by field from the raw passes</td><td>MIT</td></tr>
-        <tr class="r"><td></td><td>Selection, story cap, regional quotas</td><td>42 tests. A rule that cannot stop a run is not a rule</td><td>MIT</td></tr>
+        <tr class="r"><td></td><td>Selection, story cap, regional quotas</td><td><span data-tests>&mdash;</span> tests on these three, counted at build. A rule that cannot stop a run is not a rule</td><td>MIT</td></tr>
         <tr class="r"><td></td><td>The daily manifest</td><td>Hash published the same day in a public repository</td><td>CC0</td></tr>
         <tr class="r"><td></td><td>The rendered States</td><td>Reproducible from manifest and instrument</td><td>All rights reserved</td></tr>
       </tbody>
     </table>
-    <p class="cap r">The proof is not that we kept a copy. The proof is that we could not have made it later. Commit dates can be set to anything; only a push is witnessed. The instrument went public before the series began, and every day&#39;s hash is pushed on the day it is observed.</p>
+    <p class="cap r">The proof is not that we kept a copy. The proof is that we could not have made it later. Commit dates can be set to anything; only a push is witnessed. The instrument went public before the series began. A day cannot be read until it has ended, so each day&#39;s manifest is frozen and hashed after the day closes &mdash; hours later, not weeks. The interval is the point: late enough that the day was complete, early enough that nothing was reconsidered.</p>
   </div>
 </section>
 
@@ -497,7 +497,7 @@ h2{font-size:var(--step-head)}
     <h3>What are the days shown on this page?</h3>
     <p>Calibration days. The first ten days were produced by an earlier generation of the instrument and used to test it, and they surfaced real method defects, which are documented. They carry a retrospective evidence basis, not evidence captured at the moment of observation, and they are not canonical works.</p>
     <p>States produced from 1 December 2026 capture and hash their source at selection time. That distinction is published rather than hidden, because it is the only version that survives a critic.</p>
-    <p>These ten days are also known to be defective: the candidate pool was built from an earlier version of the source registry than the manifests declare. The defect is documented, and the days will be rebuilt before the series opens. The figures on this page come from that defective generation and are shown as instrument behaviour, not as results.</p>
+    <p>These ten days are also known to be defective: the candidate pool was built from an earlier version of the source registry than the manifests declare. The defect is documented, and the days will be rebuilt once the instrument is frozen &mdash; rebuilding them against an instrument still being corrected would only produce a second set to discard. Rebuilding fixes the registry defect; it cannot make them canonical, because evidence fetched months later cannot be evidence from inside the day, whatever the instrument does. The figures on this page come from that defective generation and are shown as instrument behaviour, not as results.</p>
   </div>
   <div class="q r">
     <h3>What exactly can be collected?</h3>

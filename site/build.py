@@ -121,6 +121,41 @@ def gate_hjaltens_rakning(html: str) -> int:
     return kapitel
 
 
+# Filerna som provar exakt det tabellraden namner: urval, storytak, regionkvoter.
+# Kommer en till fil som provar samma sak hor den hemma har. Glommer nagon bort
+# den undercountar talet, och det ar ratt felriktning - ett tal som pastar for
+# lite ar inte samma sorts fel som 42.
+URVALETS_TESTER = ("tests/test_select_day.py", "tests/test_story_cap.py")
+
+
+def rakna_tester(filer=URVALETS_TESTER) -> int:
+    """Talet i tabellen raknas fram vid bygget, aldrig skrivet for hand.
+
+    Raden sa "42 tests" om urval, storytak och regionkvoter. Uppmatt 2026-11-20:
+    de tva filerna som provar just det samlar 16 fall, hela sviten 258. 42 var
+    varken det ena eller det andra - ett tal som pastar sig vara en sak och
+    raknar en annan, alltsa samma form som hjaltens rakning hade.
+
+    VARFOR RADENS EGNA TESTER OCH INTE HELA SVITEN: sviten ar ett sant tal om
+    nagot annat an raden handlar om. Att satta 254 dar vore att upprepa felet
+    med en riktigare siffra. Texten sager vad som raknats, sa lasaren kan kora
+    samma kommando.
+
+    Pytest raknar, inte vi: en egen rakning av "def test_" missar varje
+    parametriserat fall. Saknas en fil stannar bygget."""
+    rot = HERE.parent
+    saknas = [f for f in filer if not (rot / f).exists()]
+    if saknas:
+        raise SystemExit("hittar inte %s - testtalet gar inte att rakna" % ", ".join(saknas))
+    r = subprocess.run([sys.executable, "-m", "pytest", "-q", "--collect-only", *filer],
+                       cwd=str(rot), capture_output=True, text=True)
+    m = re.search(r"(\d+) tests? collected", r.stdout)
+    if not m:
+        raise SystemExit("pytest gav ingen rakning att skriva in:\n"
+                         + (r.stdout or r.stderr)[-400:])
+    return int(m.group(1))
+
+
 def cirkel_ur_verket(src: Path, storlek: int):
     """En cirkel ur verket: diametern ar verkets fulla hojd, centrerad i bredd.
 
@@ -225,6 +260,13 @@ def main(argv):
         html, n = re.subn(r'(<meta name="build" content=")[^"]*(">)', r"\g<1>" + stamp + r"\g<2>", html, count=1)
         if n != 1:
             raise SystemExit("hittar ingen byggstampel i " + sida)
+        if sida == "index.html":
+            n = rakna_tester()
+            html, k = re.subn(r"(<span data-tests>)[^<]*(</span>)",
+                              r"\g<1>%d\g<2>" % n, html, count=1)
+            if k != 1:
+                raise SystemExit("hittar ingen plats for testtalet i " + sida)
+            print("  %-14s %d tester over urval och storytak" % ("rakning:", n))
         if sida == "labs.html":
             kap = gate_hjaltens_rakning(html)
             print("  %-14s %d kapitel, hjaltens rakning stammer" % ("grind:", kap))
