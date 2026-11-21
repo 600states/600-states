@@ -490,6 +490,15 @@ with the population it was measured on. The four v3 days were measured for
 content hash, not for capture in the window, and on a retrospective day those
 are not the same number.
 
+**The three points go in the commit message - binding from 2026-11-21.** Not
+only in the handover or the chat window the work happened in. The reviewer
+reads the repository, and a report that lives in someone else's conversation
+has to be carried across by hand to get there; one that lives in the commit is
+versioned, travels with the change, and can still be found in three months by
+whoever runs `git log` on the line that broke. A chat window is for questions
+and for what needs a decision. What merely describes what the code does belongs
+in the commit.
+
 ## No figure is published on one measurement — binding from 2026-11-10
 
 A number that has been measured once does not go on the public site, into the
