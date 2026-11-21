@@ -57,8 +57,20 @@ something else, and neither of them chooses a day:
   computed from it against the day the step was given.
 - `src/classify.py` measures elapsed time against its own limits and stamps the
   run record. Neither value reaches a manifest row.
+- `src/acquire.py` stamps `mentions_frozen_at_utc` and `events_frozen_at_utc` in
+  the snapshot manifest, and `events_last_404_utc` on the last attempt that came
+  back empty. **Binding from 2026-11-21.** The day is still the argument; what
+  these measure is when a file that did not exist became fetchable. GDELT
+  publishes a day's Events file hours after that day closed - measured
+  2026-11-21 on 20261120, from the NAS: 404 every 15 minutes from 23:00 UTC
+  through 07:45, 200 at 08:00:02, `Last-Modified` 07:00:11 - so the raw flow is
+  frozen in two rounds, and a manifest that did not say which part was frozen
+  when could not be told from one assembled days later. The two stamps bracket
+  the publication time, which is the quantity to be measured over December.
+  `acquire` also reads `time.monotonic` for the retry ceiling; that measures
+  elapsed time, like `classify.py`, and chooses nothing.
 
-A third exception needs its reason written here before the call is written.
+A fourth exception needs its reason written here before the call is written.
 
 Never write a separate backfill script.
 

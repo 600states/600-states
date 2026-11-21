@@ -46,9 +46,30 @@ def domain_of(url):
     m = re.match(r"https?://([^/]+)", url or "", re.I)
     return norm_domain(m.group(1)) if m else ""
 
-def build(day, mentions_zip):
-    reg = load_registry()
+def regioner(docs, day):
+    """Skriver action_geo_country och review_region pa posterna. Muterar dem.
+
+    EGET STEG, inte en del av build(). Events-dagsfilen ar den enda kallan till
+    land, och den publiceras timmar efter att dygnet stangde - uppmatt
+    2026-11-21: 404 till 07:45 UTC, 200 kl. 08:00, stampel 07:00. Kandidatbygget
+    far darfor inte rora den, annars kan ingenting goras fore morgonen.
+    """
     geo = load_events(day)
+    for d in docs:
+        countries = [geo[e] for e in d["event_ids"] if geo.get(e)]
+        c = collections.Counter(countries).most_common(1)
+        d["action_geo_country"] = c[0][0] if c else ""
+        d["review_region"] = REGION_MAP.get(d["action_geo_country"], "UNMAPPED")
+    return docs
+
+def build(day, mentions_zip):
+    """Kandidatpoolen ur mentions ensamt. Inget Events, alltsa inget land.
+
+    Uppmatt 2026-11-21 pa 20261120: 3 786 kandidater med och utan Events,
+    samma URL-mangd, samma mention_rows. Landet tillfor inget till poolens
+    storlek - det ar en egenskap pa posten, och den satts av regioner().
+    """
+    reg = load_registry()
 
     docs = {}   # url -> post
     for m in iter_mentions(mentions_zip):
@@ -72,17 +93,13 @@ def build(day, mentions_zip):
             d["first_mention_utc"] = m["MentionTimeDate"]
 
     for d in docs.values():
-        countries = [geo[e] for e in d["event_ids"] if geo.get(e)]
-        c = collections.Counter(countries).most_common(1)
-        d["action_geo_country"] = c[0][0] if c else ""
-        d["review_region"] = REGION_MAP.get(d["action_geo_country"], "UNMAPPED")
         d["event_ids"] = sorted(d["event_ids"])
     return list(docs.values())
 
 if __name__ == "__main__":
     day = sys.argv[1]
     mz = RAW_GDELT / (sys.argv[2] if len(sys.argv) > 2 else f"600_STATES_{day}_GDELT2_MENTIONS.zip")
-    cands = build(day, mz)
+    cands = regioner(build(day, mz), day)
     print(f"dygn {day}: {len(cands):,} kandidatdokument fran {len({c['domain'] for c in cands})} domaner")
     r = collections.Counter(c["review_region"] for c in cands)
     for k, v in r.most_common():

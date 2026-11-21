@@ -1,6 +1,15 @@
 """Urval och klassificeringsinput for ett dygn. SEPARAT PROGRAM.
 
-    python3 src/run_state.py [dygn] [--stage NAMN] [--budget N]
+    python3 src/run_state.py [dygn] [--stage NAMN] [--until NAMN] [--budget N]
+
+KORNINGEN AR DELAD I TVA, for dygnets tva kallor publiceras vid olika tid:
+
+    korning A, 00:05   --until pool          mentions finns, Events inte
+    korning B, senare  --stage regioner      Events finns, resten kors klart
+
+Uppmatt 2026-11-21: Events-dagsfilen for 20261120 gav 404 till 07:45 UTC och
+200 kl. 08:00:02. Steg fore regioner ror den aldrig; steg fran regioner och
+framat kraver den.
 
 PROGRAMMET AGER DYGNET. Utan dygnargument harleder main() det UTC-dygn som
 senast stangde och kor en forkontroll fore forsta steget. Den som startar
@@ -21,9 +30,10 @@ aldrig gora det. Farg och rendering ligger i run_color.py, som kors forst nar
 emotionsmanifestet ar fryst. Separationen ar funktionen, inte stadning.
 
 Steg, i ordning:
-    preflight   bara i det harledda laget         grind: frirymd, korningsfonster
-    candidates  GDELT -> kandidatlista            grind: dygn, mention_rows, register
+    preflight   bara nar korningen BORJAR dygnet  grind: frirymd, korningsfonster
+    candidates  mentions -> kandidatlista         grind: dygn, mention_rows, register
     pool        bevisfangst pa hela poolen        grind: rubriktackning
+    regioner    Events -> land och region         forsta steget som ror Events
     select      600 valda bland lasbara           grind: 600, regionkvoter, cap
     input       klassificerarens input            grind: varje rad har text
     --- klassificeringen kors har och lagger passen pa plats ---
@@ -34,7 +44,7 @@ Steg, i ordning:
 Avbryter med felkod nar en grind stoppar. En regel som inte kan stoppa en
 korning ar inte en regel.
 """
-import csv, json, shutil, sys
+import collections, csv, json, shutil, sys
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 HERE = Path(__file__).resolve().parent
@@ -47,7 +57,7 @@ import candidates, ranking, select_day, pool_evidence, gates
 from vocab import EMOTION_STATES
 from build_classifier_input import claim_of, readable, is_digest
 
-STAGES = ["candidates", "pool", "select", "input", "emotion"]
+STAGES = ["candidates", "pool", "regioner", "select", "input", "emotion"]
 
 def senast_stangda_dygnet(nu_utc):
     """Det UTC-dygn som senast stangde. Enda stallet dar en klocka blir ett dygn."""
@@ -156,7 +166,15 @@ def _frirymdsbehov():
         f"({andel / 2**20:.0f} MiB, snitt over {len(fardiga)} dygn)")
 
 def step_preflight(day, nu_utc):
-    """Forkontrollen, fore allt annat och bara i det harledda laget.
+    """Forkontrollen, fore allt annat och bara nar korningen BORJAR dygnet.
+
+    GRINDARNA HOR TILL KORNING A. gate_korningsfonster svarar pa fragan "far
+    dygnet borja an?", och den fragan stalls en gang per dygn, av korningen som
+    bygger kandidatlistan. Korning B fortsatter ett dygn som redan har borjat -
+    den fragar inte om igen, och den skulle inte heller stoppas av grinden, som
+    hindrar for tidigt och aldrig for sent. Frirymden och luckloggen hor till
+    samma ogonblick: en logg som skrivs tva ganger per dygn beskriver inte
+    langre en korning per dygn.
 
     Ordningen ar avsiktlig: luckorna skrivs ut aven nar nagot langre ner
     stoppar korningen, for det ar da de ar som mest varda att se.
@@ -198,9 +216,29 @@ def step_pool(day, budget):
     write_text(pj, json.dumps(pool, ensure_ascii=False))
     return pool
 
+def step_regioner(day):
+    """Delningspunkten. Events-filen nas forst har och ingen annanstans fore den.
+
+    Steget laser event_ids ur pool.json - de kommer ur mentions och ar alltsa
+    redan frysta - och skriver land och region pa posterna.
+    """
+    print(f"\n[regioner] {day}")
+    pj = sp.workdir(DATA, day) / "pool.json"
+    pool = json.loads(pj.read_text(encoding="utf-8"))
+    candidates.regioner(pool, day)
+    write_text(pj, json.dumps(pool, ensure_ascii=False))
+    med = sum(1 for c in pool if c["action_geo_country"])
+    print(f"        {med}/{len(pool)} kandidater fick land ur Events")
+    for k, v in collections.Counter(c["review_region"] for c in pool).most_common():
+        print(f"        {k:32s} {v:5d}")
+    return pool
+
 def step_select(day):
     print("\n[select]")
     pool = json.loads((sp.workdir(DATA, day) / "pool.json").read_text(encoding="utf-8"))
+    # Utan regionsteget faller urvalet pa en KeyError langt inne i kvotmotorn.
+    if any("review_region" not in c for c in pool):
+        print("        poolen saknar regioner - kor forst: --stage regioner"); sys.exit(5)
     pool_evidence.attach(pool)
     ok, dig = [], 0
     for c in pool:
@@ -343,16 +381,25 @@ def main():
     harlett = not args or args[0].startswith("-")
     day = senast_stangda_dygnet(nu) if harlett else args.pop(0)
     sp.state_id(day)                      # validerar formatet, kastar vid fel
-    start = args[args.index("--stage") + 1] if "--stage" in args else "candidates"
+    start = args[args.index("--stage") + 1] if "--stage" in args else STAGES[0]
+    stopp = args[args.index("--until") + 1] if "--until" in args else STAGES[-1]
     budget = int(args[args.index("--budget") + 1]) if "--budget" in args else None
+    for namn in (start, stopp):
+        if namn not in STAGES:
+            sys.exit(f"okant steg {namn!r} - stegen ar: {', '.join(STAGES)}")
 
-    todo = STAGES[STAGES.index(start):]
+    # --until AR EN STOPPGRANS, inte ett ensamt steg. Korning A gar candidates
+    # -> pool och slutar dar, for nasta steg kraver en fil som inte finns an.
+    todo = STAGES[STAGES.index(start):STAGES.index(stopp) + 1]
+    if not todo:
+        sys.exit(f"--until {stopp} ligger fore --stage {start}")
     print(f"=== {sp.state_id(day)} — urval och klassificeringsinput ==="
-          + ("  (dygnet harlett ur klockan)" if harlett else ""))
+          + ("  (dygnet harlett ur klockan)" if harlett else "")
+          + f"  [{todo[0]} -> {todo[-1]}]")
     try:
         # FORE RASNAPSHOTET. Ar det for tidigt saknas snapshotet ocksa, och da
         # ska svaret vara att klockan inte ar slagen - inte att filen saknas.
-        if harlett:
+        if harlett and start == STAGES[0]:
             step_preflight(day, nu)
         hits = (sorted(raw_day_dir(day).glob(f"*{day}*MENTIONS.zip"))
                 or sorted(RAW_GDELT.glob(f"*{day}*MENTIONS.zip")))
@@ -361,6 +408,7 @@ def main():
             sys.exit(4)
         if "candidates" in todo: step_candidates(day, hits[0])
         if "pool" in todo: step_pool(day, budget)
+        if "regioner" in todo: step_regioner(day)
         if "select" in todo: step_select(day)
         if "input" in todo: step_input(day)
         if "emotion" in todo: step_emotion(day)
