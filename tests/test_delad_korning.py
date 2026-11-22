@@ -110,7 +110,8 @@ SKRIPT = textwrap.dedent('''
     docs = [{"event_ids": ["1", "2", "3", "4"]},
             {"event_ids": ["4", "3", "2", "1"]},
             {"event_ids": ["2", "4"]},
-            {"event_ids": []}]
+            {"event_ids": []},
+            {"event_ids": ["1", "3", "2"]}]
     candidates.regioner(docs, "20261111")
     print(json.dumps([d["action_geo_country"] for d in docs]))
 ''')
@@ -145,6 +146,29 @@ def test_oavgjort_bryts_likadant_oavsett_dokumentets_ordning():
     assert utfall[0] == utfall[1], (
         f"samma handelser i omvand ordning gav {utfall[0]} och {utfall[1]}")
     assert utfall[3] == "", "ett dokument utan handelser ska ha tomt land"
+
+
+def test_oavgjort_vinns_av_lagsta_landskoden():
+    """REGELN, inte bara dess determinism.
+
+    Mitt forsta test provade bara att utfallet ar order-oberoende. Bade lagsta
+    och hogsta landskod ar order-oberoende, sa en andring fran min till max hade
+    passerat - och den flyttar landet pa ungefar hundra dokument per dygn
+    (uppmatt 101 av 3 786 pa 20261111, 82 av 4 245 pa 20261104).
+
+    SE och PL star lika i dokument 0. PL ar lagre alfabetiskt och ska vinna."""
+    utfall = _kor_under_hashseed(0)
+    assert utfall[0] == "PL", (
+        f"oavgjort mellan PL och SE ska ge PL, fick {utfall[0]}")
+
+
+def test_en_majoritet_slar_landskoden():
+    """Landskoden bryter LIKA. Den far aldrig sla en majoritet - da vore det
+    inte en skiljeregel utan en sortering."""
+    utfall = _kor_under_hashseed(0)
+    assert utfall[4] == "SE", (
+        f"SE har tva mot PL:s en och ska vinna trots att PL sorterar forst, "
+        f"fick {utfall[4]}")
 
 
 def test_event_ids_lamnas_sorterade_av_bygget():
