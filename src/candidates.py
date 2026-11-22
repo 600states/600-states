@@ -56,9 +56,12 @@ def regioner(docs, day):
     """
     geo = load_events(day)
     for d in docs:
-        countries = [geo[e] for e in d["event_ids"] if geo.get(e)]
-        c = collections.Counter(countries).most_common(1)
-        d["action_geo_country"] = c[0][0] if c else ""
+        c = collections.Counter(geo[e] for e in d["event_ids"] if geo.get(e))
+        # Lika rakning bryts pa lagsta landskod. most_common tog i stallet den
+        # som rakades forst, alltsa event_ids ordning - och den ordningen satts
+        # av build() i en ANNAN korning, via pool.json. Determinismen hor hemma
+        # i rakningen, inte hos den som rakar anropa.
+        d["action_geo_country"] = min(c, key=lambda land: (-c[land], land)) if c else ""
         d["review_region"] = REGION_MAP.get(d["action_geo_country"], "UNMAPPED")
     return docs
 

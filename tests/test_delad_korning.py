@@ -138,12 +138,6 @@ def test_regionerna_beror_inte_av_hashseeden():
         f"regionerna varierar med PYTHONHASHSEED: {utfall}")
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "RAPPORTERAT 2026-11-22: regioner() sorterar inte event_ids sjalv. Oavgjorda "
-    "landrakningar bryts av listans ordning, som garanteras av build() i en ANNAN "
-    "korning, via pool.json. Determinismen ar darfor en egenskap hos anroparen, "
-    "inte hos funktionen - samma form som felet 5905bce rattade, ett lager upp. "
-    "Ta bort markeringen nar regioner() bryter lika pa innehall."))
 def test_oavgjort_bryts_likadant_oavsett_dokumentets_ordning():
     """Samma handelser i omvand ordning i event_ids ska ge samma land. Gor de
     inte det beror utfallet pa nagot annat an innehallet."""

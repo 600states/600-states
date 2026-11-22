@@ -425,3 +425,92 @@ manadsjamforelse och kan inte na `CONTEMPORANEOUS_ARCHIVE` - den vagen hamtar
 inte ur arkiv. `capture_state.basis()` ska inte kompletteras; se AGENTS.md,
 "Two `basis()`, and only one of them is the series". Det som star har ar en
 matning av vad pilotens niva betyder, inte ett forslag att andra den.
+
+## Nar GDELT publicerar Events-dagsfilen (2026-11-20/21)
+
+Underlaget for att korordningen delades i tva. Matt utifran, med HEAD mot
+`data.gdeltproject.org` var 15:e minut fran en NAS, pa dygnet 20261120.
+
+Loggen ligger i arkivet som
+`03_VALIDATION_REMEDIATION/600_STATES_MATNING_GDELT_EVENTS_20261120.log`,
+sha256 `dab51afab810f558cd7245d6657f66705d8d4fb5c976c62f8eff5915951e99f2`,
+45 rader. Den forsta ar en ensam kontroll 15:58; serien ar de 44 darefter.
+
+| | |
+|---|---|
+| Serien | 44 forsok, 2026-11-20T23:00:19Z till 2026-11-21T09:45:02Z |
+| Transportfel | 0 (`curl=0` pa samtliga 45 rader) |
+| 404 | 36, sista 07:45:02 |
+| 200 | 8, forsta **08:00:02** |
+| `Last-Modified` pa alla atta | **Sat, 21 Nov 2026 07:00:11 GMT** |
+| ETag och langd pa alla atta | identiska, 7 395 331 byte |
+
+**Tva tal, inte ett.** Filen stamplades 07:00:11 och blev atkomlig nagon gang
+mellan 07:45 och 08:00 - en timme senare. Ingen omskrivning skedde efterat:
+atta pa varandra foljande 200 bar samma ETag och samma langd.
+
+**Varfor det avgjorde delningen.** Bevisfonstret stanger 03:00 UTC
+(`FONSTER_TIMMAR = 3`). Sa lange nagot i den korning som fangar bevis ror
+Events kan kedjan tidigast borja 08:00, alltsa fem timmar efter att fonstret
+stangde, och varje dygn i serien skulle bli UNQUALIFIED utan att nagon grind
+sade ifran. Fonstret rordes inte; korningen delades. Se 5905bce.
+
+**Vad talen inte sager.** En matning, ett dygn, ett observationsdygn. Den bar
+inget omdome om nar GDELT publicerar i allmanhet, och ingen starttid ska
+hardkodas pa den - darfor vantar korning B in filen i stallet for att anta
+08:00. `events_last_404_utc` och `events_frozen_at_utc` i snapshotposten
+bracketar publiceringstiden for varje dygn, sa att spridningen gar att mata
+over december.
+
+## Rapport: forvarvet och urvalet delas i tva korningar (5905bce)
+
+Rapporten for delningen, flyttad hit ur samtalet den skrevs i. Fran och med
+a8b62a6 star rapporten i commitmeddelandet; 5905bce skrevs fore den regeln.
+
+**Vilken vag avgor.** `acquire.acquire()` for frysningen, `candidates.build()`
+och `candidates.regioner()` for vad som kraver Events, `run_state.STAGES` plus
+`--stage/--until` for var en korning borjar och slutar. Statusvardena i
+snapshotmanifestet ar `MENTIONS_FROZEN` (Mentions frysta, Events saknas),
+`COMPLETE` (bada frysta, 96/96 slots) och `INCOMPLETE_SOURCE` (bada frysta,
+slots saknas). Korning A ar `--until pool`, korning B `--stage regioner`.
+Grinden `gate_korningsfonster` ligger i forkontrollen, som bara kors nar
+korningen borjar pa forsta steget - alltsa pa A, aldrig pa B, som med flit kors
+efter fonstret.
+
+**Vad som verifierades och pa vilken vag.** Allt offline, mot kopior av
+riktiga `_work`-kataloger, med `fetch()` ersatt: somen mellan de tva
+omgangarna (00:05-delens hash och tidsstampel orord nar Events hashas in),
+vantslingan och dess tak, samt att `build()` ger samma 3 786 kandidater med
+samma URL-mangd och samma `mention_rows` som fore andringen, pa 20261111.
+
+**Vad som INTE verifierades.** Ingenting rorde natverket; 404-beteendet ar
+NAS-matningen ovan, inte nagot koden har visat. Ingen fullstandig A+B kordes
+mot ett fryst dygn - `pool` hamtar ~3 800 URL:er. `INCOMPLETE_SOURCE`-grenen
+och `--force` ar oprovade.
+
+### Foljdfynd: landet avgjordes av en ordning, inte av innehallet
+
+Fore 5905bce rakades lander medan `event_ids` var en `set`: oavgjorda
+rakningar brots av mangdens iterationsordning, som beror av PYTHONHASHSEED. Tva
+processer pa samma snapshot gav olika `action_geo_country` for **111 av 3 786**
+dokument (20261111). Regionen styr regionkvoterna, sa seeden var med och
+avgjorde vilka 600 observationer som blev verket.
+
+5905bce sorterade `event_ids` i `build()`, vilket tog bort variationen mellan
+processer men flyttade avgorandet till listans ordning - alltsa till
+anroparen, via `pool.json`, i en annan korning. Acceptanstestet for 5905bce
+(8814c98) visade det. Lika rakning bryts nu pa **lagsta landskod**, i
+`regioner()` sjalv.
+
+Matt pa tva riktiga pooler, mot vad `most_common` valde:
+
+| Dygn | Dokument | Oavgjorda | Byter land | Byter region |
+|---|---|---|---|---|
+| 20261111 | 3 786 | 198 | 101 | 74 |
+| 20261104 | 4 245 | 181 | 82 | 54 |
+
+**Foljd for aldre dygn.** En omkorning av ett dygn som frystes fore den har
+andringen kan darfor valja ett annat land, en annan region och i forlangningen
+ett annat urval an det frysta manifestet. Det ar priset for att gora
+tilldelningen till en egenskap hos innehallet; det alternativ som bevarade de
+gamla utfallen bevarade ocksa felet.
