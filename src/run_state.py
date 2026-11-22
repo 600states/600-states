@@ -285,7 +285,7 @@ def step_select(day):
     #
     # Golvet stoppar ingenting. Ett dygn under det fryses och publiceras som
     # alla andra och far bara inget nummer; serien ar numrerad, inte urvald.
-    med = sum(1 for r in rader if r["evidence_basis"] == "CAPTURED_IN_WINDOW")
+    med = sum(1 for r in rader if r["evidence_basis"] == pool_evidence.FONSTERNIVAN)
     andel = (f"{med}/{len(rader)} i fonstret = {med / len(rader):.1%}, "
              f"golv {pool_evidence.GOLV_KANONISK:.0%}")
     # TVA SKAL, INTE ETT. Ett dygn som fick for fa bevis i tid och ett dygn som

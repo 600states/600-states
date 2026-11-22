@@ -239,6 +239,27 @@ def gate_rent_trad(out: Path, stamp: str) -> None:
         "    python site/build.py <nagon annan mapp>" % stamp)
 
 
+# /labs AR ADRESSEN SOM REDAN AR PUBLICERAD. Atta publika inlagg bar
+# 600states.com/labs, och sidan ligger pa /labs.html - alltsa Apaches 404-sida
+# for var och en som foljer dem. En katalog med en index.html gor adressen
+# verklig utan .htaccess, som bara finns pa servern och inte i bygget.
+#
+# OMDIRIGERING OCH INTE EN KOPIA. labs.html pekar pa img/state_001.png med
+# relativ sokvag; ur /labs/ skulle den bli /labs/img/ och bilden forsvinna.
+# En kopia skulle dessutom vara tva filer att halla lika, och den sortens par
+# glider isar. /labs.html ror sig inte - aven den lanken ar publicerad, och
+# canonical pekar dit sa att sokmotorn vet vilken av de tva som ar sidan.
+LABS_REDIRECT = """<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="build" content="%s">
+<title>600 LABS</title>
+<link rel="canonical" href="https://600states.com/labs.html">
+<meta http-equiv="refresh" content="0; url=/labs.html">
+<p><a href="/labs.html">600 LABS</a>
+"""
+
+
 def main(argv):
     if len(argv) > 2:
         raise SystemExit("anvandning: python site/build.py [malmapp]")
@@ -276,6 +297,12 @@ def main(argv):
         # ligger ute ar LF.
         io.open(out / sida, "w", encoding="utf-8", newline="\n").write(html)
         print("  %-14s %7d bytes  build=%s" % (sida, (out / sida).stat().st_size, stamp))
+
+    (out / "labs").mkdir(exist_ok=True)
+    io.open(out / "labs" / "index.html", "w", encoding="utf-8",
+            newline="\n").write(LABS_REDIRECT % stamp)
+    print("  %-14s %7d bytes  -> /labs.html" %
+          ("labs/index.html", (out / "labs" / "index.html").stat().st_size))
 
     build_data(data_root, out)
 

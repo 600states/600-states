@@ -76,8 +76,12 @@ def attach(pool, path=CACHE):
 FONSTER_TIMMAR = 3            # efter att observationsdygnet stangde, 24:00 UTC
 KORNING_START_UTC = "00:05"   # avsedd start, klart fore 00:30; schemalaggningen byggs senare
 
+# NIVAN GOLVET RAKNAR PA, som en strang och inte fyra kopior av den. Den stod
+# som literal i serie(), i run_state och i revisionen, och det ar sa FYND 003
+# uppstod: tva definitioner av samma vokabular.
+FONSTERNIVAN = "CAPTURED_IN_WINDOW"
 BEVISNIVAER = ("NO_EVIDENCE", "RETROSPECTIVE", "CONTEMPORANEOUS_ARCHIVE",
-               "CAPTURED_IN_WINDOW")
+               FONSTERNIVAN)
 
 def basis(c, day):
     """Bevisnivan for EN kandidat i v3.0-vagen. day ar observationsdygnet, YYYYMMDD.
@@ -112,7 +116,7 @@ def basis(c, day):
         return "RETROSPECTIVE"
     forst = datetime.strptime(fm, "%Y%m%d%H%M%S").replace(tzinfo=timezone.utc)
     stangde = datetime.strptime(day, "%Y%m%d").replace(tzinfo=timezone.utc) + timedelta(days=1)
-    return ("CAPTURED_IN_WINDOW"
+    return (FONSTERNIVAN
             if forst < d.astimezone(timezone.utc) <= stangde + timedelta(hours=FONSTER_TIMMAR)
             else "RETROSPECTIVE")
 
@@ -202,7 +206,7 @@ def serie(rader):
     if not rader:
         return "UNQUALIFIED"
     i_fonstret = sum(1 for r in rader
-                     if (r.get("evidence_basis") or "").strip() == "CAPTURED_IN_WINDOW")
+                     if (r.get("evidence_basis") or "").strip() == FONSTERNIVAN)
     return "CANONICAL" if i_fonstret / len(rader) >= GOLV_KANONISK else "UNQUALIFIED"
 
 

@@ -36,6 +36,7 @@ En annan malmapp gar att ange: `python site/build.py <malmapp>`.
 
     index.html
     labs.html
+    labs/index.html
     data.js
     favicon.ico
     apple-touch-icon.png
@@ -44,7 +45,13 @@ En annan malmapp gar att ange: `python site/build.py <malmapp>`.
     img/state_003.png
     img/state_004.png
 
-Nio filer, cirka 480 KB. Ingenting annat. Mappen ar avsedd att speglas rakt
+Tio filer, cirka 480 KB. Ingenting annat.
+
+`labs/index.html` ar en omdirigering till `/labs.html` och finns for att
+adressen `600states.com/labs` star i atta publika inlagg och gav Apaches
+404-sida. Den genereras av bygget, som allt annat: den far inte bli en kopia
+av sidan som nagon maste komma ihag att uppdatera. `/labs.html` ar kvar och
+ar den kanoniska adressen. Mappen ar avsedd att speglas rakt
 upp, sa lagg aldrig nagot i den som inte ska vara publikt lasbart.
 
 Markena genereras ur state_001 vid varje bygge, som allt annat harlett ur

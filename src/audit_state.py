@@ -8,6 +8,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE)); sys.path.insert(0, str(HERE.parent))
 import statepaths as sp
+import pool_evidence as pe
 from config import DATA
 from color_protocol import hex_of_row
 
@@ -73,8 +74,33 @@ def audit(day, data=DATA):
     # ett obeslutat varde. Tills det ar beslutat redovisas siffran utan att
     # pasta att den ar godkand. Se AGENTS.md.
     withhash = sum(1 for r in pre if ev.get(r["representative_url"], {}).get("content_sha256"))
-    matt.append(("bevispost med innehallshash",
+    matt.append(("sidan gick att hamta alls - innehallshash finns",
                  f"{withhash}/600 = {withhash/6:.1f}% (ovriga ar 403/404/betalvagg)"))
+    # DET ANDRA MATTET, OCH DET SOM GOLVET FAKTISKT RAKNAR PA. FYND 014 den 20
+    # november forkastade hashandelen som matt pa serien: en innehallshash
+    # sager att vi HAR sidan, inte att vi hade den i tid. Golvet raknar sedan
+    # 9113f6e fonsternivan, och parameterregistret 1.15 och bevisspecen 3.1
+    # rattades samma dag - revisionen gjorde det inte, och var darmed tredje
+    # stallet dar det gamla mattet overlevde.
+    #
+    # BADA RADERNA STAR KVAR. De mater olika saker: den forsta hur stor del av
+    # poolen som gick att hamta alls, den andra hur stor del som hanns med inom
+    # fonstret. Ett retrospektivt dygn har hog forsta siffra och noll andra, och
+    # det ar precis den skillnaden som inte gick att se harifran forut.
+    #
+    # EN FORM UTAN FALTET GER INGEN NOLLA. v3.2 bar inte evidence_basis, och
+    # noll procent vore ett svar pa en fraga som aldrig stalldes. serie() lamnar
+    # den formen UNQUALIFIED, men det ar ett omdome; den har raden mater.
+    if "evidence_basis" in pre[0]:
+        ifonstret = sum(1 for r in pre
+                        if (r.get("evidence_basis") or "").strip() == pe.FONSTERNIVAN)
+        matt.append((f"sidan fangades i bevisfonstret - {pe.FONSTERNIVAN}",
+                     f"{ifonstret}/600 = {ifonstret/6:.1f}% "
+                     f"(golv {pe.GOLV_KANONISK:.0%} for kanoniskt medlemskap)"))
+    else:
+        matt.append((f"sidan fangades i bevisfonstret - {pe.FONSTERNIVAN}",
+                     f"gar inte att mata: formen {sp.version_of(files['pre-emotion'])} "
+                     "bar inte evidence_basis"))
 
     from datetime import date
     dd = date(int(day[:4]), int(day[4:6]), int(day[6:8])).strftime("%Y%m%d")
