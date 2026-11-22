@@ -20,16 +20,18 @@ Tre pastaenden provas:
    inkorningen, som kors med flit efter fonstret.
 """
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
 
 ROT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROT / "src"))
+import acquire
 import gates
 import pool_evidence as pe
 import run_state
+import statepaths as sp
 
 
 def nu(text):
@@ -147,3 +149,138 @@ def test_inget_fardigt_dygn_ger_inget_behov(monkeypatch):
     behov, fri, matt_pa = run_state._frirymdsbehov()
     assert behov is None
     assert fri == 7
+
+
+# =========================================================================
+# 4. HARLEDNINGEN HAR ETT ENDA HEM  (tillagt for 6f8d485)
+#
+# Tva program harleder nu dygnet: acquire och run_state. Korning A anropar
+# dem minuter isar. Harleder de pa var sitt satt kan de hamna pa olika dygn
+# av andra skal an klockan, och det syns ingenstans - acquire fryser ett
+# dygn och run_state bygger kandidater ur ett annat.
+#
+# Implementationen svarade pa midnattsfragan med ett resonemang ur koden,
+# inte med en korning. Testerna nedan gor om det till en matning.
+# =========================================================================
+
+
+def test_bada_programmen_harleder_genom_samma_funktion():
+    """EN DEFINITION, ETT STALLE. run_state.senast_stangda_dygnet ska vara en
+    bindning till statepaths funktion, aldrig en andra implementation."""
+    assert run_state.senast_stangda_dygnet is sp.senast_stangda_dygnet
+
+
+def test_acquire_harleder_samma_dygn_som_run_state_hela_dygnet_runt():
+    """Provat timme for timme over ett dygnsskifte. Ett avsteg pa en enda
+    timme racker: korning A startar 00:05 och en avvikelse dar ger ett
+    snapshot av ett dygn och kandidater ur ett annat."""
+    for d in (19, 20, 21):
+        for t in range(24):
+            klockan = nu(f"2026-11-{d:02d} {t:02d}:30")
+            assert sp.senast_stangda_dygnet(klockan) == run_state.senast_stangda_dygnet(klockan)
+
+
+def test_harledningen_byter_dygn_exakt_en_gang_per_dygn_och_vid_midnatt():
+    """Fangar en forskjutning eller en tidszonsglidning: byter vardet vid
+    01:00 i stallet for 00:00 ar NAS:ens lokala tid inblandad nagonstans."""
+    start = nu("2026-11-20 00:00")
+    byten = []
+    forra = None
+    for t in range(48):
+        klockan = start + timedelta(hours=t)
+        v = sp.senast_stangda_dygnet(klockan)
+        if forra is not None and v != forra:
+            byten.append(klockan.strftime("%Y-%m-%d %H:%M"))
+        forra = v
+    assert byten == ["2026-11-21 00:00"], f"bytte vid {byten}"
+
+
+def test_midnattsfallet_ar_hogljutt_fore_starttiden():
+    """MIDNATTSFALLET, HALVA ETT.
+
+    Hamnar acquire och run_state pa var sin sida om midnatt harleder
+    run_state ett dygn senare an det acquire frös. Sker dess anrop fore
+    00:05 stoppar fonstergrinden det: dygnet den harledde stangde nyss.
+
+    Implementationen laste sig till detta. Har kors det."""
+    frost_av_acquire = sp.senast_stangda_dygnet(nu("2026-11-21 23:58"))
+    harlett_av_run_state = sp.senast_stangda_dygnet(nu("2026-11-22 00:02"))
+    assert frost_av_acquire != harlett_av_run_state, "testet provar fel sak"
+    with pytest.raises(gates.GateFailure):
+        gates.gate_korningsfonster(nu("2026-11-22 00:02"), harlett_av_run_state)
+
+
+def test_efter_starttiden_ar_det_inte_fonstret_som_stoppar():
+    """MIDNATTSFALLET, HALVA TVA - OCH DEN HAR HALVAN AR INTE HELT PROVAD.
+
+    Efter 00:05 slapper fonstergrinden igenom. Da ar det rasnapshotet som far
+    stoppa: run_state letar efter det senare dygnets mentions-zip, och den kan
+    inte finnas, for det dygnet stangde i samma ogonblick.
+
+    Det HAR testet provar bara forsta ledet: att grinden inte ar det som
+    stoppar efter 00:05. Att run_state darefter avslutar med felkod 4 ar inte
+    kort av nagon part - det vilar pa lasning av koden, hos bade den som
+    byggde och den som provar."""
+    harlett = sp.senast_stangda_dygnet(nu("2026-11-22 00:06"))
+    assert harlett == "20261121"
+    gates.gate_korningsfonster(nu("2026-11-22 00:06"), harlett)
+
+
+# ---- acquires kommandorad ------------------------------------------------
+def _kor_acquire(monkeypatch, argv):
+    """Anropar acquire.main() med stubbad acquire(). Ror aldrig natet.
+
+    Provar KOMMANDORADEN, inte harledningen. Skillnaden ar inte akademisk:
+    en svit som bara provar statepaths.senast_stangda_dygnet slapper igenom
+    en acquire som slutat anropa den - och det var exakt felet som stoppade
+    inkorningens forsta natt 2026-11-22.
+    """
+    sett = {}
+    def stubb(day, budget=None, force=False, vanta_events=False):
+        sett.update(day=day, budget=budget, force=force, vanta=vanta_events)
+        return 0
+    monkeypatch.setattr(acquire, "acquire", stubb)
+    monkeypatch.setattr(sys, "argv", ["acquire.py"] + argv)
+    with pytest.raises(SystemExit):
+        acquire.main()
+    return sett
+
+
+def test_acquire_utan_argument_harleder_dygnet(monkeypatch):
+    sett = _kor_acquire(monkeypatch, [])
+    assert sett["day"] == sp.senast_stangda_dygnet(datetime.now(timezone.utc))
+
+
+def test_acquire_med_bara_en_flagga_harleder_anda(monkeypatch):
+    """REGRESSIONEN. --vanta-events tolkades som ett datum, och korning B
+    foll med felkod 1 innan den hunnit fraga GDELT om nagot."""
+    sett = _kor_acquire(monkeypatch, ["--vanta-events"])
+    assert sett["day"] == sp.senast_stangda_dygnet(datetime.now(timezone.utc))
+    assert sett["vanta"] is True
+
+
+def test_acquire_med_flera_flaggor_harleder_anda(monkeypatch):
+    sett = _kor_acquire(monkeypatch, ["--budget", "40", "--force"])
+    assert sett["day"] == sp.senast_stangda_dygnet(datetime.now(timezone.utc))
+    assert (sett["budget"], sett["force"]) == (40, True)
+
+
+def test_acquire_med_dygn_tar_dygnet(monkeypatch):
+    """Arkivvagen ska vara oforandrad."""
+    sett = _kor_acquire(monkeypatch, ["20261111"])
+    assert sett["day"] == "20261111"
+
+
+def test_acquire_med_dygn_och_flaggor(monkeypatch):
+    sett = _kor_acquire(monkeypatch, ["20261111", "--vanta-events", "--budget", "7"])
+    assert sett["day"] == "20261111"
+    assert (sett["vanta"], sett["budget"]) == (True, 7)
+
+
+def test_acquire_avvisar_ett_felaktigt_dygnsformat(monkeypatch):
+    """Ett trasigt datum ska kasta, aldrig harledas bort. Harleds det i tysthet
+    kor arkivvagen fel dygn utan att nagon ser det."""
+    monkeypatch.setattr(acquire, "acquire", lambda *a, **k: 0)
+    monkeypatch.setattr(sys, "argv", ["acquire.py", "2026-11-11"])
+    with pytest.raises(ValueError):
+        acquire.main()
