@@ -2,7 +2,8 @@
 
 Observationsdygnet ar enda indata. Allt annat harleds:
 
-    day        20261201            CLI-argument, UTC, aldrig systemklockan
+    day        20261201            CLI-argument, UTC - eller, nar inget ges,
+                                   senast_stangda_dygnet() har i filen
     ordinal    335                 dagnummer inom aret
     state_id   2026/335            som i Observation Day Rule v1.0 FROZEN
     state_key  2026_335            filnamnssaker form av samma sak
@@ -31,10 +32,28 @@ efterhandskorning av 2 januari 2026 hamnar i STATE_2026_002 bredvid, aldrig
 ovanpa.
 """
 import re
-from datetime import date
+from datetime import date, timedelta
 
 MANIFEST_VERSION = "v3.4"
 GENERATION_DIR = "08_V3_STATES"
+
+def senast_stangda_dygnet(nu_utc):
+    """Det UTC-dygn som senast stangde. ENDA STALLET dar en klocka blir ett dygn.
+
+    Bada programmens main() anropar den har nar inget dygn gavs pa
+    kommandoraden, och ingen annan kod laser klockan for att VALJA ett dygn.
+    De tre undantagen i AGENTS.md mater omvarlden - nar ett bevis hamtades,
+    hur lang tid ett steg tog, nar en fil blev atkomlig - och valjer ingenting.
+
+    Funktionen bor har for att dygnets form bor har: harledningen ger samma
+    YYYYMMDD som resten av filen tar emot, och tva program kan inte glida isar
+    om vad "i gar" betyder nar de rakar fram det pa var sitt stalle.
+
+    nu_utc kommer fran anroparen, aldrig ur en klockavlasning har: en
+    harledning som laser klockan sjalv gar inte att prova med en forstalld
+    klocka, och det ar hela poangen med att den ligger i en funktion.
+    """
+    return (nu_utc.date() - timedelta(days=1)).strftime("%Y%m%d")
 
 def _d(day):
     s = str(day).strip()

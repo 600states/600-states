@@ -1,6 +1,9 @@
 """Forvarvssteget. Hamtar ett dygns raflode och fryser det som snapshot.
 
-    python3 src/acquire.py <AAAAMMDD> [--budget N] [--force] [--vanta-events]
+    python3 src/acquire.py [AAAAMMDD] [--budget N] [--force] [--vanta-events]
+
+Utan dygn tas det UTC-dygn som senast stangde, harlett med samma funktion som
+run_state anvander. Dygnet som argument ar arkiv- och reparationsvagen.
 
 Tva kallor per dygn:
   96 st  GDELT 2.0 mentions, en fil per 15 minuter
@@ -38,6 +41,7 @@ det som saknas vid nasta forsok. --budget begransar antalet hamtningar per
 korning sa att steget far plats i ett kort tidsfonster.
 """
 import hashlib, json, sys, time, urllib.error, urllib.request, zipfile
+from datetime import datetime, timezone
 from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE)); sys.path.insert(0, str(HERE.parent))
@@ -69,10 +73,10 @@ EVENTS_TAK_S       = 4 * 3600
 def nu_utc():
     """Hamtningens tidpunkt. TREDJE KLOCKAVLASNINGEN I KEDJAN, se AGENTS.md.
 
-    Den valjer inget dygn - dygnet ar argumentet - utan mater nar en fil som
-    inte fanns forut blev atkomlig. Samma sort som fetch_evidence.retrieved_at_utc.
+    Den valjer inget dygn - det gor statepaths.senast_stangda_dygnet, och bara
+    nar main() inte fick nagot - utan mater nar en fil som inte fanns forut blev
+    atkomlig. Samma sort som fetch_evidence.retrieved_at_utc.
     """
-    from datetime import datetime, timezone
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 def slots(day):
@@ -266,12 +270,18 @@ def acquire(day, budget=None, force=False, vanta_events=False):
     return rc
 
 def main():
-    if len(sys.argv) < 2:
+    a = sys.argv[1:]
+    if "--help" in a or "-h" in a:
         sys.exit(__doc__)
-    day = sys.argv[1]
-    a = sys.argv[2:]
+    # HARLETT LAGE, samma regel som run_state: forsta argumentet ar ett dygn
+    # bara om det inte ar en flagga. Utan den provade --vanta-events att vara
+    # ett datum, och den dagliga korningen kunde inte anropa acquire alls.
+    harlett = not a or a[0].startswith("-")
+    day = sp.senast_stangda_dygnet(datetime.now(timezone.utc)) if harlett else a.pop(0)
+    sp.state_id(day)                      # validerar formatet, kastar vid fel
     budget = int(a[a.index("--budget") + 1]) if "--budget" in a else None
-    print(f"=== {sp.state_id(day)} — forvarv ===")
+    print(f"=== {sp.state_id(day)} — forvarv ==="
+          + ("  (dygnet harlett ur klockan)" if harlett else ""))
     sys.exit(acquire(day, budget, "--force" in a, "--vanta-events" in a))
 
 if __name__ == "__main__":

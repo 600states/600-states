@@ -40,17 +40,30 @@ Every step takes the observation day as an argument (`YYYYMMDD`, UTC). A daily
 run and a run of an older day must take exactly the same path, or the days are
 not comparable.
 
-**The clock is read in exactly one place — binding from 2026-11-20.** `main()`
-in `src/run_state.py` reads it once per run, and only to choose which day to
-run when no day was given on the command line. It becomes the `YYYYMMDD` string
-immediately, and every step, gate and module downstream is handed that string.
-A gate that needs the time takes it as an argument: a gate that reads the clock
-itself cannot be tried against a forged one, and a check that cannot be tried
-is not a check.
+**One function turns a clock into a day — binding from 2026-11-22.**
+`statepaths.senast_stangda_dygnet(nu_utc)` is that function, and the `main()`
+of each program calls it, once, and only when no day was given on the command
+line. Nothing else may derive a day from a clock. The result is the `YYYYMMDD`
+string immediately, and every step, gate and module downstream is handed that
+string. A gate that needs the time takes it as an argument: a gate that reads
+the clock itself cannot be tried against a forged one, and a check that cannot
+be tried is not a check. The function takes the clock as an argument for the
+same reason.
+
+This replaces "the clock is read in exactly one place — `main()` in
+`src/run_state.py`", binding from 2026-11-20. That rule named a location, and
+it stopped being true the day `src/acquire.py` needed the same derived day:
+`acquire` had no derived mode at all, so `python3 src/acquire.py
+--vanta-events` tried to read the flag as a date and the nightly run could not
+call it. A rule that names one `main()` has to be rewritten every time a second
+program needs the day, and each rewrite is a chance to copy the three lines
+instead of calling them. Naming the function instead makes the rule hold for
+however many programs there are, and makes "two programs disagree about what
+yesterday is" impossible rather than merely unlikely.
 
 No other function, gate or module calls `datetime.now`, `time.time` or anything
-equivalent to decide what is being measured. Two places read the clock for
-something else, and neither of them chooses a day:
+equivalent to decide **what day is being produced**. Three places read the
+clock to measure the world, and none of them chooses a day:
 
 - `src/fetch_evidence.py` stamps `retrieved_at_utc` on a fetch. That stamp is a
   measurement of the world, not a choice of day, and the evidence level is
@@ -59,8 +72,8 @@ something else, and neither of them chooses a day:
   run record. Neither value reaches a manifest row.
 - `src/acquire.py` stamps `mentions_frozen_at_utc` and `events_frozen_at_utc` in
   the snapshot manifest, and `events_last_404_utc` on the last attempt that came
-  back empty. **Binding from 2026-11-21.** The day is still the argument; what
-  these measure is when a file that did not exist became fetchable. GDELT
+  back empty. **Binding from 2026-11-21.** The day is chosen in `main()` and
+  nowhere else; what these three stamps measure is when a file that did not exist became fetchable. GDELT
   publishes a day's Events file hours after that day closed - measured
   2026-11-21 on 20261120, from the NAS: 404 every 15 minutes from 23:00 UTC
   through 07:45, 200 at 08:00:02, `Last-Modified` 07:00:11 - so the raw flow is
@@ -71,6 +84,7 @@ something else, and neither of them chooses a day:
   elapsed time, like `classify.py`, and chooses nothing.
 
 A fourth exception needs its reason written here before the call is written.
+A second way to derive a day does not get one: it is the rule itself.
 
 Never write a separate backfill script.
 

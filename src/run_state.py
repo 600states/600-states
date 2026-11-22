@@ -59,9 +59,10 @@ from build_classifier_input import claim_of, readable, is_digest
 
 STAGES = ["candidates", "pool", "regioner", "select", "input", "emotion"]
 
-def senast_stangda_dygnet(nu_utc):
-    """Det UTC-dygn som senast stangde. Enda stallet dar en klocka blir ett dygn."""
-    return (nu_utc.date() - timedelta(days=1)).strftime("%Y%m%d")
+# Harledningen bor i statepaths tillsammans med dygnets ovriga form. Namnet
+# star kvar har for att det ar har man letar efter det, men det ar samma
+# funktion som acquire.main() anropar - inte en kopia av den.
+senast_stangda_dygnet = sp.senast_stangda_dygnet
 
 def _dag(katalognamn):
     """STATE_2026_308 -> date(2026, 11, 4). Aret ar aldrig hardkodat."""
@@ -376,7 +377,8 @@ def main():
     args = sys.argv[1:]
     if "--help" in args or "-h" in args:
         sys.exit(__doc__)
-    # ENDA KLOCKAVLASNINGEN I KEDJAN. Harifran ar dygnet en strang.
+    # Klockan lases en gang, bara for att valja dygn, och blir genast en
+    # strang. Samma funktion anvands av acquire.main(); se AGENTS.md.
     nu = datetime.now(timezone.utc)
     harlett = not args or args[0].startswith("-")
     day = senast_stangda_dygnet(nu) if harlett else args.pop(0)
