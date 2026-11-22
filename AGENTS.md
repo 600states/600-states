@@ -485,16 +485,45 @@ That failure has now appeared five times in this project:
 In every one of them the work was competent and a check was run. It was aimed
 one step to the side of the thing that decides.
 
-**Every report of completed work states three things.**
+**Every report of completed work states four things.**
 
 1. **Which path decides.** Not the path that was convenient to test.
 2. **What was verified, and on which path it was run.**
 3. **What was NOT verified, and why.**
+4. **Which commit was verified.** Added 2026-11-22. The verified version and
+   the version that runs are not the same thing by default, and nothing in a
+   green suite says they are.
 
 Point 3 is the one that works. It costs the author nothing, because the author
 already knows it, and it is the only part a reviewer cannot reconstruct from
 the diff. Both errors found on 2026-11-18 were found because the author wrote
 it down without being asked.
+
+### Point 4: the version verified is not the version that runs
+
+On 2026-11-22 a report stated that `main` carried the fix it had just verified.
+It did not: a second commit had landed in between. The run that night took the
+later one. Nothing was wrong — `git diff <verified>..origin/main -- src/ tools/
+deploy/ config.py` was empty, so the deciding path was identical and the extra
+commit touched only tests.
+
+But that was established after the fact, by someone who thought to look. The
+report asserted it, and the report had no way to know.
+
+A scheduled run pulls whatever `main` holds when it fires. Between a report and
+a run there is always a window, and the longer the work queue the wider it gets.
+So the report names its commit, and whoever relies on it runs:
+
+    git diff <that commit>..origin/main -- src/ tools/ deploy/ config.py
+
+Empty means the deciding path has not moved. Anything else means the report
+describes a version that is no longer the one running.
+
+**This is not yet a gate, and saying so is the point.** Nothing stops a run
+whose deciding path moved after its last verification. Making it one requires
+recording a verified commit somewhere the run can read, and that has not been
+built. Until then this is a rule in a document — which this project's own
+record says is a wish, not a rule.
 
 *Verified in both directions* is not a report. *Verified on the filesystem;
 the SMB path could not be reached from here* is.
