@@ -42,25 +42,34 @@ folder currently carries one such addendum, named above.
 Each line is a document in this folder; the order is the order the instrument
 applies them.
 
-1. **Grid Specification** — the field: 30 × 20, chronological, no exceptions.
-   Read `..._ADDENDUM_A_MASTER_PX.md` with it, not after it.
-2. **Observation Day Rule** — which UTC day an observation belongs to. Every
-   other document assumes a day has already been chosen.
-3. **Emotion Classification Protocol** — the sixteen states and the one fixed
-   vocabulary they come from.
-4. **Emotion Classification Execution Spec** and **Execution Prompt** — how
-   the classification is run, and the exact text the model is given. The
-   prompt is the one place where the field name `neutral_source_claim`
-   appears as an interface.
-5. **Colour Protocol, Golden Master** — the anchors and the formula from
-   emotion to colour. Its `grid` block is subject to the addendum above.
-6. **Source Registry** — which domains a candidate may come from.
-7. **PreEmotion Duplicate Materiality Gate** — when two observations are the
-   same story, decided before any emotion is read.
-8. **Reflection Protocol** — and
-9. **Macro State Naming Protocol** — both frozen, neither implemented in code
-   yet. They are published as commitments, not as descriptions.
-10. **Observation Verification Protocol** — how a finished day is checked.
+1. **Grid Specification** — `600_STATES_Grid_Specification_v1.0_FROZEN_EXPORT.json`
+   the field: 30 × 20, chronological, no exceptions. Read
+   `600_STATES_Grid_Specification_v1.0_ADDENDUM_A_MASTER_PX.md` with it, not
+   after it.
+2. **Observation Day Rule** — `600_STATES_Observation_Day_Rule_v1.0_FROZEN.json`
+   which UTC day an observation belongs to. Every other document assumes a day
+   has already been chosen.
+3. **Emotion Classification Protocol** — `600_STATES_Emotion_Classification_Protocol_v1.0_FROZEN.json`
+   the sixteen states and the one fixed vocabulary they come from.
+4. **Emotion Classification Execution Spec** — `600_STATES_Emotion_Classification_Execution_Spec_v2.1_FROZEN.json`
+   how the classification is run.
+5. **Emotion Classification Execution Prompt** — `600_STATES_Emotion_Classification_Execution_Prompt_v2.1_FROZEN.txt`
+   the exact text the model is given. It is the one place in this folder where
+   the field name `neutral_source_claim` appears as an interface.
+6. **Colour Protocol, Golden Master** — `600_STATES_Color_Protocol_v0.4_GOLDEN_MASTER_FROZEN.json`
+   the anchors and the formula from emotion to colour. Its `grid` block is
+   subject to the addendum above.
+7. **Source Registry** — `600_STATES_Source_Registry_v2.0_FROZEN.csv`
+   which domains a candidate may come from.
+8. **PreEmotion Duplicate Materiality Gate** — `600_STATES_PreEmotion_Duplicate_Materiality_Gate_v1.0_FROZEN.md`
+   when two observations are the same story, decided before any emotion is
+   read.
+9. **Reflection Protocol** — `600_STATES_Reflection_Protocol_v1.0_FROZEN.json`
+   frozen, with no implementation in the code.
+10. **Macro State Naming Protocol** — `600_STATES_Macro_State_Naming_Protocol_v1.0_FROZEN.json`
+    the same. Both are published as commitments, not as descriptions.
+11. **Observation Verification Protocol** — `600_STATES_Observation_Verification_Protocol_v0.1.json`
+    how a finished day is checked.
 
 ## Licence
 
