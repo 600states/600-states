@@ -28,10 +28,10 @@ The colour protocol is CC0 here like the other three. `src/color_protocol.py`,
 the code that implements it, stays MIT with the rest of the instrument: the
 document and its implementation are different things and carry different terms.
 
-The evidence is CC0 for the same reason as the protocols, one step further. A
-proof held under licence is not a proof. Manifests and hashes carry no
-conditions at all on reproduction, citation or audit. None of it is published
-yet. The terms are settled; the publication is not.
+The evidence is CC0 for the same reason as the protocols, one step further:
+manifests and hashes carry no conditions at all on reproduction, citation or
+audit. None of it is published yet, so the terms are the only part that exists.
+A proof nobody can read is not yet a proof either, whatever its licence.
 
 The artwork is not free. The images are the work. Reproducing them from a
 manifest and the instrument is trivially possible and that is by design — it is
@@ -56,8 +56,9 @@ that rewrite — all 115 tree hashes are unchanged — and
 `docs/HISTORIK_OMSKRIVNING_2026-11-11.md` maps every old commit id to its new
 one and records what was verified.
 
-Said here, the claim is stronger than it was in seventy-two trailers. A
-trailer records which tool was in the room for one commit. This says what the
-instrument is: machine-written and human-decided, from the first line to the
-last. The project asks to be taken at its word on provenance, and that has to
-include its own.
+A trailer records which tool was in the room for one commit. This says what
+the instrument is: machine-written and human-decided, from the first line to
+the last. It is a statement, not a record — the per-commit records were removed
+on 11 November 2026, and the history before that rewrite is not publicly
+verifiable. The project asks to be taken at its word on provenance, and that
+has to include its own. This is the one place where it asks for exactly that.

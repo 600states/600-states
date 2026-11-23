@@ -289,7 +289,7 @@ footer .repo a:hover{color:var(--ink)}
           </table>
         </div>
         <p>The real rule turned out to be pipe&#8209;joining in column order. But that was not the serious part. This was: <b>the newer, nominally authoritative freeze could not be verified at all</b> &mdash; under any canonicalisation. The older generation was provable; its successor was not.</p>
-        <p>The rule now lives in code, not in prose. Prose cannot be executed.</p>
+        <p>The rule now lives in code, not in prose. Prose cannot be executed &mdash; though a rule in code proves only what it does on the inputs someone can still run it against.</p>
       </div>
     </article>
 
@@ -439,7 +439,7 @@ footer .repo a:hover{color:var(--ink)}
           </table>
         </div>
         <p>Read the same day again and eight tiles in fifty change their primary emotional state. About one tile in ten moves to a colour that is not a shade of the old one.</p>
-        <p><b>Nothing is broken.</b> This cannot be engineered away. It is a property of reading the world with a language model, and any other method that reads six hundred news items and assigns them emotional states &mdash; a human included &mdash; would do the same.</p>
+        <p><b>Nothing is broken.</b> Measured on 6&nbsp;November 2026: the same model, reading the same day through the same frozen prompt, moved eight of fifty primary states. Whether another model, another prompt or another instrument design would move fewer has not been tested, so we do not claim this is unavoidable. We claim it is ours, measured, and published rather than tuned away.</p>
         <p>But our language had implied more than existed, and the difference has to be written down.</p>
         <blockquote class="pull-paper">
           <p><b>True, and proven:</b> a frozen manifest always produces exactly the same image. Verified on a full day: 600 of 600 colours reproduced, master 3087&nbsp;&times;&nbsp;2057 pixels. The render is arithmetic. No model is involved in that step.</p>
@@ -549,7 +549,7 @@ footer .repo a:hover{color:var(--ink)}
         <p><b>And it could not be repaired.</b> Repair by elimination needs exactly one missing identifier and exactly one <em>unknown</em> one &mdash; then logic leaves only one observation the row can be. Here nothing is unknown; one is duplicated, and two rows claim the same observation. Choosing between them needs either an assumption about order or a similarity measure, and both were already tested and measured as unreliable.</p>
         <p>So the batch fails, which is correct. But the consequence was new: <b>a day can become impossible to complete</b> &mdash; and <em>one day, one run, one outcome</em> means it cannot be worked around by running the day again.</p>
         <p>The obvious fix was to have the model echo a second, shorter key beside the identifier. We rejected it, and the reason belongs here: <b>a disagreement between the two does not say which one slipped.</b> It would have been one more gate that looks like a check without being one.</p>
-        <p>What we did instead was to stop asking the model to copy identifiers at all. <b>Each observation is now sent on its own.</b> Identity comes from the request. With one observation there is no row to slip between &mdash; the failure is not repaired, it is impossible.</p>
+        <p>What we did instead was to stop asking the model to copy identifiers at all. <b>Each observation is now sent on its own.</b> Identity comes from the request. With one observation there is no row for an identifier to slip to. The failure is designed out rather than patched &mdash; which removes this failure, not every possible one.</p>
         <p>Then we read the frozen execution spec again, and found this:</p>
         <blockquote>
           <p><code>"row_independence_required": true</code></p>
@@ -612,7 +612,7 @@ footer .repo a:hover{color:var(--ink)}
           <p>The evidence was collected. It was carried to the last step. It was dropped at the one moment that makes a record permanent.</p>
         </blockquote>
         <p><b>The consequence is exact.</b> In the published record, a day captured as it happened and a day captured a fortnight later look identical. The distinction the new pipeline exists to make is the one distinction the manifest does not record &mdash; so it cannot be checked by a reader, and it cannot be checked by us.</p>
-        <p>Nothing was faked and no work is wrong because of this. What is wrong is the claim: <em>new States carry OBSERVED_AT_CAPTURE</em> is a sentence about a field that is not there. It has been removed from our public copy until the field exists, and the fix is small, because the measurement was never the problem.</p>
+        <p>What is wrong is the claim, not the measurement: <em>new States carry OBSERVED_AT_CAPTURE</em> is a sentence about a field that is not there. It has been removed from our public copy until the field exists, and the fix is small, because the measurement was never the problem. Whether anything else in that work is wrong is not something this finding settles, in either direction.</p>
         <p><b>Then we measured it.</b> With the rule written, we ran it over the three days this pipeline has produced, without writing anything:</p>
         <div class="data">
           <table>

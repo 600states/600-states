@@ -104,7 +104,11 @@ The instrument is governed by documents that are frozen and hashed:
 Observation Day Rule v1.0, Colour Protocol v0.4 GOLDEN MASTER, Emotion
 Classification Protocol v1.0, Grid Specification v1.0.
 `src/color_protocol.py` restates the colour anchors as literals. The
-protocol file is the authority and the literals must match it.
+protocol file is the authority and the literals must match it. The
+positive/negative partition in the same file has no counterpart in the protocol
+and no authority behind it. An addendum will state it; until then it is an
+unfrozen constant inside a frozen method, and it is named here rather than left
+to be found.
 
 A known discrepancy: the protocol's formula list does not state which emotion
 belongs to which lightness branch. That mapping exists only in code, and an
