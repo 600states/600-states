@@ -20,6 +20,9 @@ Fyra pastaenden:
      glida.
   4. Manifestet tacker varje dokument i katalogen. Ett dokument utan rad i
      manifestet ar opublicerat i praktiken: ingen kan kontrollera det.
+  5. Undantagslistan bar ingen riktig protokollfil. Den finns for riggning -
+     licens, lasanvisning, manifestets tva format - och ar annars vagen runt
+     de fyra pastaendena ovan.
 
 Testerna hoppas over utan arkivet. Da finns ingen kalla att jamfora mot, och ett
 test som da provar kopian mot sig sjalv vore varre an inget test.
@@ -38,7 +41,7 @@ import config
 
 KOPIAN = ROT / "protocols"
 MANIFEST = "MANIFEST_SHA256__600_STATES_PROTOCOLS_v1.0"
-EJ_DOKUMENT = {"LICENSE", MANIFEST + ".txt", MANIFEST + ".json"}
+EJ_DOKUMENT = {"LICENSE", "README.md", MANIFEST + ".txt", MANIFEST + ".json"}
 
 kraver_arkiv = pytest.mark.skipif(
     not config.FROZEN.exists(),
@@ -128,6 +131,24 @@ def test_manifestet_tacker_varje_publicerat_dokument():
     rader = _manifestrader()
     utan = [p.name for p in dokument() if p.name not in rader]
     assert utan == [], f"publicerade dokument utan rad i manifestet: {utan}"
+
+
+@kraver_arkiv
+def test_undantagslistan_innehaller_inget_arkiverat_dokument():
+    """EJ_DOKUMENT ar riggning, inte en undantagslista for protokoll.
+
+    Ett protokoll som skrivs in har slipper alla fyra pastaendena ovan utan att
+    nagot blir rott. Arkivet avgor: riggningen finns inte i config.FROZEN, varje
+    riktigt protokoll gor det. Den som later ett dokument glida in i listan far
+    det har testet rott, oavsett vad filen heter.
+
+    Katalograknningen (minst 12 dokument) fangar samma sak utan arkivet, sa de
+    tva tillsammans tacker bada vagarna.
+    """
+    inne = sorted(n for n in EJ_DOKUMENT if (config.FROZEN / n).exists())
+    assert inne == [], (
+        "EJ_DOKUMENT namner dokument som finns i arkivet - de ar protokoll och "
+        f"ska provas, inte undantas: {inne}")
 
 
 def _manifestrader():
