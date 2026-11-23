@@ -494,6 +494,31 @@ one step to the side of the thing that decides.
    the version that runs are not the same thing by default, and nothing in a
    green suite says they are.
 
+**Every factual claim in a report carries the command that produced it and that
+command's output — added 2026-11-23.** The rule above covers numbers. It does
+not cover claims about what a file says, what a document settles, or what did
+not change, and those failed the same day it was written.
+
+A claim without a pasted command is not a claim. Write "unverified" instead.
+
+Two incidents, both on 2026-11-23, both with a check that ran and passed:
+
+- `git diff 170a2fc..HEAD -- site/` returned nothing and was reported as "the
+  site is unchanged". `site/dist/` is in `.gitignore` line 12, so that diff
+  could not see the built page at all. The live page and the built page
+  differed by two commits. Empty output means either "nothing changed" or
+  "nothing here is tracked", and only one command tells them apart:
+  `git ls-files site/dist`.
+- A probe for a corrected sentence searched for a phrase the replacement text
+  deliberately kept, and reported the fix as missing. The control that settled
+  it searched for the clause that was actually removed.
+
+**A negative claim carries a positive control.** Before "nothing changed",
+"it does not appear", or "there is no such file", run the same measurement in a
+form that must produce output, and paste that too. Otherwise the report
+establishes that the instrument was pointed somewhere, not that it was pointed
+at the right thing.
+
 **No figure in a report is typed from memory — added 2026-11-23.** Every number
 is pasted from the run that produced it. The suite's counts come from
 `python tools/matt.py`, which runs it with and without the archive, reads both
@@ -562,6 +587,40 @@ versioned, travels with the change, and can still be found in three months by
 whoever runs `git log` on the line that broke. A chat window is for questions
 and for what needs a decision. What merely describes what the code does belongs
 in the commit.
+
+## Search before proposing a change — binding from 2026-11-23
+
+Before an identifier, a constant or a published sentence is proposed for
+change, it is searched for across `protocols/`, `src/`, `tests/` and `site/`.
+The proposal states where it occurs. A proposal made without that search is
+withdrawn, not argued.
+
+The field `neutral_source_claim` was recommended for renaming because its name
+asserts a property its content does not have. The name is written into
+`protocols/600_STATES_Emotion_Classification_Execution_Prompt_v2.1_FROZEN.txt`
+on lines 10 and 16. Renaming it would have required thawing and rehashing a
+frozen protocol eight nights before the series opens, and would have touched
+five source files and three tests. One `grep` would have found that before the
+recommendation was made rather than after. The field keeps its name; the public
+sentence was corrected instead, and the wrong name is now stated publicly as
+wrong rather than quietly fixed.
+
+## A settled question is not reopened by asking — binding from 2026-11-23
+
+Whoever knows the subject decides it, in the message that raises it. Handing a
+technical question back costs a day of someone else's attention and buys
+nothing. What belongs to the owner: a name, money, legal exposure, time. Not a
+measurement, a format, a parameter or a wording.
+
+Before a question is raised as open, the folder it would be settled in is read.
+`master_px` was raised as a decision about the meaning of the freeze. It had
+been settled on 2026-11-05 in
+`protocols/600_STATES_Grid_Specification_v1.0_ADDENDUM_A_MASTER_PX.md`, which
+states the measurement, the two rejected alternatives and the reason the frozen
+files are not rewritten. The addendum was in the same folder as the file it
+corrects, and its hash was already in the manifest. What was actually missing
+was a reader's guide, which is a smaller thing than a frozen decision and was
+written as `protocols/README.md`.
 
 ## No figure is published on one measurement — binding from 2026-11-10
 
