@@ -23,12 +23,16 @@ Fyra pastaenden:
   5. Undantagslistan bar ingen riktig protokollfil. Den finns for riggning -
      licens, lasanvisning, manifestets tva format - och ar annars vagen runt
      de fyra pastaendena ovan.
+  6. Lasanvisningens lasordning namner varje dokument och bara dem. Ordningen
+     bor bara dar, men NAMNEN ar en andra kopia av katalogen - FYND 004:s form
+     mellan prosa och filsystem. Byter ett dokument namn glider listan tyst.
 
 Testerna hoppas over utan arkivet. Da finns ingen kalla att jamfora mot, och ett
 test som da provar kopian mot sig sjalv vore varre an inget test.
 """
 import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -149,6 +153,72 @@ def test_undantagslistan_innehaller_inget_arkiverat_dokument():
     assert inne == [], (
         "EJ_DOKUMENT namner dokument som finns i arkivet - de ar protokoll och "
         f"ska provas, inte undantas: {inne}")
+
+
+LASANVISNING = "README.md"
+DOKUMENTANDELSER = (".json", ".txt", ".csv", ".md")
+
+
+def _lasordningen():
+    """Avsnittet "Reading order" ur lasanvisningen, fram till nasta rubrik."""
+    text = (KOPIAN / LASANVISNING).read_text(encoding="utf-8")
+    delar = text.split("## Reading order", 1)
+    assert len(delar) == 2, "lasanvisningen har inget avsnitt 'Reading order'"
+    return delar[1].split("\n## ", 1)[0]
+
+
+def _bakatfasta(avsnitt):
+    return re.findall(r"`([^`\n]+)`", avsnitt)
+
+
+def test_lasanvisningen_namner_rattelsen():
+    """Lasanvisningen finns till for EN sak: att den som laser grid-specen
+    hittar addendumet innan hen implementerar 3000 x 2000. Star inte talet dar
+    har dokumentet slutat gora sitt jobb, och ett undantaget dokument som ingen
+    kontrollerar sager snart inte det det finns till for."""
+    text = (KOPIAN / LASANVISNING).read_text(encoding="utf-8")
+    for krav in ("3087", "2057", "ADDENDUM_A_MASTER_PX"):
+        assert krav in text, f"lasanvisningen namner inte {krav}"
+
+
+def test_lasordningen_och_katalogen_sager_samma_sak():
+    """At bada hallen.
+
+    Ett namn utan fil: lasanvisningen pekar pa nagot som inte finns, och den
+    som foljer den stannar. En fil utan punkt: ett protokoll som ingen
+    lasordning namner, alltsa publicerat men inte anvisat.
+
+    Bakatfastingar i avsnittet bar aven identifierare inne i dokumenten -
+    neutral_source_claim och grid nar det har skrevs. Filtret ar filandelsen,
+    och det som filtreras bort provas separat nedan sa att bortfiltreringen
+    inte kan dolja ett filnamn.
+    """
+    avsnitt = _lasordningen()
+    namngivna = [t for t in _bakatfasta(avsnitt) if t.endswith(DOKUMENTANDELSER)]
+    filer = {p.name for p in dokument()}
+
+    dubbletter = sorted({n for n in namngivna if namngivna.count(n) > 1})
+    assert dubbletter == [], f"namnet star mer an en gang i lasordningen: {dubbletter}"
+
+    utan_fil = sorted(set(namngivna) - filer)
+    utan_punkt = sorted(filer - set(namngivna))
+    assert utan_fil == [], (
+        "lasordningen namner filer som inte finns i protocols/ - ett dokument "
+        f"har bytt namn eller tagits bort: {utan_fil}")
+    assert utan_punkt == [], (
+        "dokument i protocols/ som ingen punkt i lasordningen namner - "
+        f"publicerat men inte anvisat: {utan_punkt}")
+
+
+def test_filtret_i_lasordningen_doljer_ingen_fil():
+    """Det som filtrerades bort far inte vara ett dokument under annat namn."""
+    avsnitt = _lasordningen()
+    bortfiltrerat = [t for t in _bakatfasta(avsnitt)
+                     if not t.endswith(DOKUMENTANDELSER)]
+    ar_anda_fil = sorted(t for t in bortfiltrerat if (KOPIAN / t).exists())
+    assert ar_anda_fil == [], (
+        "bakatfast namn utan dokumentandelse som anda ar en fil i protocols/ - "
+        f"filtret skulle ha slappt igenom det: {ar_anda_fil}")
 
 
 def _manifestrader():
