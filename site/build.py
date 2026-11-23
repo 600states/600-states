@@ -38,7 +38,7 @@ def render_for(state_dir: Path, day: str) -> Path:
     return found[-1]
 
 
-def build_data(data_root: Path, out: Path) -> None:
+def build_data(data_root: Path, out: Path) -> dict:
     """Skriver data.js: 600 rutor med farg, tolkning OCH kallan bakom.
 
     Kedjan nyhet -> observation -> emotion -> farg far aldrig kortas av, sa de
@@ -87,6 +87,7 @@ def build_data(data_root: Path, out: Path) -> None:
         json.dump(payload, f, ensure_ascii=False, separators=(",", ":"))
         f.write(";\n")
     print("  data.js        %7d bytes  %s" % ((out / "data.js").stat().st_size, agreement))
+    return agreement
 
 
 TALORD = {"ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14,
@@ -296,6 +297,12 @@ def main(argv):
 
     stamp = build_stamp()
     gate_rent_trad(out, stamp)
+
+    # Fore sidorna, for att index.html bar talet ur den har rakningen. En andra
+    # rakning for prosan vore samma varde pa tva stallen - FYND 004 - och den
+    # forsta av dem raknade med ett reguljart uttryck over hela data.js och gav
+    # 603 traffar over 600 rutor. Talet kommer ur faltet, en gang.
+    agreement = build_data(data_root, out)
     # Varje sida stamplas, och en sida utan stampel faller bygget: en sida som
     # inte gar att binda till en version ar inte sparbar, och det ar hela
     # skalet till att stampeln finns.
@@ -311,6 +318,12 @@ def main(argv):
             if k != 1:
                 raise SystemExit("hittar ingen plats for testtalet i " + sida)
             print("  %-14s %d tester over urval och storytak" % ("rakning:", n))
+            utan = agreement.get("1/3", 0)
+            html, k = re.subn(r"(<span data-nocons>)[^<]*(</span>)",
+                              r"\g<1>%d\g<2>" % utan, html, count=1)
+            if k != 1:
+                raise SystemExit("hittar ingen plats for talet utan samstammighet i " + sida)
+            print("  %-14s %d rutor utan samstammighet (1/3)" % ("enighet:", utan))
         if sida == "labs.html":
             kap = gate_hjaltens_rakning(html)
             print("  %-14s %d kapitel, hjaltens rakning stammer" % ("grind:", kap))
@@ -326,8 +339,6 @@ def main(argv):
             newline="\n").write(LABS_REDIRECT % stamp)
     print("  %-14s %7d bytes  -> /labs.html" %
           ("labs/index.html", (out / "labs" / "index.html").stat().st_size))
-
-    build_data(data_root, out)
 
     build_favicon(data_root, out)
 
