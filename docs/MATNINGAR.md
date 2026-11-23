@@ -514,3 +514,77 @@ andringen kan darfor valja ett annat land, en annan region och i forlangningen
 ett annat urval an det frysta manifestet. Det ar priset for att gora
 tilldelningen till en egenskap hos innehallet; det alternativ som bevarade de
 gamla utfallen bevarade ocksa felet.
+
+## Tva tal till ett publikt inlagg: pilotens 600 och ombyggnadens 82 (2026-11-23)
+
+Ett publikt inlagg gar inte att ratta efter publicering, bara radera. Darfor
+provades bada talen mot frysta filer innan de skrevs, och resultatet star har
+i stallet for i ett chattfonster.
+
+### "In the pilot, all 600 tiles were classified from words in the URL" — 600 stammer
+
+Frys: `02_PILOT_SERIES_001_010_SUPERSEDED_FOR_VALIDATION/`
+`PILOT_SERIES_001_010_AUDIT_SNAPSHOT_v1.0.zip`, sha256
+`bd6a82bc78df58aafe86e02b0bb10ae2444b630df178ac44b3bd34fe2afae40a` — identisk
+med den medfoljande `_SHA256.txt`. Filen i zippen:
+`600_STATES_2026_001_FINAL_TILE_MANIFEST_v2.0_STANDARDIZED.csv`.
+
+| Matt | Utfall |
+|---|---|
+| Rader | 600 |
+| `representative_slug` ifylld | 600 av 600 |
+| Falt som bar en sidtitel | finns inte i formen |
+
+Slugen ar URL:ens sokvag med skiljetecken utbytta mot mellanslag. En naiv
+kontroll fann 596 av 600 dar slugordens forsta sex ord ater finns i adressen;
+de fyra avvikelserna ar kontrollens fel och inte radernas — `9.7031233` och
+procentkodat `%E2%80%99` delas i bitar av ordsplittringen. Alla fyra ar
+URL-harledda vid genomlasning.
+
+**Vad talet INTE visar.** Pilotens klassificerarinmatning ar inte bevarad.
+Det frysta visar att slugen fanns for alla 600 och att formen inte hade nagot
+annat textfalt — inte vad modellen las. Slutsatsen vilar pa franvaron av ett
+alternativ, inte pa en bevarad inmatning.
+
+**Och "the pilot" ar tio dygn, 6 000 rutor.** Bara dygn 001 har ett
+FINAL_TILE_MANIFEST i frysen; ovriga nio bar bara emotions- och
+fargmanifest, utan slugkolumn. Talet 600 galler dygn 001.
+
+### "The same day rebuilt: 82" — stammer, ur en fil som maste pekas ut exakt
+
+Frys: `08_V3_STATES/STATE_001/classifier_input/batch_01.json` … `batch_10.json`,
+60 observationer per fil.
+
+| `claim_source` | Antal |
+|---|---|
+| LIVE_FETCH | 515 |
+| URL_SLUG | **82** |
+| PAGE_TITLE_UNVERIFIED | 3 |
+
+**Att det ar RATT frys ar sjalva poangen.** Samma mapp bar tre inmatningar
+for samma dygn, och de ger olika tal:
+
+| Plats | URL_SLUG | Matchar `site_001.json` |
+|---|---|---|
+| `classifier_input/` | 82 | 600 av 600 |
+| `input_v3.1/` | 108 | 14 av 600 |
+| `classifier_input_batch_NN.json` i roten | faltet saknas | 10 av 600 |
+
+Mappen som heter `input_v3.1` ar alltsa inte v3.1:s inmatning. Den som
+producerade det publicerade verket ar `classifier_input/`, och det avgors inte
+av namnet utan av att alla 600 `neutral_source_claim` ar identiska med
+rutorna i `site_001.json`.
+
+**Vad 82 inte ar.** Det ar inte antalet sidor som inte gick att hamta. Av de
+82 hade 30 statuskod 200 — sidan hamtades, men titeln var oanvandbar eller
+horde inte till adressen och forkastades av `_relates`. Resterande 52 ar
+403/404/omdirigeringar eller utan bevispost.
+
+| `claim_source` och `evidence_http_status` | Antal |
+|---|---|
+| URL_SLUG, 200 | 30 |
+| URL_SLUG, 403 | 22 |
+| URL_SLUG, tomt | 15 |
+| URL_SLUG, 404 | 8 |
+| URL_SLUG, 308 | 6 |
+| URL_SLUG, 301 | 1 |

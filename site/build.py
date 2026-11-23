@@ -103,6 +103,10 @@ def gate_hjaltens_rakning(html: str) -> int:
     Att lamna den ogrindad pa just den har sidan vore att upprepa kapitel IV,
     "The check that could not fail".
 
+    Talordet far ocksa sta pa bara ETT stalle i sidans beskrivning av sig
+    sjalv. En rakning pa tva stallen ar en rakning som bara halvt gar att
+    ratta.
+
     Returnerar antalet kapitel. Faller med besked om de inte stammer."""
     kapitel = len(re.findall(r'<p class="ch-num">[IVXLC]+</p>', html))
     lead = re.search(r'<p class="lead">(.*?)</p>', html, re.S)
@@ -118,6 +122,25 @@ def gate_hjaltens_rakning(html: str) -> int:
             "hjalten sager %s (%d) men sidan har %d kapitel — "
             "andra ordet eller kapitlen, bygget stoppas"
             % (ord_.group(1), sagt, kapitel))
+    # EN RAKNING, ETT STALLE. Talordet stod bade i hjalten och i underrubriken,
+    # och grinden sag bara hjalten: vid sjutton kapitel hade den ena rattats och
+    # den andra blivit kvar. Det ar FYND 004:s form - ett varde pa tva stallen -
+    # den har gangen i grindens egen text.
+    #
+    # Bara sidans beskrivning av sig sjalv raknas. Kapiteltexten namner sexton
+    # kanslor och sexton hextecken, och innehallsforteckningen bar en
+    # kapitelrubrik med samma ord; inget av det ar ett pastaende om sidan.
+    omsig = [lead.group(1)] + [m.group(1) for m in (
+        re.search(r'<p class="sub">(.*?)</p>', html, re.S),
+        re.search(r'<meta name="description" content="(.*?)">', html, re.S)) if m]
+    helt = r"(?<![A-Za-z])%s(?![A-Za-z])" % ord_.group(1)
+    star = sum(len(re.findall(helt, t, re.I)) for t in omsig)
+    if star != 1:
+        raise SystemExit(
+            "talordet %s star %d ganger i sidans beskrivning av sig sjalv "
+            "(hjalten, underrubriken, meta-beskrivningen) — det ska sta pa "
+            "ETT stalle, annars rattas bara det ena nar kapitlen blir fler"
+            % (ord_.group(1), star))
     return kapitel
 
 
