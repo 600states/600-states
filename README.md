@@ -102,8 +102,9 @@ Both need the data archive, which is not in this repository. Point
 
 The instrument is governed by documents that are frozen and hashed:
 Observation Day Rule v1.0, Colour Protocol v0.4 GOLDEN MASTER, Emotion
-Classification Protocol v1.0, Grid Specification v1.0. The code reads the
-colour anchors from the protocol file rather than restating them.
+Classification Protocol v1.0, Grid Specification v1.0.
+`src/color_protocol.py` restates the colour anchors as literals. The
+protocol file is the authority and the literals must match it.
 
 A known discrepancy: the protocol's formula list does not state which emotion
 belongs to which lightness branch. That mapping exists only in code, and an

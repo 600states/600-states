@@ -465,7 +465,7 @@ h2{font-size:var(--step-head)}
       <thead><tr><th>Version</th><th>What it governs</th><th>How it is held</th><th>Terms</th></tr></thead>
       <tbody>
         <tr class="r"><td>v1.0</td><td>Observation Day Rule</td><td>Frozen document, SHA-256 published</td><td>CC0</td></tr>
-        <tr class="r"><td>v0.4</td><td>Colour Protocol, Golden Master</td><td>Reproduces 3&thinsp;600 of 3&thinsp;600 known tiles</td><td>MIT</td></tr>
+        <tr class="r"><td>v0.4</td><td>Colour Protocol, Golden Master</td><td>Reproduces 3&thinsp;600 of 3&thinsp;600 known tiles</td><td>CC0</td></tr>
         <tr class="r"><td>v1.0</td><td>Emotion Classification Protocol</td><td>Sixteen states, one fixed vocabulary</td><td>CC0</td></tr>
         <tr class="r"><td>v1.0</td><td>Grid Specification</td><td>30 × 20, chronological, no exceptions</td><td>CC0</td></tr>
         <tr class="r"><td></td><td>Consensus over three passes</td><td>Rebuilt field by field from the raw passes</td><td>MIT</td></tr>
@@ -474,7 +474,7 @@ h2{font-size:var(--step-head)}
         <tr class="r"><td></td><td>The rendered States</td><td>Reproducible from manifest and instrument</td><td>All rights reserved</td></tr>
       </tbody>
     </table>
-    <p class="cap r">The proof is not that we kept a copy. The proof is that we could not have made it later. The instrument went public before the series began. A day cannot be read until it has ended, so each day&#39;s manifest is frozen and hashed after the day closes &mdash; hours later, not weeks. The interval is the point: late enough that the day was complete, early enough that nothing was reconsidered.</p>
+    <p class="cap r">What is proved is narrower than it sounds. A day cannot be read until it has ended, so each day&#39;s manifest is frozen and hashed after the day closes &mdash; hours later, not weeks. What the hash proves is that the manifest has not changed since the freeze. It does not prove the freeze was the first attempt. No mechanism can prove that, and we do not claim it.</p>
   </div>
 </section>
 
@@ -482,7 +482,7 @@ h2{font-size:var(--step-head)}
   <div class="head"><h2 class="r">Before you ask</h2></div>
   <div class="q r">
     <h3>Does this measure how the world felt?</h3>
-    <p>No, and it never claims to. 600 STATES interprets the emotional state of the world's news through the same transparent protocol every day. It does not measure human feeling, and it is not sentiment analysis of headlines: every observation is first reduced to a neutral factual representation, so the model reads the event rather than the publisher's rhetoric.</p>
+    <p>No, and it never claims to. 600 STATES interprets the emotional state of the world's news through the same transparent protocol every day. It does not measure human feeling, and it is not sentiment analysis of headlines: the publisher's masthead is removed from every headline deterministically, before any model reads it, and the frozen prompt forbids classifying the publisher's rhetoric. The headline's own wording is what the model receives. No step rewrites it into neutral language first, and the field that carries it is misnamed. The name is frozen, so it stays.</p>
   </div>
   <div class="q r">
     <h3>Does an AI make the picture?</h3>
@@ -496,13 +496,13 @@ h2{font-size:var(--step-head)}
   <div class="q r">
     <h3>What are the days shown on this page?</h3>
     <p>Calibration days. The first ten days were produced by an earlier generation of the instrument and used to test it, and they surfaced real method defects, which are documented. They carry a retrospective evidence basis, not evidence captured at the moment of observation, and they are not canonical works.</p>
-    <p>States produced from 1 December 2026 capture and hash their source at selection time. That distinction is published rather than hidden, because it is the only version that survives a critic.</p>
+    <p>States produced from 1 December 2026 capture and hash their source at selection time. A day is numbered when at least ninety per cent of its rows carry source content captured inside the evidence window, so up to sixty tiles in a numbered State may rest on a hashed reference without captured page content. The floor is published rather than hidden, because it is the only version that survives a critic.</p>
     <p>These ten days are also known to be defective: the candidate pool was built from an earlier version of the source registry than the manifests declare. The defect is documented, and the days will be rebuilt once the instrument is frozen &mdash; rebuilding them against an instrument still being corrected would only produce a second set to discard. Rebuilding fixes the registry defect; it cannot make them canonical, because evidence fetched months later cannot be evidence from inside the day, whatever the instrument does. The figures on this page come from that defective generation and are shown as instrument behaviour, not as results.</p>
   </div>
   <div class="q r">
     <h3>What exactly can be collected?</h3>
     <p>One day: its image, its manifest, and the evidence trail behind all 600 tiles. The image is the Proof of State. The manifest is the Proof of Work. Beautiful enough to collect, rigorous enough to audit.</p>
-    <p>The collection is finite because the calendar is finite. Write to <a href="mailto:archive@600states.com">archive@600states.com</a> to be told before the first State is observed.</p>
+    <p>The collection is finite because the series is capped at 600 numbered works in code, not because the calendar runs out. Write to <a href="mailto:archive@600states.com">archive@600states.com</a> to be told before the first State is observed.</p>
   </div>
   <div class="q r">
     <h3>What happens on a boring day?</h3>
@@ -537,6 +537,7 @@ h2{font-size:var(--step-head)}
     <ul class="r">
       <li>Licensing</li>
       <li>Instrument, MIT</li>
+      <li>Protocols, CC0 1.0</li>
       <li>Evidence, CC0 1.0</li>
       <li>Artwork, all rights reserved</li>
     </ul>

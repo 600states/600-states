@@ -477,7 +477,7 @@ footer .repo a:hover{color:var(--ink)}
         <blockquote>
           <p><code>Messages.stream() got an unexpected keyword argument 'temperature'</code></p>
         </blockquote>
-        <p>Checked three ways: the SDK signature has neither <code>temperature</code> nor <code>top_p</code>; the words do not appear anywhere in its message types; the API reference lists the body parameters without them. <b>Sampling is not something you can set for this generation of models.</b> The control is called effort, and it was already written out in the instrument.</p>
+        <p>Checked three ways: the SDK signature has neither <code>temperature</code> nor <code>top_p</code>; the words do not appear anywhere in its message types; the API reference lists the body parameters without them. <b>Our client path exposes no sampling controls.</b> That is what was measured. Whether this model generation accepts them on another path was not tested. The control is called effort, and it was already written out in the instrument.</p>
         <p>The question is closed &mdash; but not by a measurement. There was nothing there to measure. The old note said the vendor&rsquo;s default applies, which implies a value someone could have chosen and we declined to. No such value exists in this chain. The field stays in the journal, because a field that disappears reads as though the question was never asked, but the note now says what is true and how it was checked.</p>
         <p>The mistake was not the instrument&rsquo;s. Nobody read the signature before writing the measurement. Three minutes would have been enough.</p>
         <p><b>Then the measurement erased another measurement.</b> That morning the calibration file had been fixed against exactly this: one run used to delete another, so results are merged rather than replaced. The merge kept entries for models that were <em>not</em> in the new run. It protected against a different model &mdash; but not against <b>the same model run again</b>, which is the commonest case of all. The evening run took the morning&rsquo;s place without a word, and the raw responses with it.</p>
@@ -629,7 +629,7 @@ footer .repo a:hover{color:var(--ink)}
         <blockquote class="pull">
           <p>Eighth time. The rule existed, it was documented, it was frozen &mdash; and it was not in the code path that decides.</p>
         </blockquote>
-        <p><b>And it answered a question we had not asked properly.</b> Looking for where the stamp was lost meant walking the pipeline stage by stage, and that showed something about the series itself: <b>exactly one stage is time&#8209;critical</b>. Acquiring the raw feed can be done from an archive. Selection, classification, colour and rendering all run over material that is already frozen, and give the same result whenever they run.</p>
+        <p><b>And it answered a question we had not asked properly.</b> Looking for where the stamp was lost meant walking the pipeline stage by stage, and that showed something about the series itself: <b>exactly one stage is time&#8209;critical</b>. Acquiring the raw feed can be done from an archive. Selection, colour and rendering all run over material that is already frozen, and give the same result whenever they run. Classification does not. It is the one stage whose output varies, and chapter IX measures by how much.</p>
         <p>Only the fetch depends on <em>when</em> it happens. Everything else can be late without being wrong.</p>
         <blockquote class="pull">
           <p>A daily series does not need a machine running every day. It needs the page fetched close to the day. The reading can wait.</p>
@@ -667,7 +667,7 @@ footer .repo a:hover{color:var(--ink)}
             </tbody>
           </table>
         </div>
-        <p><b>Nothing was wrong with the run.</b> Two requests had failed on the first round and succeeded on the retry. The retry exists precisely to heal that. But the error list was never cleared between rounds, so the gate counted two attempts that no longer corresponded to anything in the measurement.</p>
+        <p><b>The gate was wrong about what it counted.</b> Two requests had failed on the first round and succeeded on the retry. The retry exists precisely to heal that. But the error list was never cleared between rounds, so the gate counted two attempts that no longer corresponded to anything in the measurement. What else that run may have contained cannot be established: the raw answer was written under the request&rsquo;s own name, and the retry overwrote it. A later paragraph in this chapter is how that was fixed.</p>
         <blockquote class="pull">
           <p>The gate counted attempts. The run is made of rows.</p>
         </blockquote>
