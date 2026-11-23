@@ -494,6 +494,27 @@ one step to the side of the thing that decides.
    the version that runs are not the same thing by default, and nothing in a
    green suite says they are.
 
+**No figure in a report is typed from memory — added 2026-11-23.** Every number
+is pasted from the run that produced it. The suite's counts come from
+`python tools/matt.py`, which runs it with and without the archive, reads both
+exit codes directly, and prints the line to paste. It prints nothing when the
+suite is red.
+
+This was written after the same error twice in two days: a report stated 279
+and 299 where the suite had 280 and 298. Neither was carelessness in the
+ordinary sense. The report and the test run were issued in one shell call, so
+the heredoc holding the message was written before the output existed — the
+number could only ever be an estimate at the moment it was typed. **The order
+of operations made the error certain.**
+
+The project had already decided this question elsewhere and in the other
+direction: the website's test count stood written as 42 when it was 16, and
+since `0ac74ec` it is counted at build time. The rule was enforced on the page
+and not on the reports about it.
+
+*Uppmätt slår uppräknat* is not a disposition. It is a question of where the
+number comes from.
+
 Point 3 is the one that works. It costs the author nothing, because the author
 already knows it, and it is the only part a reviewer cannot reconstruct from
 the diff. Both errors found on 2026-11-18 were found because the author wrote
