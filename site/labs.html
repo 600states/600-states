@@ -263,6 +263,7 @@ footer .repo a:hover{color:var(--ink)}
     <p class="r">600 STATES turns one UTC day of observed news into one image. Six hundred observations, each read through a frozen emotional protocol, each converted to a colour by a frozen formula, laid out in the order they happened across a 30&nbsp;&times;&nbsp;20 field. Nothing is composed. No colour is chosen. If a day comes out ugly, the day came out ugly.</p>
     <p class="r" style="margin-top:1.15em">That is an easy thing to claim and a hard thing to be true. So this page is the audit &mdash; including the findings that made finished work worthless.</p>
     <p class="r" style="margin-top:1.15em">And the instrument is open. Every gate named below is a few lines of code you can read: <a class="lnk" href="https://github.com/600states/600-states">github.com/600states/600-states</a>. An audit you cannot check is an advertisement.</p>
+    <p class="r" style="margin-top:1.15em">And it was written with AI. The instrument is machine&#8209;written and human&#8209;decided, from the first line to the last. How much of which commit is not recorded, so that is a statement and not a record &mdash; the terms and the reasons are in <a class="lnk" href="https://github.com/600states/600-states/blob/main/COPYRIGHT.md">COPYRIGHT.md</a>.</p>
   </div>
 </section>
 
@@ -330,7 +331,7 @@ footer .repo a:hover{color:var(--ink)}
       <div class="ch-body">
         <p>The audit script runs nineteen checks over a finished state and prints <code>ALLT STAMMER</code> &mdash; <em>everything holds</em> &mdash; when they pass.</p>
         <p>One of them passed a hardcoded <code>True</code> into the comparison. It had never been capable of failing. It was not a weak check; it was the shape of a check with nothing inside it.</p>
-        <p>It is now a measurement that reports a real number: <b>94.3%</b> of observations carry a content hash of the page as fetched. The rest are 403s, 404s and paywalls. The figure is printed as a measurement and not as a pass, because the floor has not been decided &mdash; and an undecided floor must not be dressed up as an approval.</p>
+        <p>It is now a measurement that reports a real number: <b>94.3%</b> of observations carry a content hash of the page as fetched. The rest are 403s, 404s and paywalls. The figure is printed as a measurement and not as a pass, because no floor has been decided for this measure &mdash; it is not the window floor that numbers a work, and an undecided floor must not be dressed up as an approval.</p>
       </div>
     </article>
 
@@ -727,9 +728,9 @@ footer .repo a:hover{color:var(--ink)}
       </div>
       <div class="ch-body">
         <p>People ask whether a day will come out looking like a face, a figure, a shape. The honest answer is <b>yes, and essentially never</b> &mdash; and the two halves of that sentence are worth separating, because it is easy to give the wrong one.</p>
-        <p><b>Nothing in the process builds shapes.</b> The grid is ordered by <em>time</em>, not by space. Two horizontally adjacent tiles are about two minutes apart; two vertically adjacent tiles are about <b>seventy&#8209;two minutes</b> apart. Adjacency sideways is strong, vertically almost nothing, and a figure needs both. On a measured day, 504 of the 600 colours were unique &mdash; the field is made of single tiles, not blocks.</p>
-        <p><b>But nothing excludes it either.</b> The output space contains every possible assignment of six hundred colours to six hundred positions, and a recognisable figure is somewhere in that space. It is not forbidden. It is merely absurd &mdash; roughly <b>1 in 10<sup>300</sup></b>. One work a day since the Big Bang would give about 5&nbsp;&times;&nbsp;10<sup>12</sup> attempts. You would need some 10<sup>287</sup> universes&rsquo; worth of days.</p>
-        <p>What <em>can</em> appear is temporal. A large story produces many observations close together in time, and those sit side by side. The day&rsquo;s dominant event shows up as a horizontal run. A stripe, not a face.</p>
+        <p><b>Nothing in the process builds shapes.</b> The grid is ordered by <em>time</em>, not by space. Two horizontally adjacent tiles are about two minutes apart; two vertically adjacent tiles are about <b>seventy&#8209;two minutes</b> apart. That is the ordering, and it is all we claim: how much neighbouring tiles actually resemble each other has not been counted on any day, in either direction. A figure would need both. On a measured day, 504 of the 600 colours were unique &mdash; the field is made of single tiles, not blocks.</p>
+        <p><b>But nothing excludes it either.</b> The output space contains every possible assignment of six hundred colours to six hundred positions, and a recognisable figure is somewhere in that space. It is not forbidden. How unlikely it is we do not put a number on: that number would depend on what counts as a recognisable figure, and we have not defined it, let alone measured it. A probability with no model behind it is decoration.</p>
+        <p>What <em>can</em> appear is temporal. A large story produces many observations close together in time, and those sit side by side. Whether the day&rsquo;s dominant event comes out as a horizontal run has not been counted on any day, so we claim only what the layout fixes: the field is ordered by the clock, and that ordering is a choice of ours. The form is not neutral.</p>
         <blockquote class="pull">
           <p>The instrument does not draw. It records. So for a state to look like something, the world would have had to have a day shaped like that something.</p>
         </blockquote>
@@ -750,9 +751,10 @@ footer .repo a:hover{color:var(--ink)}
         <p>Honest work has an open list, and this is ours.</p>
         <ul class="open">
           <li><b>A new reference manifest.</b> The calibration battery measures against a reference built under the old delivery form. Until it is rebuilt, every future battery compares the instrument against something it no longer is.</li>
-          <li><b>The floor for evidence with a content hash.</b> 94.3% measured. Which floor should apply is undecided, so the number is reported and not approved.</li>
+          <li><b>A floor for evidence with a content hash. This is not the window floor; that one is decided and numbers the work.</b> 94.3% measured. Which floor should apply is undecided, so the number is reported and not approved.</li>
           <li><b>Secondary states are less stable than primary.</b> 0.56 against 0.78 in self&#8209;agreement. Whether the colour model should weight secondary lower is open &mdash; and must not be decided on the basis of which option looks better.</li>
           <li><b>The reach of the one&#8209;run rule.</b> The gate stops a re&#8209;run of a frozen day, but deleting the lock file by hand leaves no trace inside that day&rsquo;s own folder. An append&#8209;only freeze log outside it is proposed and not yet built.</li>
+          <li><b>The frozen materiality gate is not implemented.</b> It requires a stated material novelty for every DISTINCT decision. The selection runs lexical word overlap at a Jaccard threshold of 0.25 and states nothing. &ldquo;600 materially distinct observations&rdquo; therefore rests on a lexical measure, not on the frozen rule, and that is a gap and not a reading of it.</li>
           <li><b>Two protocols have no code at all</b> &mdash; reflection and macro&#8209;state naming.</li>
         </ul>
       </div>

@@ -347,7 +347,7 @@ h2{font-size:var(--step-head)}
         <div class="field-keys" id="grid" role="group" aria-label="600 tiles. Use the arrow keys to move between tiles." tabindex="0"></div>
         <canvas id="fieldcv" aria-hidden="true"></canvas>
         <noscript><img src="img/state_001.png" alt="The rendered field of 600 colours for the first calibration day." width="3087" height="2057" loading="lazy"></noscript>
-        <p class="field-cap r">Chronological order, left to right, top to bottom. Nothing has been moved. This field carries 527 distinct colours.</p>
+        <p class="field-cap r">Chronological order, left to right, top to bottom. Nothing has been moved. This field carries <span data-distinct>&mdash;</span> distinct colours.</p>
       </div>
       <aside class="readout" id="readout" aria-live="polite">
         <p class="idx">Tile — of 600</p>
@@ -374,7 +374,7 @@ h2{font-size:var(--step-head)}
 <section id="showcase">
   <div class="wrap show-head">
     <h2 class="r">Same instrument. Different world.</h2>
-    <p class="cap r">Four days, four fields, and at a glance they are the same. The mean colour of each differs by less than six steps. The difference is not in the surface: between 1 and 4 January, uncertainty in the observed flow more than doubled, from 28 tiles to 59. The instrument is stable. The days are not.</p>
+    <p class="cap r">Four days, four fields, and at a glance they are the same. The mean colour of each differs by less than six steps. The difference is not in the surface: between 1 and 4 January the count of tiles read as uncertainty went from 28 to 59. Those figures come from the calibration generation this project calls defective, and a count of labels is not a measurement of the world&rsquo;s uncertainty. It is instrument behaviour, shown as instrument behaviour. The instrument is stable. The days are not.</p>
   </div>
   <div class="wrap carousel r">
     <div class="track" id="track" role="group" aria-label="Four observed days. Use the left and right arrow keys to move between them." tabindex="0">
@@ -482,7 +482,7 @@ h2{font-size:var(--step-head)}
   <div class="head"><h2 class="r">Before you ask</h2></div>
   <div class="q r">
     <h3>Does this measure how the world felt?</h3>
-    <p>No, and it never claims to. 600 STATES interprets the emotional state of the world's news through the same transparent protocol every day. It does not measure human feeling, and it is not sentiment analysis of headlines: the publisher's masthead is removed from the headline deterministically, before any model reads it, and the frozen prompt forbids classifying the publisher's rhetoric. The headline's own wording is what the model receives. No step rewrites it into neutral language first, and the field that carries it is misnamed. The name is frozen, so it stays.</p>
+    <p>No, and it never claims to. 600 STATES interprets the emotional state of the world's news through the same transparent protocol every day. It does not measure human feeling, and it is not sentiment analysis of headlines: the publisher's masthead is removed from the headline deterministically, before any model reads it, and the frozen prompt forbids classifying the publisher's rhetoric. The headline's own wording is what the model receives. No step rewrites it into neutral language first, and the field that carries it is misnamed. The name is frozen, so it stays. A measurable share of observations never gets a headline at all: on two run&#8209;in nights, 23 and 24 November 2026, 44 and 41 observations of 600 took their text from the words in the web address instead.</p>
   </div>
   <div class="q r">
     <h3>Does an AI make the picture?</h3>
@@ -496,13 +496,13 @@ h2{font-size:var(--step-head)}
   <div class="q r">
     <h3>What are the days shown on this page?</h3>
     <p>Calibration days. The first ten days were produced by an earlier generation of the instrument and used to test it, and they surfaced real method defects, which are documented. They carry a retrospective evidence basis, not evidence captured at the moment of observation, and they are not canonical works.</p>
-    <p>States produced from 1 December 2026 capture and hash their source at selection time. A day is numbered when at least ninety per cent of its rows carry source content captured inside the evidence window, so up to sixty tiles in a numbered State may rest on a hashed reference without captured page content. The floor is published rather than hidden, because it is the only version that survives a critic.</p>
+    <p>States produced from 1 December 2026 capture and hash their source at selection time. A day is numbered when at least ninety per cent of its rows carry source content captured inside the evidence window, so up to sixty tiles in a numbered State may rest on a hashed reference without captured page content. This is the window floor: ninety per cent, decided, in code, and the only floor that numbers a work. A second measure &mdash; the share of rows carrying a content hash of the page as fetched &mdash; is reported on 600 LABS and has no floor at all. It numbers nothing. The window floor is published rather than hidden, because it is the only version that survives a critic.</p>
     <p>These ten days are also known to be defective: the candidate pool was built from an earlier version of the source registry than the manifests declare. The defect is documented, and the days will be rebuilt once the instrument is frozen &mdash; rebuilding them against an instrument still being corrected would only produce a second set to discard. Rebuilding fixes the registry defect; it cannot make them canonical, because evidence fetched months later cannot be evidence from inside the day, whatever the instrument does. The figures on this page come from that defective generation and are shown as instrument behaviour, not as results.</p>
   </div>
   <div class="q r">
     <h3>What exactly can be collected?</h3>
     <p>One day: its image, its manifest, and the evidence trail behind all 600 tiles. The image is the Proof of State. The manifest is the Proof of Work. Beautiful enough to collect, rigorous enough to audit.</p>
-    <p>The collection is finite because the series is capped at 600 numbered works in code, not because the calendar runs out. Write to <a href="mailto:archive@600states.com">archive@600states.com</a> to be told before the first State is observed.</p>
+    <p>The collection is finite because the series is capped at 600 numbered works in code, not because the calendar runs out &mdash; the code also knows a third class, commissioned works outside the numbered series, which the cap does not count and does not stop. No run assigns that class yet. Write to <a href="mailto:archive@600states.com">archive@600states.com</a> to be told before the first State is observed.</p>
   </div>
   <div class="q r">
     <h3>What happens on a boring day?</h3>

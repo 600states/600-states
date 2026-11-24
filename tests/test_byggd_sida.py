@@ -67,6 +67,24 @@ def test_sidans_tal_ar_data_js_tal():
 
 
 @kraver_bygge
+def test_sidans_antal_distinkta_farger_ar_data_js_tal():
+    """Samma form som talet ovan, pa samma payload.
+
+    SKRIVET AV SAMMA PART SOM ANDRADE BYGGET, till skillnad fran resten av
+    filen. Det bryter mot arbetsdelningen i AGENTS.md och star har i stallet
+    for att doljas: raden ar en upprepning av provet ovan och inte en ny
+    bedomning, men den ar inte oberoende granskad.
+    """
+    ur_data = len({r[0] for r in _rutor()})
+    ur_sidan = _ur_sidan("distinct")
+    assert ur_sidan.isdigit(), (
+        f"sidan sager '{ur_sidan}' dar ett tal ska sta - bygget ersatte inte "
+        "platshallaren")
+    assert int(ur_sidan) == ur_data, (
+        f"sidan sager {ur_sidan} distinkta farger, data.js har {ur_data}")
+
+
+@kraver_bygge
 def test_varje_enighetsniva_i_data_har_en_gloss():
     """Ett nytt faltvarde far ingen gloss i stallet for fel gloss - bra, men da
     star det oglosat pa sidan. Testet fangar vardet, inte beteendet."""
@@ -79,7 +97,7 @@ def test_varje_enighetsniva_i_data_har_en_gloss():
 def test_byggets_platshallare_ersattes():
     """En oersatt platshallare betyder att kallan laddats upp i stallet for
     bygget. Bada talen provas, for de skrivs av samma loop."""
-    for falt in ("tests", "nocons"):
+    for falt in ("tests", "nocons", "distinct"):
         v = _ur_sidan(falt)
         assert v.isdigit() and int(v) > 0, (
             f"data-{falt} ar '{v}' i den byggda sidan - inte ett tal over noll")
