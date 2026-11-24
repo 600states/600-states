@@ -767,6 +767,7 @@ footer .repo a:hover{color:var(--ink)}
           <li><b>Secondary states are less stable than primary.</b> 0.56 against 0.78 in self&#8209;agreement. Whether the colour model should weight secondary lower is open &mdash; and must not be decided on the basis of which option looks better.</li>
           <li><b>The reach of the one&#8209;run rule.</b> The gate stops a re&#8209;run of a frozen day, but deleting the lock file by hand leaves no trace inside that day&rsquo;s own folder. An append&#8209;only freeze log outside it is proposed and not yet built.</li>
           <li><b>The frozen materiality gate is not implemented.</b> It requires a stated material novelty for every DISTINCT decision. The selection runs lexical word overlap at a Jaccard threshold of 0.25 and states nothing. &ldquo;600 materially distinct observations&rdquo; therefore rests on a lexical measure, not on the frozen rule, and that is a gap and not a reading of it.</li>
+          <li><b>Nothing binds the build and its checks to one reading of the archive.</b> The build reads it when it runs and the tests read it again when they run; two reads at different moments can answer differently, and no gate ties them to the same instant.</li>
           <li><b>Two protocols have no code at all</b> &mdash; reflection and macro&#8209;state naming.</li>
         </ul>
       </div>

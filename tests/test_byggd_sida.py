@@ -163,6 +163,44 @@ def test_labssidans_distinkta_farger_ar_manifestets():
 
 
 @kraver_bygge
+def test_sidans_testtal_ar_en_egen_insamling():
+    """Talet i tabellen mot en egen insamling av samma tva filer.
+
+    VAD GRINDEN SKYDDAR MOT, OCH INTE. Bygget kor om rakningen vid varje
+    bygge, sa talet ar ratt sa lange sidan byggs. Det har provet fangar en
+    handredigering i den byggda sidan och en gammal dist som laddas upp. Det
+    fangar INTE ett fel i sjalva rakningen: blir bygget och provet fel pa
+    samma satt sager raden ingenting. Mer an sa pastas inte.
+
+    Insamlingen gors har, inte genom byggets rakna_tester(). Provet raknar
+    nod-id:n; bygget laser pytests sammanfattningsrad. Tva vagar till samma
+    tal, sa att ett fel i den enda regexen inte kan bekrafta sig sjalv. En
+    egen rakning av "def test_" hade missat parametriserade fall, och det ar
+    darfor pytest far samla aven har.
+
+    Filerna kommer ur byggets URVALETS_TESTER: vilka filer raden handlar om ar
+    en uppgift, inte en rakning, och den ska inte sta pa tva stallen.
+
+    SKRIVET AV SAMMA PART SOM ANDRADE BYGGET, som de tre ovan.
+    """
+    r = subprocess.run([sys.executable, "-m", "pytest", "-q", "--collect-only",
+                        *bygge.URVALETS_TESTER],
+                       cwd=str(ROT), capture_output=True, text=True)
+    assert r.returncode == 0, (
+        "insamlingen gick inte att kora:\n" + (r.stdout or r.stderr)[-400:])
+    noder = [rad for rad in r.stdout.splitlines() if "::" in rad]
+    assert noder, "pytest samlade ingenting att rakna i " + str(bygge.URVALETS_TESTER)
+
+    ur_sidan = _ur_sidan("tests")
+    assert ur_sidan.isdigit(), (
+        f"sidan sager '{ur_sidan}' dar ett tal ska sta - bygget ersatte inte "
+        "platshallaren")
+    assert int(ur_sidan) == len(noder), (
+        f"sidan sager {ur_sidan} tester over urval och storytak, insamlingen "
+        f"ger {len(noder)}. Ar sidan byggd efter att testerna andrades?")
+
+
+@kraver_bygge
 def test_varje_enighetsniva_i_data_har_en_gloss():
     """Ett nytt faltvarde far ingen gloss i stallet for fel gloss - bra, men da
     star det oglosat pa sidan. Testet fangar vardet, inte beteendet."""
