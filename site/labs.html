@@ -245,7 +245,7 @@ footer .repo a:hover{color:var(--ink)}
       <p class="sub">Method errors found while building the instrument, what the measurement was, and what changed because of it.</p>
     </div>
     <div class="tile hero-say lift">
-      <p class="lead">There are sixteen write&#8209;ups here, and more findings than that. This is what has been written up, not everything that has been found.</p>
+      <p class="lead">There are seventeen write&#8209;ups here, and more findings than that. This is what has been written up, not everything that has been found.</p>
 
       <ol class="toc">
         <li><a href="#hash"><span>I</span>The hash that could not be reproduced</a></li>
@@ -264,6 +264,7 @@ footer .repo a:hover{color:var(--ink)}
         <li><a href="#capture"><span>XIV</span>The timestamp that died at the freeze</a></li>
         <li><a href="#attempts"><span>XV</span>The gate that counted attempts</a></li>
         <li><a href="#twoformulas"><span>XVI</span>Two formulas for one cost</a></li>
+        <li><a href="#seed"><span>XVII</span>The selection depended on an environment variable</a></li>
       </ol>
       <p class="note">Most of these have the same shape: the rule existed, and no line of code enforced it. That is the lesson the whole project now runs on &mdash; <b>a rule that cannot stop a run is a wish.</b></p>
     </div>
@@ -726,6 +727,40 @@ footer .repo a:hover{color:var(--ink)}
         <p>This is the shape of the fourth finding on this page, eleven findings later: one quantity, two definitions, drifting apart until something forces them together. What forced them this time was a day that cost more than the number said it would.</p>
         <p><b>The fix is one formula, not two corrected ones.</b> Writing both carefully is what we did the first time. The dry run and the written record have to compute through the same function, and the cache price has to sit beside each model&rsquo;s other prices rather than inside a formula as a constant.</p>
         <p>It is reported and not yet repaired, which is deliberate: a divergence gets written down before it gets fixed, so that the next reader can see what was true and not only what was corrected.</p>
+      </div>
+    </article>
+
+    <article class="ch r" id="seed">
+      <div class="ch-head">
+        <p class="ch-num">XVII</p>
+        <div><h2>The selection depended on an environment variable</h2><p class="when">22 November 2026</p></div>
+      </div>
+      <div class="ch-body">
+        <p>Every observation carries a country, and the country decides which of eight regions it counts towards. The regions carry quotas, and the quotas decide which six hundred of several thousand candidates become the work. So the country assignment is not a label on the side. <b>It is part of the selection.</b></p>
+        <p>A document is usually mentioned by several events, and those events do not always agree on the country. The rule is the majority. What was never written down is what happens when two countries tie &mdash; and the code answered that question without being asked, because the events were held in a <code>set</code>.</p>
+        <p>A Python set has no order. It has an iteration order, and that order depends on <code>PYTHONHASHSEED</code>, which is random for every process unless it is pinned. The majority count walked the set, and the first country to reach the highest tally won. On a tie, the winner was whichever one the interpreter happened to reach first.</p>
+        <div class="data">
+          <table>
+            <caption>Ties in the country count, measured on two real candidate pools</caption>
+            <thead><tr><th>Observed day</th><th class="n">Documents</th><th class="n">Ties</th><th class="n">Country changes</th><th class="n">Region changes</th></tr></thead>
+            <tbody>
+              <tr><th>11 November 2026</th><td class="n">3,786</td><td class="n hit">198</td><td class="n">101</td><td class="n">74</td></tr>
+              <tr><th>4 November 2026</th><td class="n">4,245</td><td class="n hit">181</td><td class="n">82</td><td class="n">54</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>The two columns on the right are measured against what the old count chose. Run the old code twice instead, on the same frozen snapshot with nothing else changed, and <b>111 of the 3,786 documents came back with a different country the second time</b>. Same input, same instrument, two answers.</p>
+        <blockquote class="pull">
+          <p>The determinism was a property of a data structure, not of a rule. Nothing had decided how ties break. Something was deciding them anyway.</p>
+        </blockquote>
+        <p>The first repair sorted the events before counting. That removed the variation between processes, and it looked like the end of it. It was not. Sorting moved the decision from the set&rsquo;s iteration order to the list&rsquo;s order, and that order is set by the caller, in a different run, through a file written earlier in the chain. The answer had stopped moving, but it still did not come from the content. <b>A value that is stable today because of something elsewhere is not determined. It is unobserved.</b></p>
+        <p>The fix is one line, and it sits in the function that does the counting: a tie is broken on the <b>lowest country code</b>. Two countries with the same tally now resolve the same way in every process, on every machine, in any order, because the answer is in the data and not in the arrangement of it.</p>
+        <blockquote class="pull">
+          <p>Every day run before 22 November 2026 cannot be reproduced against its own frozen manifest.</p>
+        </blockquote>
+        <p>That is the cost, and it cannot be recovered. Rerun one of those days now and the corrected rule may give a different country, a different region, a different quota and in the end a different six hundred &mdash; so the rerun would disagree with the manifest that was frozen on the day, and the manifest is the record. The alternative was to keep the old behaviour so that the old outcomes would still come out, which would have preserved the defect in order to preserve agreement with it.</p>
+        <p>It applies to the calibration days, which is where the instrument was being tested while this was true. One of them has its own page, with what does and does not reproduce written out: <a class="lnk" href="/state-2026-315.html">the calibration work for 11 November 2026</a>. Its colour reproduces exactly. Its selection does not, and the page says so rather than leaving it to be found.</p>
+        <p>The canonical series opens on 1 December 2026, after the fix. No numbered State is affected.</p>
       </div>
     </article>
   </div>

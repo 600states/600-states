@@ -23,6 +23,9 @@ import pytest
 ROT = Path(__file__).resolve().parent.parent
 DIST = ROT / "site" / "dist"
 KALLA = ROT / "site" / "index.html"
+# Faltets skript flyttade till site/field.js nar en andra sida borjade visa
+# samma falt. GLOSS lases dar den star.
+FALTKOD = ROT / "site" / "field.js"
 
 sys.path.insert(0, str(ROT / "site"))
 sys.path.insert(0, str(ROT))
@@ -61,9 +64,9 @@ def _ur_sidan(falt, sida="index.html"):
 
 def _gloss_nycklar():
     """Nycklarna i GLOSS, ur kallan - glossen ar skript och byggs inte om."""
-    text = KALLA.read_text(encoding="utf-8")
+    text = FALTKOD.read_text(encoding="utf-8")
     block = text.split("var GLOSS = {", 1)
-    assert len(block) == 2, "hittar ingen GLOSS i site/index.html"
+    assert len(block) == 2, "hittar ingen GLOSS i site/field.js"
     return set(re.findall(r"'([^']+)':", block[1].split("}", 1)[0]))
 
 

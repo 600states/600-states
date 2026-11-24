@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2026/315 — a calibration work</title>
+<meta name="description" content="The calibration work for the observed day of 11 November 2026: what reproduces from its frozen manifest, what does not, and what its hash does and does not prove.">
+<link rel="canonical" href="https://600states.com/state-2026-315.html">
+<meta name="build" content="dev">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* RUMMET AR TYPOGRAFI, YTA OCH TYSTNAD.
+   Galleriet ar en LAYOUT, inte en rendering: verket ligger platt i sin egen
+   geometri, utan ram, vagg, gallerijus eller skugga. En komponerad bild av
+   verket vore precis det projektet sager att det inte gor. */
+:root{
+  --bg:#0a0a0b; --ink:#ffffff; --muted:#dbd5dd; --dim:#a79fa9;
+  --accent:#e8c354; --accent-ink:#0a0a0b;
+  --paper:#ffffff; --paper-ink:#101014; --paper-muted:#5d5a63;
+  --m:clamp(16px,2.2vw,32px);
+  --step-small:clamp(1rem,0.97rem + 0.12vw,1.0625rem);
+  --step-micro:clamp(0.8125rem,0.79rem + 0.1vw,0.875rem);
+  --step-body:clamp(1.0625rem,1rem + 0.25vw,1.1875rem);
+  --step-head:clamp(2.2rem,1.2rem + 4.2vw,5.2rem);
+}
+:root:not([data-theme="light"]){color-scheme:dark}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Hanken Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:var(--step-body);line-height:1.45;letter-spacing:-0.005em;
+  font-weight:400;-webkit-font-smoothing:antialiased;overflow-x:hidden;
+}
+h1,h2{font-weight:500;letter-spacing:-0.05em;line-height:0.9;margin:0}
+p{margin:0}
+a{color:inherit}
+img{display:block;max-width:100%}
+::selection{background:var(--accent);color:var(--accent-ink)}
+:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+
+.wrap{max-width:1280px;margin-inline:auto;padding-inline:var(--m)}
+.back{padding:28px 0 0;font-size:var(--step-micro);color:var(--dim)}
+.back a{text-decoration:none}
+.back a:hover{color:var(--accent)}
+
+/* padding-block och inte "padding: X 0": .wrap bar sidmarginalen i
+   padding-inline, och en kortform hade nollat den. */
+.open{padding-block:clamp(56px,9vw,132px) clamp(40px,6vw,88px)}
+.open h1{font-size:var(--step-head)}
+.open .kind{margin-top:22px;font-size:clamp(1.2rem,2.2vw,1.8rem);letter-spacing:-0.03em;line-height:1.15;max-width:26ch}
+.open .when{margin-top:18px;font-size:var(--step-small);color:var(--dim)}
+
+section{border-top:1px solid #231f27}
+.block{padding-block:clamp(40px,6vw,88px);display:grid;grid-template-columns:34% 1fr;gap:clamp(20px,3vw,56px);align-items:start}
+.block h2{font-size:clamp(1.5rem,2.6vw,2.4rem)}
+.block .body p + p{margin-top:1.1em}
+.block .body{max-width:68ch;color:var(--muted)}
+.block .body b{color:var(--ink);font-weight:500}
+.lnk{color:var(--accent);text-underline-offset:3px}
+.fig{margin-top:1.5em;font-size:var(--step-small);color:var(--dim)}
+.fig b{color:var(--ink)}
+
+/* Verket. Platt, i sin egen geometri, pa samma yta som startsidans falt - och
+   lasrutan ar startsidans, hamtad ur field.js och inte kopierad hit. */
+.field-sec{background:var(--paper);color:var(--paper-ink);border-top:0}
+.field-sec .inner{padding-block:clamp(40px,6vw,88px)}
+.field-sec h2{font-size:clamp(1.5rem,2.6vw,2.4rem)}
+.field-layout{display:grid;grid-template-columns:1fr 34%;gap:clamp(24px,3vw,56px);align-items:start;margin-top:40px}
+.field-keys{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)} /* taste-skill-ignore: visually hidden keyboard layer, not a rule */
+.field-keys button{position:absolute;width:1px;height:1px;border:0;padding:0;margin:0} /* taste-skill-ignore: visually hidden, not a rule */
+#fieldcv{display:block;margin-inline:auto;max-width:100%;cursor:pointer}
+.field-keys:focus-visible + #fieldcv{outline:3px solid var(--accent);outline-offset:4px}
+.field-cap{margin-top:24px;font-size:var(--step-small);color:var(--paper-muted);max-width:72ch}
+.readout{background:#f2f0ee;padding:clamp(20px,2vw,32px);min-height:420px;position:sticky;top:32px}
+.readout .idx{font-size:var(--step-micro);color:var(--paper-muted)}
+.readout .lock{margin-top:9px;font-size:var(--step-micro);line-height:1.4;font-weight:500;color:var(--paper-ink)}
+.readout .swatch{width:100%;height:84px;margin:16px 0 20px;background:#2d5580}
+.readout .txt{font-size:clamp(1.1rem,1.4vw,1.45rem);line-height:1.25;letter-spacing:-0.025em}
+.readout dl{display:grid;grid-template-columns:auto 1fr;gap:7px 18px;margin:26px 0 0;font-size:var(--step-small)}
+.readout dt{color:var(--paper-muted)}
+.readout dd{margin:0;font-weight:500;overflow-wrap:anywhere}
+.readout dd a{color:inherit;text-decoration:underline;text-underline-offset:2px}
+.readout .src-note{margin-top:18px;font-size:var(--step-micro);line-height:1.45;color:var(--paper-muted)}
+.readout .note{margin-top:22px;font-size:var(--step-small);line-height:1.5;color:var(--paper-muted)}
+
+footer{border-top:1px solid #231f27;padding:48px 0 72px;font-size:var(--step-micro);color:var(--dim)}
+footer p + p{margin-top:10px}
+
+@media (max-width:860px){
+  .block{grid-template-columns:1fr;gap:18px}
+  .field-layout{grid-template-columns:1fr}
+  .readout{position:static;min-height:0}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap back"><p><a href="/">&larr; 600 STATES</a></p></div>
+
+<div class="wrap open">
+  <h1>2026/315</h1>
+  <p class="kind">A calibration work. Not a State, and it will not become one.</p>
+  <p class="when">Observed day: 11 November 2026, UTC</p>
+</div>
+
+<section>
+  <div class="wrap block">
+    <h2>What this is</h2>
+    <div class="body">
+      <p>One UTC day of observed news, read through the same frozen protocols as the series and rendered by the same instrument: 600 observations, 600 colours, laid out in the order they happened across a 30&nbsp;&times;&nbsp;20 field.</p>
+      <p>It is a <b>calibration work</b>. It was the first full run of the current consensus protocol, made to find out whether the chain holds end to end before the series began. It is not a numbered State and it cannot become one. Its evidence was fetched eighteen hours after the observation window closed, so not one of its 600 rows carries source content captured inside the day &mdash; and the rule that numbers a work is about the window, not about the picture.</p>
+      <p>Nor can it be re-run into the series later. <b>One day, one run, one outcome.</b> A day is read once, frozen once, and the day of 11 November 2026 has passed. There is no second attempt at it, for this instrument or any other.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap block">
+    <h2>What reproduces</h2>
+    <div class="body">
+      <p>The colour. Every tile&rsquo;s hex value is recomputed from the frozen emotion protocol and compared with the value in the frozen manifest, at the moment this page is built.</p>
+      <p class="fig"><b><span data-repro-2026-315>&mdash;</span> of 600 tiles</b> reproduce exactly, with no deviations. The figure is counted by the build from the archived manifest, not written in by hand; if it ever stops being 600, this page says so by itself.</p>
+      <p>That is the part of the work that is a function: given the same four classified values, the colour formula returns the same colour today as it did on 12 November 2026, and will tomorrow.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap block">
+    <h2>What does not reproduce</h2>
+    <div class="body">
+      <p>The selection. <b>Which 600 observations became this work cannot be reproduced from the archive.</b></p>
+      <p>At the time this day was run, the country assigned to a document was decided by a majority count held in an unordered set, and ties were broken by the order the interpreter happened to use &mdash; which depends on an environment variable that is random for every process. The country decides the region, the region carries a quota, and the quota decides which observations are admitted. So the tie-break was part of the selection, and nothing had decided it.</p>
+      <p>It was found and corrected on 22 November 2026, ten days after this work was produced. Every day run before that correction &mdash; this one included &mdash; may select differently if it is run again, and would then disagree with its own frozen manifest. The whole finding is written up as <a class="lnk" href="/labs.html#seed">600 LABS, chapter XVII</a>.</p>
+      <p>This is stated here rather than left to be discovered. The work is what it is: a correct colour rendering of a selection whose derivation is no longer repeatable.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap block">
+    <h2>What the hash proves</h2>
+    <div class="body">
+      <p>The manifest was frozen with a SHA-256 sidecar beside it, and it still hashes to that value. <b>What that proves is that the file has not changed since it was written.</b></p>
+      <p>It does not prove when it was written. The hash is ours and the clock that dated it is ours, so the time of the freeze rests on our own record and on nothing else. It does not prove the freeze was the first attempt either. No mechanism can prove that, and it is not claimed.</p>
+      <p>There is <b>no external timestamp on this work yet</b>. An OpenTimestamps proof binds a manifest&rsquo;s hash to a Bitcoin block and is the one part of this that does not depend on trusting us &mdash; it is built into the chain&rsquo;s own run, and when it is applied here it will be applied by that code path and not by hand.</p>
+    </div>
+  </div>
+</section>
+
+<section class="field-sec">
+  <div class="wrap inner">
+    <h2>The work</h2>
+    <p class="field-cap">600 observations of 11 November 2026, in chronological order, left to right and top to bottom. Nothing has been moved, nothing composed, no colour chosen. Click any square to read the observation behind it.</p>
+    <div class="field-layout">
+      <div>
+        <div class="field-keys" id="grid" role="group" aria-label="600 tiles. Use the arrow keys to move between tiles." tabindex="0"></div>
+        <canvas id="fieldcv" aria-hidden="true"></canvas>
+        <noscript><img src="img/state_2026_315.png" alt="The rendered field of 600 colours for the observed day of 11 November 2026." width="3087" height="2057" loading="lazy"></noscript>
+      </div>
+      <aside class="readout" id="readout" aria-live="polite">
+        <p class="idx">Tile — of 600</p>
+        <p class="lock" hidden>Held on this tile, so you can reach the source. Click it again, or press Escape, to follow the pointer.</p>
+        <div class="swatch"></div>
+        <p class="txt">Pick a square. The observation that produced its colour appears here.</p>
+        <dl>
+          <dt>Primary state</dt><dd>—</dd>
+          <dt>Secondary</dt><dd>—</dd>
+          <dt>Intensity</dt><dd>—</dd>
+          <dt>Confidence</dt><dd>—</dd>
+          <dt>Agreement</dt><dd>—</dd>
+          <dt>Source</dt><dd>—</dd>
+          <dt>Observed</dt><dd>—</dd>
+          <dt>Evidence</dt><dd>—</dd>
+          <dt>Observation</dt><dd>—</dd>
+        </dl>
+        <p class="src-note">The representative source as captured for the observation day. Some links have since moved or gone behind a paywall. The manifest records what was captured and its hash; where the link no longer resolves, that record is ours and cannot be checked against the publisher.</p>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap block">
+    <h2>Where it goes</h2>
+    <div class="body">
+      <p>This work is being given to <b>Fundacja Wielka Orkiestra Świątecznej Pomocy</b> for its 35th final, held on <b>31 January 2027</b>, whose theme is neonatal intensive care. It goes as a physical print together with the book for the same day, and everything it raises goes to the foundation.</p>
+      <p>It is decided and planned; nothing has been ordered yet, and what happens on the day is the foundation&rsquo;s to run and to announce.</p>
+      <p>Whoever ends up with it gets a calibration work with everything on this page written out: what it is, what reproduces, what does not, and what its hash does and does not prove. <b>It is not part of the series and it is not a numbered State.</b> That is also why it is the right work to give away.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p><a href="/">600 STATES</a> &middot; <a href="/labs.html">600 LABS</a></p>
+    <p>Source: <a href="https://github.com/600states/600-states">github.com/600states/600-states</a></p>
+    <p>The artwork is the Proof of State. The manifest is the Proof of Work.</p>
+  </div>
+</footer>
+
+<script src="data_2026_315.js"></script>
+<script src="field.js"></script>
+<script>
+if(window.initField) initField(window.STATE2026315);
+</script>
+</body>
+</html>

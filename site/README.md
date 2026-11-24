@@ -5,11 +5,19 @@ ingen PHP. Sidan visar instrumentet, den ar inte en del av det.
 
 ## Vad som ligger har och vad som inte gor det
 
-    index.html   startsidan, inklusive CSS och JS
-    labs.html    600 LABS - fynden, matningarna och vad som andrades
-    build.py     bygger en uppladdningsbar mapp
+    index.html             startsidan, inklusive CSS
+    labs.html              600 LABS - fynden, matningarna och vad som andrades
+    state-2026-315.html    kalibreringsverket 2026/315, egen adress
+    field.js               faltet och lasrutan, last av bada faltsidorna
+    build.py               bygger en uppladdningsbar mapp
 
-Repot bar sidan, inte dess innehall. `data.js` och de fyra renderingarna
+`field.js` ar faltet och lasrutan, och ligger i en egen fil for att TVA sidor
+visar samma falt: startsidan och sidan for 2026/315. Koden lag forst inne i
+`index.html`, och en kopia av tvahundra rader hade varit samma varde pa tva
+stallen - FYND 004:s form i den publika vyn. Sidan ger datan, filen ritar den.
+En sida behover bara `#grid`, `#fieldcv` och `#readout` i samma form.
+
+Repot bar sidan, inte dess innehall. `data.js` och renderingarna
 genereras vid varje bygge ur dataarkivet, och ligger medvetet inte i git:
 
 - **Bevisen.** `data.js` ar 600 observationer med kall-URL, tidsstampel och
@@ -36,16 +44,26 @@ En annan malmapp gar att ange: `python site/build.py <malmapp>`.
 
     index.html
     labs.html
+    state-2026-315.html
     labs/index.html
     data.js
+    data_2026_315.js
+    field.js
     favicon.ico
     apple-touch-icon.png
     img/state_001.png
     img/state_002.png
     img/state_003.png
     img/state_004.png
+    img/state_2026_315.png
 
-Tio filer, cirka 480 KB. Ingenting annat.
+Fjorton filer, cirka 860 KB. Ingenting annat.
+
+`state-2026-315.html` ar kalibreringsverket 2026/315 pa en egen adress, och
+star med flit inte i menyn: det ar inte ett numrerat State och ska inte sta
+som jamlike med serien. Det lankas fran LABS kapitel XVII och fran en mening
+i startsidans Proof-avsnitt. Dygnet far inte flyttas in i startsidans falt -
+`FIELD_DAY` ar dygn 001 och tre av startsidans tal raknas ur det faltet.
 
 `labs/index.html` ar en omdirigering till `/labs.html` och finns for att
 adressen `600states.com/labs` star i atta publika inlagg och gav Apaches
@@ -83,6 +101,8 @@ sig, sa en besokare kan fa ny sida med gammal data. Andras datan, hoj
 versionen i taggen samtidigt:
 
     <script src="data.js"></script>  ->  <script src="data.js?v=2"></script>
+
+Samma sak galler `data_2026_315.js` och `field.js`.
 
 ## Faltet ar en canvas
 

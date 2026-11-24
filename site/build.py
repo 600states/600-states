@@ -38,6 +38,14 @@ def manifest_for(state_dir: Path, day: str) -> Path:
 LABS_DAY = "308"
 LABS_DIR = "STATE_2026_308"
 
+# Kalibreringsverket med en egen sida och en egen adress. Dygnet ar INTE ett
+# seriedygn och far darfor inte ligga i startsidans falt: faltet ar dygn 001 och
+# tre av sidans tal raknas ur det. Tva dygn i samma widget vore tvetydigheten
+# tillbaka. Nyckeln ar arkivets katalognamn, dygnet det som star i filnamnen.
+SIDA_315 = "state-2026-315.html"
+NYCKEL_315 = "2026_315"
+DYGN_315 = "315"
+
 
 def distinkta_farger(data_root: Path, day: str, katalog: str) -> int:
     """Distinkta hexvarden i ett dygns konsensusmanifest."""
@@ -49,6 +57,27 @@ def distinkta_farger(data_root: Path, day: str, katalog: str) -> int:
     return len({r["hex"].strip().lower() for r in rader})
 
 
+def reproducerar(data_root: Path, nyckel: str, day: str) -> int:
+    """Hur manga av dygnets 600 rutor fargprotokollet raknar fram pa nytt.
+
+    Sidan for 2026/315 pastar att fargen reproducerar. Talet raknas darfor vid
+    varje bygge, ur det frysta manifestet i arkivet, med samma funktion som
+    renderar - aldrig skrivet for hand. Slutar dygnet reproducera sager sidan
+    det sjalv i stallet for att fortsatta pasta motsatsen.
+
+    Samma falt som tests/test_color_protocol.py provar for dygn 001: kolumnen
+    hex i det frysta manifestet, mot hex_of_row ur de fyra protokollfalten.
+    """
+    import csv
+    sys.path.insert(0, str(HERE.parent / "src"))
+    from color_protocol import hex_of_row
+    m = manifest_for(data_root / "08_V3_STATES" / ("STATE_" + nyckel), day)
+    rader = list(csv.DictReader(io.open(m, encoding="utf-8", newline="")))
+    if len(rader) != 600:
+        raise SystemExit("vantade 600 rader i %s, fick %d" % (m.name, len(rader)))
+    return sum(1 for r in rader if hex_of_row(r).upper() == r["hex"].upper())
+
+
 def render_for(state_dir: Path, day: str) -> Path:
     found = sorted(state_dir.glob("600_STATES_2026_%s_v*_CONSENSUS.png" % day))
     if not found:
@@ -56,22 +85,24 @@ def render_for(state_dir: Path, day: str) -> Path:
     return found[-1]
 
 
-def build_data(data_root: Path, out: Path) -> dict:
+def build_data(data_root: Path, out: Path, nyckel: str = FIELD_DAY,
+               day: str = FIELD_DAY, fil: str = "data.js",
+               variabel: str = "STATE001") -> dict:
     """Skriver data.js: 600 rutor med farg, tolkning OCH kallan bakom.
 
     Kedjan nyhet -> observation -> emotion -> farg far aldrig kortas av, sa de
     tva kallorna joinas rad for rad och skriptet stannar hellre an skriver en
     halvriktig fil. En sida som pastar att varje ruta bar sitt eget bevis far
     inte skeppa en ruta vars bevis har flyttat."""
-    state_dir = data_root / "08_V3_STATES" / ("STATE_" + FIELD_DAY)
-    site_json = state_dir / ("site_%s.json" % FIELD_DAY)
+    state_dir = data_root / "08_V3_STATES" / ("STATE_" + nyckel)
+    site_json = state_dir / ("site_%s.json" % nyckel)
     if not site_json.exists():
         raise SystemExit("saknas: " + str(site_json))
 
     site = json.load(io.open(site_json, encoding="utf-8"))
     site = site if isinstance(site, list) else (site.get("tiles") or list(site.values())[0])
     import csv
-    manifest = list(csv.DictReader(io.open(manifest_for(state_dir, FIELD_DAY), encoding="utf-8")))
+    manifest = list(csv.DictReader(io.open(manifest_for(state_dir, day), encoding="utf-8")))
 
     if not (len(site) == len(manifest) == 600):
         raise SystemExit("vantade 600 rader i bada kallorna, fick %d och %d" % (len(site), len(manifest)))
@@ -100,11 +131,11 @@ def build_data(data_root: Path, out: Path) -> dict:
 
     payload = {"tiles": tiles, "agreement": agreement,
                "distinct": len(set(t[0] for t in tiles)), "n": len(tiles)}
-    with io.open(out / "data.js", "w", encoding="utf-8") as f:
-        f.write("window.STATE001=")
+    with io.open(out / fil, "w", encoding="utf-8") as f:
+        f.write("window.%s=" % variabel)
         json.dump(payload, f, ensure_ascii=False, separators=(",", ":"))
         f.write(";\n")
-    print("  data.js        %7d bytes  %s" % ((out / "data.js").stat().st_size, agreement))
+    print("  %-14s %7d bytes  %s" % (fil, (out / fil).stat().st_size, agreement))
     return payload
 
 
@@ -322,10 +353,13 @@ def main(argv):
     # raknade med ett reguljart uttryck over hela data.js och gav 603 traffar
     # over 600 rutor. Talen kommer ur payloaden, en gang.
     talen = build_data(data_root, out)
+    # Kalibreringsverkets egen datafil, samma funktion och samma kontroller.
+    # En andra vag hit vore en andra definition av vad en ruta ar.
+    build_data(data_root, out, NYCKEL_315, DYGN_315, "data_2026_315.js", "STATE2026315")
     # Varje sida stamplas, och en sida utan stampel faller bygget: en sida som
     # inte gar att binda till en version ar inte sparbar, och det ar hela
     # skalet till att stampeln finns.
-    for sida in ("index.html", "labs.html"):
+    for sida in ("index.html", "labs.html", SIDA_315):
         html = io.open(HERE / sida, encoding="utf-8").read()
         html, n = re.subn(r'(<meta name="build" content=")[^"]*(">)', r"\g<1>" + stamp + r"\g<2>", html, count=1)
         if n != 1:
@@ -363,6 +397,14 @@ def main(argv):
                 raise SystemExit("hittar ingen plats for slugandelen i " + sida)
             print("  %-14s %d av %d rutor lasta ur webbadressen (S), dygn %s"
                   % ("urladress:", slug, talen["n"], FIELD_DAY))
+        if sida == SIDA_315:
+            r = reproducerar(data_root, NYCKEL_315, DYGN_315)
+            html, k = re.subn(r"(<span data-repro-2026-%s>)[^<]*(</span>)" % DYGN_315,
+                              r"\g<1>%d\g<2>" % r, html, count=1)
+            if k != 1:
+                raise SystemExit("hittar ingen plats for reproduktionstalet i " + sida)
+            print("  %-14s %d av 600 rutor reproducerar ur protokollet, dygn 2026/%s"
+                  % ("farg:", r, DYGN_315))
         if sida == "labs.html":
             d = distinkta_farger(data_root, LABS_DAY, LABS_DIR)
             html, k = re.subn(r"(<span data-distinct-2026-%s>)[^<]*(</span>)" % LABS_DAY,
@@ -387,6 +429,10 @@ def main(argv):
     print("  %-14s %7d bytes  -> /labs.html" %
           ("labs/index.html", (out / "labs" / "index.html").stat().st_size))
 
+    # Faltet och lasrutan: en fil, last av bada sidorna. Se site/field.js.
+    shutil.copyfile(HERE / "field.js", out / "field.js")
+    print("  %-14s %7d bytes" % ("field.js", (out / "field.js").stat().st_size))
+
     build_favicon(data_root, out)
 
     for day in DAYS:
@@ -394,6 +440,11 @@ def main(argv):
         dst = out / "img" / ("state_%s.png" % day)
         shutil.copyfile(src, dst)
         print("  img/%s  %7d bytes" % (dst.name, dst.stat().st_size))
+
+    src = render_for(data_root / "08_V3_STATES" / ("STATE_" + NYCKEL_315), DYGN_315)
+    dst = out / "img" / ("state_%s.png" % NYCKEL_315)
+    shutil.copyfile(src, dst)
+    print("  img/%s  %7d bytes" % (dst.name, dst.stat().st_size))
 
     print("\nKlart: " + str(out))
     print("Ladda upp innehallet i mappen till /600states.com/public_html/ .")
