@@ -11,6 +11,7 @@ platshallare.
 
 Skrivet av den andra parten an den som skrev bygget, enligt AGENTS.md.
 """
+import csv
 import json
 import re
 import subprocess
@@ -23,9 +24,26 @@ ROT = Path(__file__).resolve().parent.parent
 DIST = ROT / "site" / "dist"
 KALLA = ROT / "site" / "index.html"
 
+sys.path.insert(0, str(ROT / "site"))
+sys.path.insert(0, str(ROT))
+import build as bygge
+import config
+
 kraver_bygge = pytest.mark.skipif(
     not (DIST / "index.html").exists() or not (DIST / "data.js").exists(),
     reason="site/dist saknas - kor python site/build.py forst")
+
+# Labs-dygnets manifest, via byggets EGNA konstanter: andras LABS_DAY foljer
+# provet med i stallet for att prova ett dygn som inte langre byggs.
+try:
+    LABS_MANIFEST = bygge.manifest_for(
+        config.data_root() / "08_V3_STATES" / bygge.LABS_DIR, bygge.LABS_DAY)
+except SystemExit:
+    LABS_MANIFEST = None
+
+kraver_labsdygnet = pytest.mark.skipif(
+    LABS_MANIFEST is None,
+    reason="dataarkivet saknas - satt STATES_DATA (se README)")
 
 
 def _rutor():
@@ -105,6 +123,43 @@ def test_sidans_slugandel_ar_data_js_falt():
     assert int(ur_sidan) == ur_data, (
         f"sidan sager {ur_sidan} rutor lasta ur webbadressen, data.js har "
         f"{ur_data}")
+
+
+@kraver_bygge
+@kraver_labsdygnet
+def test_labssidans_distinkta_farger_ar_manifestets():
+    """Talet pa 600 LABS mot en omrakning ur dygnets eget manifest.
+
+    DEN HAR VAKTEN LIGGER BLAND DE OVERHOPPADE UTAN ARKIVET, till skillnad
+    fran de tva pa startsidan. De jamfor sidan mot data.js, och bada filerna
+    ligger i site/dist. Det har talet kommer fran ett ANNAT dygn an faltets
+    och star darfor inte i data.js: enda omrakningen ar manifestet, och
+    manifestet ligger i arkivet. En farsk klon utan STATES_DATA kor alltsa
+    inte den har raden, och talet ar da bara "ett tal over noll" enligt
+    platshallarprovet. Det ar exakt den lucka som gjorde modellidentitetens
+    varde ovaktat, och den star har i stallet for att hittas.
+
+    Uppmatt 2026-11-24 pa 0ba06de, fore det har provet: 504 -> 505 pa den
+    byggda sidan gav SEX GRONA. Bygget skrev talet, men ingenting jamforde
+    det.
+
+    Rakningen gors har, inte med bygget egna distinkta_farger(): ett prov som
+    anropar funktionen det provar sager bara att den ar sig lik.
+
+    SKRIVET AV SAMMA PART SOM ANDRADE BYGGET, som de tva ovan.
+    """
+    rader = list(csv.DictReader(
+        LABS_MANIFEST.read_text(encoding="utf-8").splitlines()))
+    assert len(rader) == 600, (
+        f"{LABS_MANIFEST.name} har {len(rader)} rader, inte 600")
+    ur_arkivet = len({r["hex"].strip().lower() for r in rader})
+    ur_sidan = _ur_sidan("distinct-2026-" + bygge.LABS_DAY, "labs.html")
+    assert ur_sidan.isdigit(), (
+        f"labs-sidan sager '{ur_sidan}' dar ett tal ska sta - bygget ersatte "
+        "inte platshallaren")
+    assert int(ur_sidan) == ur_arkivet, (
+        f"labs-sidan sager {ur_sidan} distinkta farger for dygn "
+        f"2026/{bygge.LABS_DAY}, manifestet har {ur_arkivet}")
 
 
 @kraver_bygge
