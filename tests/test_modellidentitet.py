@@ -103,6 +103,32 @@ def test_specens_falt_ar_inte_jamforelsevardet():
         classify.gate_modellidentitet(falt)
 
 
+def test_den_styrande_modellen_star_i_tankandetabellen():
+    """DELVAKT PA VILKET vardet ar, utan arkivet. Inte en hel vakt.
+
+    Vakterna ovan provar VAR vardet kommer ifran. Den arkivfria av dem byter ut
+    styrande_modell och ser darfor inte en andrad literal: muteras
+    STYRANDE_MODELL till "GPT-5.6 Sol" ger det 1 rott prov MED arkivet och noll
+    utan - vakten for vardet ligger bland de overhoppade, och en extern
+    granskare kor sviten utan arkiv. Uppmatt 2026-11-24 pa 5f80624.
+
+    TANKANDE ar en lista over modeller instrumentet kan kora, och den finns i
+    repot. Specens falt star inte i den och faller har. Men raden ar BARA en
+    delvakt: "claude-sonnet-5-5" star i tabellen och slipper igenom. Last som
+    hel vakt ar den samre an ingen - det arkivkravande provet ar fortfarande
+    det som sager vilket vardet ska vara.
+
+    Ingen andra deklaration av modellnamnet laggs till for att gora den hel.
+    Tva definitioner av samma varde ar FYND 004, och ett varde pa tva stallen
+    ar precis det grinden finns for.
+    """
+    assert config.styrande_modell() in classify.TANKANDE, (
+        "den styrande modellen %r star inte i TANKANDE. Antingen har literalen "
+        "i config andrats till nagot instrumentet inte kor, eller sa har "
+        "modellen fallit ur tabellen - i bada fallen klassificerar en korning "
+        "med en modell ingen skrivit in" % config.styrande_modell())
+
+
 # =========================================================================
 # 3. --avvikande-modell noterar och slapper igenom - bara vid avvikelse
 # =========================================================================
