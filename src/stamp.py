@@ -26,6 +26,19 @@ blocket lyckades inte.
 Misslyckas forankringen lamnas .ots orord och forsoket skrivs i posten.
 Nasta dygns korning tar om den - forsoket, aldrig stampeln.
 
+TVA TILLSTAND SOM SER LIKADANA UT, OCH FELKODEN SKILJER DEM AT. Noll
+attesteringar betyder antingen "inte an" eller "jag kan inte lasa svaret", och
+bara det forsta ar normalt. Uppmatt pa varden 2026-11-24, bada riktningarna:
+
+    ots upgrade, beviset OFULLSTANDIGT : felkod 1, "Failed! Timestamp not complete"
+    ots upgrade, beviset HELT          : felkod 0, "Got 1 attestation(s)"
+                                         + "Success! Timestamp complete"
+
+Sager klienten att beviset ar helt medan verifieringens utskrift inte gar att
+lasa har utskriftsformatet andrats under oss, och da STOPPAR programmet. Ett
+dygn som ligger kvar som vantande i veckor tills nagon undrar varfor det inte
+publicerats ar dyrare an en krasch samma natt.
+
 STAMPLINGEN STOPPAR INGENTING. Fyra externa kalendrar som inte svarar 00:06
 far inte kosta ett annars felfritt dygn; ett dygn gar inte att gora om. Ett
 misslyckat stamplingsforsok ger darfor en varning och felkod 0, och utfallet
@@ -46,7 +59,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE)); sys.path.insert(0, str(HERE.parent))
 import statepaths as sp
 import gates
-from atomic import write_text
+from atomic import write_text, write_bytes
 from config import DATA, require_data
 
 # Klienten anropas som ett program, inte som ett bibliotek. Ett enda stalle, sa
@@ -81,6 +94,23 @@ def _nu():
     """Nar steget kordes. Mater omvarlden och valjer ingenting - samma undantag
     som bevisens hamtningstidpunkt, se AGENTS.md."""
     return f"{datetime.now(timezone.utc):%Y-%m-%dT%H:%M:%SZ}"
+
+
+def kopia_fore_upgrade(ots):
+    """Originalets bytes bredvid .ots, skrivna av oss och genom atomic.
+
+    ots upgrade skriver .ots PA PLATS, och den skrivningen ar klientens - den
+    gar inte genom atomic och ett avbrott mitt i den kan skada filen. Beviset
+    ar det enda som binder manifestet till ett block och gar inte att
+    aterskapa: en ny stampel skulle binda manifestet till ett SENARE block och
+    gora det aldsta beviset varre. Efter ett forsok som inte lyckades ska
+    originalets bytes darfor alltid ga att fa tillbaka.
+    """
+    k = ots.with_name(ots.name + ".fore-upgrade")
+    # EN BEFINTLIG KOPIA SKRIVS INTE OVER. Ligger den kvar har ett forsok
+    # gjorts utan att lyckas, och da ar dess bytes originalet - inte det
+    # klienten kan ha hunnit skriva i .ots sedan dess.
+    return k if k.exists() else write_bytes(k, ots.read_bytes())
 
 
 def attesteringar(text):
@@ -180,6 +210,7 @@ def step_forankra(day, data=DATA):
         print(f"  VARNING {ots.name} saknas - stampeln maste tas om"); return post
 
     start = _nu()
+    kopia = kopia_fore_upgrade(ots)
     upp_kod, upp_ut = _kor("upgrade", str(ots))
     # FELKODEN AVGOR INTE. ots --no-bitcoin verify avslutar med felkod 1 aven
     # nar beviset ar helt - den verifierar inte automatiskt, den talar om vad
@@ -193,17 +224,33 @@ def step_forankra(day, data=DATA):
          "utskrift": (upp_ut + ver_ut).strip()[:500]})
 
     if not kal:
+        skriv_post(day, post, data)
+        if upp_kod == 0:
+            # FELKODEN AVGOR HAR, OCH BARA HAR. upgrade felkod 0 betyder att
+            # klienten anser beviset helt ("Success! Timestamp complete",
+            # uppmatt pa varden 2026-11-24) - och da ska verifieringen kunna
+            # skriva ut en blockhojd. Kan den inte det ar det inte dygnet som
+            # vantar, det ar utskriftsformatet som andrats under oss. Ett
+            # tyst misslyckande skulle ligga kvar som vantande i veckor.
+            gates._say("upgrade och verifiering sager samma sak", False,
+                       f"upgrade felkod 0 (beviset helt) men verifieringen gav "
+                       f"noll attesteringar - formatet har andrats, "
+                       f"{kopia.name} har originalets bytes")
         # Sex bekraftelser kravs, och de tar langre tid an forsta blocket.
         # .ots lamnas ORORD och forsoket tas om nasta dygn. Rapportera, gor
         # inte om: en ny stampel skulle binda manifestet till ett senare block
         # och gora det aldsta beviset varre.
-        print("  VARNING ingen Bitcoin-attestering an - .ots lamnas orord, "
-              "forsoket tas om nasta dygn")
-        skriv_post(day, post, data)
+        print(f"  VARNING ingen Bitcoin-attestering an (upgrade felkod "
+              f"{upp_kod}) - .ots lamnas orord, forsoket tas om nasta dygn")
         return post
 
     post["forankring"] = {"at": start, "ots_sha256": _sha(ots), "kalendrar": kal}
     skriv_post(day, post, data)
+    # Forankringen lyckades: .ots ar andrad med avsikt och nya ots_sha256 star
+    # i posten. Kopian tas bort. Den ar en ofullstandig version av samma bevis,
+    # och en fil som ser ut som bevis men binder mindre an originalet ar nagot
+    # nagon forr eller senare verifierar i stallet for det riktiga.
+    kopia.unlink(missing_ok=True)
     for k in kal:
         print(f"        block {k['block_height']}  merkleroot {k['merkle_root']}")
     print(f"        {len(kal)} attestering(ar) - dygnet far publiceras")

@@ -129,6 +129,20 @@ atskilda.
 aldst forst. Lyckas den inte lamnas `.ots` orord och forsoket tas om nasta
 dygn; stampeln gors aldrig om.
 
+Noll attesteringar betyder tva olika saker, och felkoden skiljer dem at.
+Uppmatt 2026-11-24: `ots upgrade` ger felkod 1 och "Failed! Timestamp not
+complete" nar beviset ar ofullstandigt, och felkod 0 med "Success! Timestamp
+complete" nar det ar helt. Felkod 1 utan attesteringar ar alltsa normalt och
+tas om; felkod 0 utan attesteringar betyder att klientens utskrift inte gar
+att lasa langre, och da **stoppar stamplingen** i stallet for att lagga dygnet
+tyst bland de vantande.
+
+`ots upgrade` skriver `.ots` pa plats, och den skrivningen ar klientens. En
+kopia med originalets bytes laggs darfor bredvid, av oss och atomiskt, fore
+anropet: `<manifest>.csv.ots.fore-upgrade`. Den tas bort nar forankringen
+lyckats - da ar `.ots` det starkare beviset och en ofullstandig kopia bredvid
+ar bara nagot att verifiera av misstag.
+
 Forankringen ligger ett dygn senare for att sex bekraftelser tar langre tid an
 forsta blocket, och en korning ska aldrig vanta pa en extern kedja. Uppmatt
 2026-11-24: forsta blocket efter ca 57 minuter, alla fyra kalendrar inom ca
