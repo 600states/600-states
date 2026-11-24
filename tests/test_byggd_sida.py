@@ -86,6 +86,28 @@ def test_sidans_antal_distinkta_farger_ar_data_js_tal():
 
 
 @kraver_bygge
+def test_sidans_slugandel_ar_data_js_falt():
+    """Talet i meningen mot rutornas claim_source i data.js, index 11.
+
+    SKRIVET AV SAMMA PART SOM ANDRADE BYGGET, precis som provet for distinct
+    ovan. Det bryter mot arbetsdelningen i AGENTS.md och star har i stallet
+    for att doljas: raden ar en upprepning av samma form, inte en ny
+    bedomning, och den ar inte oberoende granskad.
+
+    Faltet, inte prosan: rutornas egen text innehaller ordet "S" overallt, och
+    en rakning over filen skulle traffa den.
+    """
+    ur_data = sum(1 for r in _rutor() if r[11] == "S")
+    ur_sidan = _ur_sidan("slug-001")
+    assert ur_sidan.isdigit(), (
+        f"sidan sager '{ur_sidan}' dar ett tal ska sta - bygget ersatte inte "
+        "platshallaren")
+    assert int(ur_sidan) == ur_data, (
+        f"sidan sager {ur_sidan} rutor lasta ur webbadressen, data.js har "
+        f"{ur_data}")
+
+
+@kraver_bygge
 def test_varje_enighetsniva_i_data_har_en_gloss():
     """Ett nytt faltvarde far ingen gloss i stallet for fel gloss - bra, men da
     star det oglosat pa sidan. Testet fangar vardet, inte beteendet."""
@@ -103,6 +125,11 @@ kraver_git = pytest.mark.skipif(
 @kraver_git
 def test_stampeln_pekar_pa_en_commit_som_finns_i_historiken():
     """Stampeln ska namna en commit som gar att na fran HEAD.
+
+    HARKOMST: provet ar skrivet av projektagaren, inte av den som committade
+    det. Det lag i arbetstradet 2026-11-24 och committades oforandrat i
+    24e4d06 av den part som orsakade felet det beskriver. Uppgiften star har
+    och inte bara i git log, sa att den foljer filen.
 
     Den finns till for att den utrullade sidan sjalv ska kunna saga vilken
     version som ligger ute. En stampel som pekar pa ett commitobjekt utanfor
@@ -146,7 +173,7 @@ def test_byggets_platshallare_ersattes():
     """En oersatt platshallare betyder att kallan laddats upp i stallet for
     bygget. Bada talen provas, for de skrivs av samma loop."""
     for falt, sida in (("tests", "index.html"), ("nocons", "index.html"),
-                       ("distinct", "index.html"),
+                       ("distinct", "index.html"), ("slug-001", "index.html"),
                        ("distinct-2026-308", "labs.html")):
         v = _ur_sidan(falt, sida)
         assert v.isdigit() and int(v) > 0, (

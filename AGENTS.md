@@ -588,6 +588,30 @@ whoever runs `git log` on the line that broke. A chat window is for questions
 and for what needs a decision. What merely describes what the code does belongs
 in the commit.
 
+### After an amend, the page is rebuilt — binding from 2026-11-24
+
+An amend gives the commit a new sha, and a `site/dist/` built before the amend
+stamps a commit that is no longer on the branch. The content can be identical
+and the stamp still point at nothing anyone can fetch. The same holds for a
+rebased branch.
+
+The gate is `test_stampeln_pekar_pa_en_commit_som_finns_i_historiken`, and it
+requires the stamp to name an **ancestor of `HEAD`**. An older built page is
+honest: it says when it was built, and that commit can be fetched. An orphaned
+stamp is not.
+
+**Do not write a measured figure into a commit message after the page has been
+built from that commit. Measure before, or rebuild after.**
+
+The circle is real, which is why it needs a rule rather than care. The `527`
+test requires a built page, `site/build.py` refuses to build a dirty tree, so
+the suite line can only be measured after the build. On 2026-11-24 it was
+amended in; the amend gave the commit a new sha and `site/dist/` stood with the
+old one — `3b184f5`, identical tree and identical parent, but no longer
+reachable from `main`. That page was live for some hours, stamped with a commit
+nobody could look up, on a site whose own published history records that it was
+once rewritten.
+
 ## Search before proposing a change — binding from 2026-11-23
 
 Before an identifier, a constant or a published sentence is proposed for

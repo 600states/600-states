@@ -351,6 +351,18 @@ def main(argv):
                 raise SystemExit("hittar ingen plats for antalet distinkta farger i " + sida)
             print("  %-14s %d distinkta farger av %d rutor"
                   % ("farger:", talen["distinct"], talen["n"]))
+            # Rutornas index 11 ar claim_source: P rubrik, S ord ur adressen,
+            # U osakrad sidtitel. Samma falt som sidan glossar i lasrutan, sa
+            # det talet kan en besokare rakna om sjalv ur data.js. Dygnet star
+            # i spannets namn: byts FIELD_DAY utan att prosan foljer med,
+            # hittar raden nedan inget span och bygget stannar.
+            slug = sum(1 for t in talen["tiles"] if t[11] == "S")
+            html, k = re.subn(r"(<span data-slug-%s>)[^<]*(</span>)" % FIELD_DAY,
+                              r"\g<1>%d\g<2>" % slug, html, count=1)
+            if k != 1:
+                raise SystemExit("hittar ingen plats for slugandelen i " + sida)
+            print("  %-14s %d av %d rutor lasta ur webbadressen (S), dygn %s"
+                  % ("urladress:", slug, talen["n"], FIELD_DAY))
         if sida == "labs.html":
             d = distinkta_farger(data_root, LABS_DAY, LABS_DIR)
             html, k = re.subn(r"(<span data-distinct-2026-%s>)[^<]*(</span>)" % LABS_DAY,
