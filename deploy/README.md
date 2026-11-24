@@ -20,7 +20,9 @@ environment".
 | Fil | Vad |
 |---|---|
 | `Dockerfile` | Python last med digest, lasfilen installerad med `--no-deps` och `pip check`, icke-root, ingen standardkorning |
-| `compose.yml` | Tva roller pa samma image: `uppdatera` och `kedja` |
+| `stampel.Dockerfile` | Samma form, egen lasfil. Stamplingens miljo - se nedan |
+| `requirements-stampel.txt` | Stamplingens nio paket pa exakt version |
+| `compose.yml` | Tre roller: `uppdatera`, `kedja` och `stampel` |
 | `.env.exempel` | Variabelnamnen. Kopieras till `.env` pa varden. `.env` committas aldrig |
 
 Imagen innehaller inte koden. Repot monteras. Imagen beskriver miljon; klonen
@@ -110,6 +112,35 @@ Varje steg kors med ett explicit kommando, aldrig genom att starta projektet:
 
 Schemalaggningen ar inte uppsatt. Nar den gors ska uppgiften bara anropa
 kommandon med jamna mellanrum; tiden ager programmet.
+
+## Stampling - egen image, tva steg i olika korningar
+
+Stamplingen kor inte i kedjans image. Nio Bitcoin- och git-bibliotek hor inte
+hemma i det instrument som laser nyheter, och en stampel intygar ett fardigt
+manifest - den tillverkar det inte. Samma princip som haller urval och farg
+atskilda.
+
+| Nar | Kommando | Nat |
+|---|---|---|
+| Direkt efter frysningen | `docker compose run --rm stampel python src/stamp.py stampla` | ja, fyra kalendrar |
+| I nasta dygns korning B | `docker compose run --rm stampel python src/stamp.py forankra` | ja |
+
+`forankra` utan dygn tar alla dygn som har en stampel men ingen forankring,
+aldst forst. Lyckas den inte lamnas `.ots` orord och forsoket tas om nasta
+dygn; stampeln gors aldrig om.
+
+Forankringen ligger ett dygn senare for att sex bekraftelser tar langre tid an
+forsta blocket, och en korning ska aldrig vanta pa en extern kedja. Uppmatt
+2026-11-24: forsta blocket efter ca 57 minuter, alla fyra kalendrar inom ca
+5,5 timmar; en `upgrade` atta minuter efter forsta blocket lyckades inte.
+
+Ingen nyckel och ingen planbok. Det enda som lamnar maskinen ar manifestets
+SHA-256.
+
+**Grinden sitter pa publiceringen, inte pa frysningen.** Ett fryst manifest
+vars `.ots` annu inte forankrats publiceras inte, men det produceras: ett
+natavbrott 00:06 kostar en fordrojning, aldrig ett verk. Grinden kors av
+`run_color.py --stage site`, laser arkivets tidsstampelpost och ror inget nat.
 
 ## Lagring
 

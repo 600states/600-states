@@ -177,6 +177,60 @@ def gate_korningsfonster(nu_utc, dygn):
          f"tidigast {tidigast:%Y-%m-%d %H:%M}, klockan ar {nu_utc:%Y-%m-%d %H:%M} UTC")
 
 
+def gate_frozen_emotion(day, data):
+    """Emotionsmanifestet finns, ar fryst, och ar orort sedan frysningen.
+
+    DEN BOR HAR, INTE I FARGSIDAN. Tva program stallde samma fraga: fargen,
+    som inte far rakna hex pa ett manifest som andrats efter frysningen, och
+    stamplingen, som inte far intyga en hash som inte langre ar filens. Skriven
+    pa tva stallen hade den kunnat glida isar - och da hade de tva programmen
+    haft var sin uppfattning om vad "fryst" betyder. Det ar FYND 004:s form.
+
+    Returnerar manifestets sokvag, sa att anroparen slipper harleda den igen.
+    """
+    import hashlib
+    import statepaths as sp
+    emo = sp.emotion_manifest(data, day)
+    side = sp.sha_sidecar(emo)
+    _say("emotionsmanifestet finns", emo.exists(), emo.name)
+    _say("det ar fryst (sha256-sidecar finns)", side.exists(), side.name)
+    want = side.read_text(encoding="utf-8").split()[0]
+    got = hashlib.sha256(emo.read_bytes()).hexdigest()
+    _say("manifestet ar orort sedan frysningen", want == got, f"{got[:16]} mot {want[:16]}")
+    return emo
+
+
+def gate_forankrad_stampel(state_id, post):
+    """Ett fryst manifest utan forankrad .ots publiceras inte.
+
+    GRINDEN SITTER PA PUBLICERINGEN, INTE PA FRYSNINGEN, och det ar hela
+    poangen. Fyra externa kalendrar som inte svarar 00:06 far inte kosta ett
+    annars felfritt dygn - ett dygn gar inte att gora om. Pa publiceringen
+    kostar samma avbrott en fordrojning, och en fordrojning gar att ta igen.
+
+    Stamplingen och forankringen ligger darfor i egna korningar, i en egen
+    container, och den har grinden laser bara deras post. DEN ROR INGET NAT och
+    kraver inget av de nio stampelpaketen: den laser en JSON-fil ur arkivet.
+    Det ar avsiktligt - en grind som bara gar att prova med natet uppe gar inte
+    att prova.
+
+    FORANKRAD BETYDER MINST EN BITCOIN-ATTESTERING, inte fyra. Fyra kalendrar
+    stamplar, men en enda attestering binder redan manifestets hash till ett
+    block, och antalet star i posten for den som vill se det. Ett hogre krav
+    vore ett tal utan matning bakom sig.
+    """
+    _say("dygnet har en tidsstampelpost", bool(post),
+         f"{state_id}: " + ("posten finns" if post else "ingen post - har dygnet stamplats?"))
+    st = post.get("stampel") or {}
+    _say("manifestet ar stamplat", bool(st.get("at")),
+         st.get("ots") or "ingen .ots skriven")
+    fo = post.get("forankring") or {}
+    kal = fo.get("kalendrar") or []
+    _say("stampeln ar forankrad i blockkedjan", bool(kal),
+         f"{len(kal)} attestering(ar)" + (f", forst block {kal[0]['block_height']}" if kal
+                                          else " - kor forankringen igen nasta dygn"))
+
+
 def gate_frirymd(behov, fri, matt_pa):
     """Ett dygn far inte borja skrivas nar det inte finns plats for det.
 

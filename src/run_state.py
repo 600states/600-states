@@ -11,6 +11,12 @@ Uppmatt 2026-11-21: Events-dagsfilen for 20261120 gav 404 till 07:45 UTC och
 200 kl. 08:00:02. Steg fore regioner ror den aldrig; steg fran regioner och
 framat kraver den.
 
+FORANKRINGEN AV FOREGAENDE DYGNS TIDSSTAMPEL LIGGER I KORNING B, men inte i
+det har programmet: den kors i stamplingens egen container, med ett eget
+kommando bredvid korningen. Se src/stamp.py och deploy/README.md. Skalet ar
+detsamma som haller urval och farg isar - de nio Bitcoin- och git-biblioteken
+finns inte i kedjans image och ska inte finnas dar.
+
 PROGRAMMET AGER DYGNET. Utan dygnargument harleder main() det UTC-dygn som
 senast stangde och kor en forkontroll fore forsta steget. Den som startar
 korningen bestammer alltsa inte langre vilket dygn det ar, och en feltryckning

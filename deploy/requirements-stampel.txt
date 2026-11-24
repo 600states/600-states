@@ -1,0 +1,19 @@
+# Lasfil for STAMPLINGENS container. INTE kedjans requirements.txt.
+#
+# Nio Bitcoin- och git-bibliotek hor inte hemma i det instrument som laser
+# nyheter. Stampeln intygar ett fardigt manifest - den tillverkar det inte, och
+# den ska inte kunna rora det som tillverkar det. Samma princip som haller
+# urval och farg atskilda, och samma form som kedjans lasfil: exakta versioner,
+# installerade med --no-deps, bygget faller pa pip check om listan inte ar
+# sjalvbarande.
+#
+# Uppmatt pa varden 2026-11-24. Versionerna ar matta, inte valda.
+opentimestamps-client==0.8.0
+opentimestamps==0.5.0
+python-bitcoinlib==0.12.2
+GitPython==3.2.1
+gitdb==4.0.12
+smmap==5.0.3
+PySocks==1.7.1
+pycryptodomex==3.24.2
+platformdirs==4.14.8

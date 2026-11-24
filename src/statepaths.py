@@ -85,6 +85,21 @@ def png(DATA, day):               return _f(DATA, day, f"{V}_CONSENSUS.png")
 def site_json(DATA, day):         return outdir(DATA, day) / f"site_{state_key(day)}.json"
 def classifier_input(DATA, day):  return outdir(DATA, day) / "classifier_input"
 def sha_sidecar(path):            return path.with_name(path.name + ".sha256")
+def ots_sidecar(path):            return path.with_name(path.name + ".ots")
+
+def timestamp_record(DATA, day):
+    """Dygnets tidsstampelpost. Stamplingens egen journal.
+
+    Den star HAR och inte i stamp.py av samma skal som allt annat i den har
+    filen: ett filnamn som byggs pa tva stallen glider isar, och den som laser
+    posten (publiceringsgrinden) ar inte den som skriver den.
+
+    POSTEN LIGGER BREDVID MANIFESTET, INTE I DET. Emotionsmanifestet ar fryst
+    och hashat, och det ar just den hashen stampeln intygar: skrevs stampelns
+    falt in i manifestet efter frysningen vore hashen i stampeln en hash av
+    nagot annat an filen. Ett bevis som andrar det det bevisar ar inget bevis.
+    """
+    return _f(DATA, day, "TIMESTAMP.json")
 
 def frozen(path):
     """Dygnets egen fil, aven om den frystes under en tidigare manifestversion.

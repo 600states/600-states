@@ -48,6 +48,30 @@ services:
       - ${REPO_DIR:?REPO_DIR saknas - se deploy/.env.exempel}:/srv/repo:ro
       - ${DATA_DIR:?DATA_DIR saknas - se deploy/.env.exempel}:/srv/data
 
+  # Stamplingen. EGEN IMAGE, egen lasfil - se deploy/stampel.Dockerfile. Den
+  # delar bara anvandare och monteringar med kedjan; de nio Bitcoin- och
+  # git-biblioteken finns inte i kedjans image och ska inte finnas dar.
+  #
+  # Repot ar skrivskyddat och datan skrivbar, som for kedjan: stampeln skriver
+  # .ots-filen och sin post bredvid manifestet, aldrig i koden.
+  #
+  #   docker compose run --rm stampel python src/stamp.py stampla
+  #   docker compose run --rm stampel python src/stamp.py forankra
+  stampel:
+    <<: *bas
+    image: 600-states-stampel:lokal
+    build:
+      context: ..
+      dockerfile: deploy/stampel.Dockerfile
+    environment:
+      TZ: UTC
+      STATES_DATA: /srv/data
+      HOME: /tmp
+      PYTHONDONTWRITEBYTECODE: "1"
+    volumes:
+      - ${REPO_DIR:?REPO_DIR saknas - se deploy/.env.exempel}:/srv/repo:ro
+      - ${DATA_DIR:?DATA_DIR saknas - se deploy/.env.exempel}:/srv/data
+
   uppdatera:
     <<: *bas
     profiles: ["uppdatera"]

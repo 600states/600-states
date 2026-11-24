@@ -18,7 +18,12 @@ och korningen avbryts.
 Steg:
     color   hex ur protokollet -> fargmanifest + sha256
     render  PNG ur fargmanifestet
-    site    publika vyns datafil
+    site    publika vyns datafil         grind: forankrad tidsstampel
+
+Stampelgrinden sitter pa site och ingen annanstans. Ett fryst manifest vars
+.ots annu inte forankrats publiceras inte, men det produceras: frysning, farg
+och rendering ror inte stampeln. Steget tas om med --stage site nar
+forankringen gatt igenom - se src/stamp.py.
 """
 import csv, hashlib, sys
 from pathlib import Path
@@ -34,19 +39,9 @@ STAGES = ["color", "render", "site"]
 
 def _sha(p): return hashlib.sha256(Path(p).read_bytes()).hexdigest()
 
-def gate_frozen_emotion(day, data=DATA):
-    emo = sp.emotion_manifest(data, day)
-    side = sp.sha_sidecar(emo)
-    gates._say("emotionsmanifestet finns", emo.exists(), emo.name)
-    gates._say("det ar fryst (sha256-sidecar finns)", side.exists(), side.name)
-    want = side.read_text(encoding="utf-8").split()[0]
-    got = _sha(emo)
-    gates._say("manifestet ar orort sedan frysningen", want == got, f"{got[:16]} mot {want[:16]}")
-    return emo
-
 def step_color(day, data=DATA):
     print("\n[color]")
-    emo = gate_frozen_emotion(day, data)
+    emo = gates.gate_frozen_emotion(day, data)
     rows = list(csv.DictReader(open(emo, encoding="utf-8")))
     for r in rows:
         r["hex"] = hex_of_row(r)
@@ -69,7 +64,19 @@ def step_render(day, data=DATA):
     return png
 
 def step_site(day, data=DATA):
+    """Publiceringssteget: den publika vyns datafil. HAR SITTER STAMPELGRINDEN.
+
+    Inte pa frysningen. Fyra externa kalendrar som inte svarar 00:06 far inte
+    kosta ett annars felfritt dygn - ett dygn gar inte att gora om. Har kostar
+    samma avbrott en fordrojning: dygnet ar fryst, fargat och renderat, och
+    steget tas om med --stage site nar forankringen gatt igenom.
+
+    Grinden laser en JSON-fil ur arkivet och ror inget nat. Stamplingen sjalv
+    ligger i src/stamp.py och kors i en egen container.
+    """
     print("\n[site]")
+    import stamp
+    gates.gate_forankrad_stampel(sp.state_id(day), stamp.las_post(day, data))
     from build_site import build
     out, meta = build(day, data)
     print(f"        {out.name}  ·  {meta['colours']} unika farger  ·  {meta['pubs']} publicister")
