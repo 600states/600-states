@@ -117,8 +117,20 @@ section{padding:clamp(64px,8vw,140px) var(--m)}
 .ch .when{margin-top:14px;font-size:var(--step-micro);color:var(--dim);letter-spacing:0}
 .ch-body{margin-left:0;margin-top:clamp(22px,2.4vw,40px);max-width:70ch}
 .ch-body > * + *{margin-top:1.15em}
-/* ATTA tight-leading-traffar star kvar med avsikt, se commit 11f7b66: de sitter
-   pa rubrik- och citattyp vars radavstand kommer ur den frysta tokenskalan.
+/* DESIGNKROKENS FYND AR SEDDA OCH UPPSKJUTNA, INTE MISSADE.
+   Atta tight-leading-traffar star kvar med avsikt sedan commit 11f7b66. Vid
+   genomgangen 2026-11-24 rapporterade kroken ELVA fynd over bada sidorna - tva
+   pa labs och nio pa startsidan - och alla elva ar bedomda och uppskjutna till
+   efter seriestart. Ingen ignore ar satt i kroken: ett undertryckt fynd syns
+   inte igen, och det har ska synas tills det ar atgardat.
+   De ar av tva slag, och de bedoms olika:
+     tight-leading   radavstand 1,08x till 1,25x, uppmatt med
+                     `impeccable detect` 2026-11-24. Samtliga sitter pa
+                     rubrik- och citattyp vars radavstand kommer ur den frysta
+                     tokenskalan.
+     cramped-padding sektioner och omslag med bakgrund vars barn sitter an mot
+                     kanten - .q, .head, .track, .cta, .scarce, .field-sec.
+                     Innerkanten kommer i dag fran .wrap inuti dem.
    SA HAR SKILJER DU EN AKTA REGRESSION FRAN DEM: las vardet. 1,18x och 1,25x ar
    rubriker och citat och ska ligga kvar. Allt som traffar .ch-body p ar brodtext
    och ar ett verkligt fel - radavstandet nedan far aldrig under 1,3. */
@@ -728,7 +740,7 @@ footer .repo a:hover{color:var(--ink)}
       </div>
       <div class="ch-body">
         <p>People ask whether a day will come out looking like a face, a figure, a shape. The honest answer is <b>yes, and essentially never</b> &mdash; and the two halves of that sentence are worth separating, because it is easy to give the wrong one.</p>
-        <p><b>Nothing in the process builds shapes.</b> The grid is ordered by <em>time</em>, not by space. Two horizontally adjacent tiles are about two minutes apart; two vertically adjacent tiles are about <b>seventy&#8209;two minutes</b> apart. That is the ordering, and it is all we claim: how much neighbouring tiles actually resemble each other has not been counted on any day, in either direction. A figure would need both. On a measured day, 504 of the 600 colours were unique &mdash; the field is made of single tiles, not blocks.</p>
+        <p><b>Nothing in the process builds shapes.</b> The grid is ordered by <em>time</em>, not by space. Two horizontally adjacent tiles are about two minutes apart; two vertically adjacent tiles are about <b>seventy&#8209;two minutes</b> apart. That is the ordering, and it is all we claim: how much neighbouring tiles actually resemble each other has not been counted on any day, in either direction. A figure would need both. On State 2026/308, 4 November 2026, <span data-distinct-2026-308>&mdash;</span> of the 600 colours were distinct, counted by the build from that day&rsquo;s consensus manifest &mdash; the field is made of single tiles, not blocks.</p>
         <p><b>But nothing excludes it either.</b> The output space contains every possible assignment of six hundred colours to six hundred positions, and a recognisable figure is somewhere in that space. It is not forbidden. How unlikely it is we do not put a number on: that number would depend on what counts as a recognisable figure, and we have not defined it, let alone measured it. A probability with no model behind it is decoration.</p>
         <p>What <em>can</em> appear is temporal. A large story produces many observations close together in time, and those sit side by side. Whether the day&rsquo;s dominant event comes out as a horizontal run has not been counted on any day, so we claim only what the layout fixes: the field is ordered by the clock, and that ordering is a choice of ours. The form is not neutral.</p>
         <blockquote class="pull">

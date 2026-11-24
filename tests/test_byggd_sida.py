@@ -13,6 +13,7 @@ Skrivet av den andra parten an den som skrev bygget, enligt AGENTS.md.
 """
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -33,10 +34,10 @@ def _rutor():
     return json.loads(text.split("=", 1)[1].rstrip().rstrip(";"))["tiles"]
 
 
-def _ur_sidan(falt):
+def _ur_sidan(falt, sida="index.html"):
     m = re.search(r"<span data-%s>([^<]*)</span>" % falt,
-                  (DIST / "index.html").read_text(encoding="utf-8"))
-    assert m, f"hittar inget data-{falt} i den byggda sidan"
+                  (DIST / sida).read_text(encoding="utf-8"))
+    assert m, f"hittar inget data-{falt} i den byggda {sida}"
     return m.group(1)
 
 
@@ -93,11 +94,60 @@ def test_varje_enighetsniva_i_data_har_en_gloss():
     assert utan == [], f"enighetsnivaer i data.js som GLOSS inte namner: {utan}"
 
 
+kraver_git = pytest.mark.skipif(
+    not (ROT / ".git").exists(),
+    reason="inget git-trad - stampeln gar inte att sla upp")
+
+
+@kraver_bygge
+@kraver_git
+def test_stampeln_pekar_pa_en_commit_som_finns_i_historiken():
+    """Stampeln ska namna en commit som gar att na fran HEAD.
+
+    Den finns till for att den utrullade sidan sjalv ska kunna saga vilken
+    version som ligger ute. En stampel som pekar pa ett commitobjekt utanfor
+    grenen kan ingen utomstaende sla upp, och i ett projekt som publicerat att
+    dess historik skrevs om ar det precis fel form att ha pa en publicerad
+    artefakt.
+
+    EN AELDRE BYGGD SIDA AR INTE ETT FEL. En stampel pa en FORFADER till HEAD
+    ar arlig: sidan byggdes da, och den commiten gar att hamta. Det testet
+    forbjuder ar en stampel som inte gar att na alls.
+
+    Sa uppstod det 2026-11-24: 527-provet kraver en byggd sida, build.py
+    kraver ett rent trad, och svitraden maste darfor matas EFTER bygget. Den
+    amendades in, amenden gav commiten ett nytt sha, och dist stod kvar med
+    det gamla - 3b184f5, identiskt trad och identisk foralder, men inte langre
+    pa grenen. Regeln som foljer: efter en amend byggs sidan om.
+    """
+    m = re.search(r'<meta name="build" content="([^"]*)">',
+                  (DIST / "index.html").read_text(encoding="utf-8"))
+    assert m, "den byggda sidan saknar byggstampel"
+    stampel = m.group(1)
+    if stampel == "unknown":
+        pytest.skip("bygget kunde inte lasa git - inget att sla upp")
+    sha = stampel[:-len("-dirty")] if stampel.endswith("-dirty") else stampel
+
+    finns = subprocess.run(["git", "cat-file", "-e", sha + "^{commit}"],
+                           cwd=str(ROT), capture_output=True)
+    assert finns.returncode == 0, (
+        f"stampeln {stampel} ar inget commitobjekt i det har tradet")
+
+    natbar = subprocess.run(["git", "merge-base", "--is-ancestor", sha, "HEAD"],
+                            cwd=str(ROT), capture_output=True)
+    assert natbar.returncode == 0, (
+        f"stampeln {stampel} gar inte att na fran HEAD - sidan ar byggd ur en "
+        "commit som inte ligger pa grenen. Bygg om efter en amend eller en "
+        "ombaserad gren.")
+
+
 @kraver_bygge
 def test_byggets_platshallare_ersattes():
     """En oersatt platshallare betyder att kallan laddats upp i stallet for
     bygget. Bada talen provas, for de skrivs av samma loop."""
-    for falt in ("tests", "nocons", "distinct"):
-        v = _ur_sidan(falt)
+    for falt, sida in (("tests", "index.html"), ("nocons", "index.html"),
+                       ("distinct", "index.html"),
+                       ("distinct-2026-308", "labs.html")):
+        v = _ur_sidan(falt, sida)
         assert v.isdigit() and int(v) > 0, (
-            f"data-{falt} ar '{v}' i den byggda sidan - inte ett tal over noll")
+            f"data-{falt} ar '{v}' i den byggda {sida} - inte ett tal over noll")

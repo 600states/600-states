@@ -588,3 +588,34 @@ horde inte till adressen och forkastades av `_relates`. Resterande 52 ar
 | URL_SLUG, 404 | 8 |
 | URL_SLUG, 308 | 6 |
 | URL_SLUG, 301 | 1 |
+
+## Tva inkorningsnatters URL_SLUG-andel (2026-11-24)
+
+Startsidan sager att en matbar andel av observationerna aldrig far en rubrik.
+Harifran kommer de tva talen, och harifran kommer ocksa deras begransning.
+
+| Natt | Observationsdygn | URL_SLUG | LIVE_FETCH | Kod |
+|---|---|---|---|---|
+| 2026-11-23 | 2026/326 (22 november) | **44** av 600 | 556 | `03937d7` |
+| 2026-11-24 | 2026/327 (23 november) | **41** av 600 | 559 | `020729b` |
+
+Dygnsnumren ar kontrollerade mot `statepaths.state_id`: `20261122` ger
+`2026/326` och `20261123` ger `2026/327`. Natten raknar alltsa dygnet fore.
+
+**Vagen som avgor:** korning B:s logg pa NAS:en. Matt av NAS-assistenten,
+last ur loggen.
+
+**Det gar inte att rakna om har, och det ar inte samma sak som att det saknar
+underlag.** Inkorningsdygnen ligger inte i arkivet: senaste dygn dar ar
+`STATE_2026_315` och senaste ravdata `20261111`, bada kontrollerade
+2026-11-24. Den som klonar repot kan darfor inte reproducera 44 och 41. Ett
+tal vars begransning star utskriven ar inte ett tal utan underlag - men det ar
+heller inte ett tal som den har filen i ovrigt bestar av, och skillnaden ar
+skalet till att den star har och inte bara pa sidan.
+
+**Pilotens motsvarighet GAR att rakna om.** 82 URL_SLUG av 600 for dygn 001,
+avsnittet ovan. Samma tal star i den publicerade `site/dist/data.js`, pa
+rutornas index 11: 515 `P`, 82 `S`, 3 `U`, raknat 2026-11-24. Manifestets
+`claim_source` ger samma fordelning: 515 LIVE_FETCH, 82 URL_SLUG, 3
+PAGE_TITLE_UNVERIFIED. For det visade dygnet ar vagen alltsa oppen for vem som
+helst.

@@ -31,6 +31,24 @@ def manifest_for(state_dir: Path, day: str) -> Path:
     return found[-1]
 
 
+# Dygnet bakom talet pa 600 LABS. Ett annat dygn an faltets, sa talet kan inte
+# lasas ur data.js payload - det raknas ur dygnets eget manifest, pa samma falt.
+# Dygnet star ocksa i spannets namn i labs.html: andras konstanten harunder utan
+# att prosan foljer med, hittar bygget inget span och stannar. Det ar avsikten.
+LABS_DAY = "308"
+LABS_DIR = "STATE_2026_308"
+
+
+def distinkta_farger(data_root: Path, day: str, katalog: str) -> int:
+    """Distinkta hexvarden i ett dygns konsensusmanifest."""
+    import csv
+    m = manifest_for(data_root / "08_V3_STATES" / katalog, day)
+    rader = list(csv.DictReader(io.open(m, encoding="utf-8", newline="")))
+    if len(rader) != 600:
+        raise SystemExit("vantade 600 rader i %s, fick %d" % (m.name, len(rader)))
+    return len({r["hex"].strip().lower() for r in rader})
+
+
 def render_for(state_dir: Path, day: str) -> Path:
     found = sorted(state_dir.glob("600_STATES_2026_%s_v*_CONSENSUS.png" % day))
     if not found:
@@ -334,6 +352,14 @@ def main(argv):
             print("  %-14s %d distinkta farger av %d rutor"
                   % ("farger:", talen["distinct"], talen["n"]))
         if sida == "labs.html":
+            d = distinkta_farger(data_root, LABS_DAY, LABS_DIR)
+            html, k = re.subn(r"(<span data-distinct-2026-%s>)[^<]*(</span>)" % LABS_DAY,
+                              r"\g<1>%d\g<2>" % d, html, count=1)
+            if k != 1:
+                raise SystemExit("hittar ingen plats for 2026/%s distinkta farger i %s"
+                                 % (LABS_DAY, sida))
+            print("  %-14s %d distinkta farger av 600 rutor, dygn 2026/%s"
+                  % ("farger:", d, LABS_DAY))
             kap = gate_hjaltens_rakning(html)
             print("  %-14s %d kapitel, hjaltens rakning stammer" % ("grind:", kap))
         # newline="\n": utan den oversatter Python \n till CRLF pa Windows, och
