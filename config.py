@@ -81,3 +81,38 @@ def canonical_batch_size() -> int:
     """
     import json
     return int(json.loads(SPEC_FILE.read_text(encoding="utf-8"))["canonical_batch_size"])
+
+
+# Modellidentiteten. EN definition - men INTE specens.
+#
+# SPEC_FILE anger "classifier_model": "GPT-5.6 Sol". Instrumentet kor
+# claude-opus-5, beslutat 2026-11-06. Faltet i specen ar alltsa fel OM
+# instrumentet, och specen ar FRYST: den rattas inte, den kompletteras av ett
+# addendum. Darfor star den styrande identiteten HAR, och koden laser med
+# avsikt inte specens falt - ett varde som ar fel pa ett fruset stalle blir
+# inte rattare av att lasas darifran.
+#
+# Det motsager inte canonical_batch_size ovan, som LASES ur specen. Skillnaden
+# ar ingen princip om var varden bor: det ar en matning av vilket av de tva
+# faltet som stammer med instrumentet. Batchstorleken gor det. Modellen inte.
+#
+# Specens falt lamnas orort och publiceras vidare med sin hash. Det doljs inte
+# heller: korjournalen bar bada, sa att avvikelsen star i projektets eget
+# bevismaterial i stallet for att hittas av en granskare. Se FYND 023.
+STYRANDE_MODELL = "claude-opus-5"
+
+
+def styrande_modell() -> str:
+    """Modellen ett kanoniskt verk ska klassificeras med."""
+    return STYRANDE_MODELL
+
+
+def specens_modellfalt() -> str:
+    """Vad specen SAGER att modellen ar.
+
+    Lases bara for att kunna visa avvikelsen i korjournalen. Den styr ingen
+    korning och far aldrig anvandas som jamforelsevarde i en grind.
+    """
+    import json
+    return str(json.loads(SPEC_FILE.read_text(encoding="utf-8")).get(
+        "classifier_model", ""))

@@ -1,6 +1,7 @@
 """Klassificeringssteget. Anropar API:et direkt, inte som agent.
 
     python3 src/classify.py <AAAAMMDD> [--pass N] [--budget N] [--model ID]
+                            [--avvikande-modell]
                                       [--dry-run] [--live] [--slapp] [--en-i-taget]
 
 Leveransen ar Batch API (halva listpriset, faststallt 2026-11-06). --live kor
@@ -34,8 +35,10 @@ verk. Prefixet markeras cache_control sa att det kostar en brakdel efter
 forsta anropet.
 
 GRINDEN FORE FORSTA ANROPET: promptfilens sha256 maste stamma mot den som
-exekveringsspecen anger. Stammer den inte ar instrumentet inte det som
-beskrivs, och korningen avbryts.
+exekveringsspecen anger, OCH modellen som anropas maste vara den styrande.
+Stammer nagondera inte ar instrumentet inte det som beskrivs, och korningen
+avbryts. --avvikande-modell slapper igenom modellbytet och skriver det i
+korjournalen.
 """
 import hashlib, json, os, re, statistics, sys, time
 from pathlib import Path
@@ -45,12 +48,12 @@ import statepaths as sp
 import gates
 from atomic import write_text
 from vocab import EMOTION_STATES, ORDER
-from config import DATA, FROZEN, SPEC_FILE
+from config import DATA, FROZEN, SPEC_FILE, styrande_modell, specens_modellfalt
 
 PROMPT_FILE = FROZEN / "600_STATES_Emotion_Classification_Execution_Prompt_v2.1_FROZEN.txt"
 PASSES      = (1, 2, 3)
 MAX_TRIES   = 3
-DEFAULT_MODEL = os.environ.get("STATES_MODEL", "claude-opus-5")
+DEFAULT_MODEL = os.environ.get("STATES_MODEL", styrande_modell())
 
 # TAENKANDET AR EN INSTRUMENTPARAMETER. Hur den uttrycks skiljer sig per modell,
 # och det ar transport, inte instruktion - ingen modell far en annan prompt.
@@ -179,11 +182,41 @@ OUTPUT_RULE = (
 
 def sha(p): return hashlib.sha256(Path(p).read_bytes()).hexdigest()
 
-def gate_instrument():
+def gate_modellidentitet(model=None, tillat_avvikelse=False):
+    """Modellen som faktiskt anropas, mot den styrande identiteten.
+
+    SPECENS FALT AR INTE AUKTORITET. Exekveringsspecen anger
+    classifier_model "GPT-5.6 Sol"; instrumentet kor claude-opus-5. Specen ar
+    fryst och rattas inte, sa den styrande identiteten bor i config och
+    jamforelsen sker mot den. Att jamfora mot specens falt hade stoppat varje
+    riktig korning och slappt igenom fel modell - grinden hade falt at fel
+    hall.
+
+    Faller pa avvikelse. --avvikande-modell slapper igenom den och skriver
+    avvikelsen i korjournalen: ett modellbyte ska ga att gora, men bara
+    avsiktligt och aldrig tyst.
+
+    model=None provar ingenting och sager det. Anropas grinden utan modell
+    finns ingen modell att prova, och en grind som tiger da ar varre an ingen
+    grind - jamfor FRIRYMDEN PROVADES INTE i gates.py.
+    """
+    styrande = styrande_modell()
+    if model is None:
+        print(f"  MODELLIDENTITETEN PROVADES INTE (styrande {styrande})")
+        return styrande
+    detalj = f"{model} mot styrande {styrande}"
+    if tillat_avvikelse and model != styrande:
+        print(f"  NOTERA avvikande modell pa begaran: {detalj}")
+        return styrande
+    gates._say("modellen ar den styrande", model == styrande, detalj)
+    return styrande
+
+def gate_instrument(model=None, tillat_avvikelse=False):
     spec = json.loads(SPEC_FILE.read_text(encoding="utf-8"))
     want, got = spec["canonical_prompt_sha256"], sha(PROMPT_FILE)
     gates._say("exekveringsprompten finns", PROMPT_FILE.exists(), PROMPT_FILE.name)
     gates._say("promptens sha256 stammer mot specen", want == got, f"{got[:16]} mot {want[:16]}")
+    gate_modellidentitet(model, tillat_avvikelse)
     return PROMPT_FILE.read_text(encoding="utf-8"), spec
 
 def batches(day):
@@ -1044,11 +1077,11 @@ def kor_direkt(client, model, prompt, todo, d, rec, omgang, budget=None):
     return parse_fel_totalt, 0
 
 def run(day, only_pass=None, budget=None, model=DEFAULT_MODEL, dry=False,
-        leverans=None, slapp=False, en_i_taget=False):
+        leverans=None, slapp=False, en_i_taget=False, tillat_avvikande_modell=False):
     sp.state_id(day)
     print(f"=== {sp.state_id(day)} — klassificering ===")
     gate_dygnet_ar_oppet(day)
-    prompt, spec = gate_instrument()
+    prompt, spec = gate_instrument(model, tillat_avvikande_modell)
     bs = batches(day)
     n_obs = sum(len(b) for _, b in bs)
     gates._say("input tacker 600 observationer", n_obs == 600, f"{n_obs} i {len(bs)} batchar")
@@ -1093,6 +1126,11 @@ def run(day, only_pass=None, budget=None, model=DEFAULT_MODEL, dry=False,
     # inte saknas i den - en okand parameter ska sta som okand. Vardet satts
     # forst nar kalibreringsbatteriet matt vad det gor med utfallet.
     rec = {"state_id": sp.state_id(day), "model": model,
+           "styrande_modell": styrande_modell(),
+           "spec_classifier_model": specens_modellfalt(),
+           "spec_classifier_model_note":
+               "specens falt styr inte och lases inte av nagon grind; den "
+               "styrande identiteten star i config.STYRANDE_MODELL. Se FYND 023.",
            "thinking": tankande_for(model),
            "effort": effort_for(model),
            "effort_note": "utskriven; lika modellens API-standardvarde 2026-11-06",
@@ -1162,7 +1200,8 @@ def main():
                      "--dry-run" in a,
                      "direkt" if "--live" in a else None,
                      "--slapp" in a,
-                     "--en-i-taget" in a))
+                     "--en-i-taget" in a,
+                     "--avvikande-modell" in a))
     except gates.GateFailure as e:
         print(f"\nKEDJAN STOPPAD: {e}"); sys.exit(1)
 
