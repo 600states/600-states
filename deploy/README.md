@@ -22,6 +22,7 @@ environment".
 | `Dockerfile` | Python last med digest, lasfilen installerad med `--no-deps` och `pip check`, icke-root, ingen standardkorning |
 | `stampel.Dockerfile` | Samma form, egen lasfil. Stamplingens miljo - se nedan |
 | `requirements-stampel.txt` | Stamplingens nio paket pa exakt version |
+| `requirements-bok.txt` | Bokgeneratorns fem paket pa exakt version. Ingen container - se nedan |
 | `compose.yml` | Tre roller: `uppdatera`, `kedja` och `stampel` |
 | `.env.exempel` | Variabelnamnen. Kopieras till `.env` pa varden. `.env` committas aldrig |
 
@@ -155,6 +156,34 @@ SHA-256.
 vars `.ots` annu inte forankrats publiceras inte, men det produceras: ett
 natavbrott 00:06 kostar en fordrojning, aldrig ett verk. Grinden kors av
 `run_color.py --stage site`, laser arkivets tidsstampelpost och ror inget nat.
+
+## Boken - egen lasfil, ingen container
+
+`tools/bygg_bok.py` genererar bokens PDF ur ett dygns frysta manifest: en sida
+per ruta, 611 sidor for 2026/315. Den behover reportlab och qrcode, och de star
+i `requirements-bok.txt` och ALDRIG i kedjans `requirements.txt`. Skalet ar
+stampelns: ett PDF-bibliotek hor inte hemma i det instrument som laser nyheter.
+Filen ligger i `tools/` och inte i `src/`, sa att instrumentet inte kan
+importera den.
+
+Till skillnad fran stampeln far boken ingen egen container. Stampeln ar
+tidskritisk och ror natet; boken laser ett fardigt arkiv, kors nar som helst
+och kan koras om. En lasfil racker:
+
+    python -m venv .venv-bok
+    .venv-bok/bin/pip install --no-deps -r deploy/requirements-bok.txt
+    .venv-bok/bin/pip check
+
+**Typsnitten foljer inte med.** DejaVu Sans, Sans-Bold, Sans-ExtraLight och
+SansMono laggs i en katalog som `STATES_FONTS` pekar pa, pa samma satt som
+`STATES_DATA` pekar pa arkivet. Ingen sokvag star i koden.
+
+    STATES_FONTS=<katalog> STATES_DATA=<arkiv> python tools/bygg_bok.py ut.pdf
+
+**Samma manifest ger samma byte.** `CreationDate` och `ModDate` satts ur
+observationsdygnets midnatt i UTC, harledd ur `state_id`, aldrig ur klockan.
+Utan det kunde boken aldrig byggas om till samma fil, och da vore pastaendet
+att den genereras av kod omojligt att prova.
 
 ## Lagring
 

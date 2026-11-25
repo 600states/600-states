@@ -1,0 +1,18 @@
+# Lasfil for BOKENS generator. INTE kedjans requirements.txt.
+#
+# Ett PDF-bibliotek hor inte hemma i det instrument som laser nyheter. Boken
+# ligger nedstroms det frysta manifestet: den laser ett fardigt verk och
+# tillverkar det inte. Samma skal som gav stamplingen en egen lasfil, och
+# samma form: exakta versioner, installerade med --no-deps, listan ar
+# sjalvbarande och pip check gar igenom.
+#
+# Uppmatt 2026-11-25. Versionerna ar matta, inte valda: reportlab 5.0.1 ar
+# den version den forsta generatorn kordes med 2026-11-13, enligt bargningen.
+#
+# Typsnitten foljer INTE med har. DejaVu Sans, Sans-Bold, Sans-ExtraLight och
+# SansMono laggs i en katalog som STATES_FONTS pekar pa.
+reportlab==5.0.1
+qrcode==8.2
+pillow==13.0.0
+charset-normalizer==3.5.3
+colorama==0.4.6
