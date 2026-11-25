@@ -101,6 +101,22 @@ def timestamp_record(DATA, day):
     """
     return _f(DATA, day, "TIMESTAMP.json")
 
+
+def signature_record(DATA, day):
+    """Dygnets signaturpost. Egen fil, inte ett falt i tidsstampelposten.
+
+    Tva program som skriver samma JSON maste lasa den andras innehall for att
+    inte skriva over det, och da ar ordningen mellan dem plotsligt en regel
+    ingen skrivit ned. Stampeln och signaturen intygar samma hash men ar tva
+    oberoende bevis: en lasare som bara har det ena ska se att det andra
+    saknas, inte hitta ett tomt falt i nagon annans journal.
+
+    Av samma skal som tidsstampelposten ligger den BREDVID manifestet. Det
+    signaturen intygar ar manifestets hash, och ett falt skrivet in i
+    manifestet efter frysningen hade gjort hashen till en hash av nagot annat.
+    """
+    return _f(DATA, day, "SIGNATURE.json")
+
 def frozen(path):
     """Dygnets egen fil, aven om den frystes under en tidigare manifestversion.
 

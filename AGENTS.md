@@ -708,6 +708,55 @@ that sentence is no longer true of this history. Whether the file changes or
 the provenance is stated some other way is the owner's call; see "Where
 documentation and code disagree".
 
+## The commit identity — binding from 2026-11-25
+
+Every commit carries exactly this author and committer string, byte for byte:
+
+    600 STATES <archive@600states.com>
+
+The section above forbids what a commit must not carry. This one states what it
+must. The prohibition was written down on 2026-11-11 and the identity was not,
+so the repository ran for two weeks with the positive half of the rule living
+nowhere.
+
+`600 STATES` is the work's author: a pseudonym with continuity, decided
+2026-11-25 and recorded in `PARAMETER_REGISTER` section 1.18. The whole argument
+of the method is that the instrument decides the image, so a named author invites
+the one question the method exists to make irrelevant. Company-anonymous does not
+qualify either: a company can change owners and signatories without the signature
+changing, and then there is no continuity left to check.
+
+**The signing key's UID is the same string.** Not a variant of it. The identity
+then appears in two independent public places — the git history and the signature
+over the manifest hash — and a reader can match one against the other. Two
+spellings are two identities, and continuity is the entire claim.
+
+**Measured 2026-11-25, and the measurement is why this section is not a
+formality:**
+
+    archive@600states.com  137 commits  2026-09-07 .. 2026-11-25
+    noreply@600states.com   48 commits  2026-11-06 .. 2026-11-11
+
+The name is identical across all 185 commits. The address was two and was
+corrected on 2026-11-11, the same day as the history rewrite above. So this is
+one identity plus a closed episode, not two live ones — but any public sentence
+about "the same hand, every day" states both halves. A sentence that mentions
+only the current address is the same shape as a claim about a gate that does not
+run.
+
+Nothing here is enforced by a gate yet. The gate belongs with the signature: one
+test reading that the key's UID, the string in `PARAMETER_REGISTER` 1.18 and
+HEAD's author field are the same string, written by whoever did not build the
+signing step.
+
+The signature itself exists from 2026-11-25. `src/sign.py` signs the frozen
+manifest's sha256 with minisign and writes that identity string as the
+signature's trusted comment; `gates.gate_signerat_manifest` refuses to publish a
+day whose record does not carry a verified one. What is still missing is the
+test above — the one that reads all three strings and compares them. A signature
+that spells the identity one way while the history spells it another is exactly
+what that test exists to catch, and nothing in the signing step can catch it.
+
 ## Reference environment — binding from 2026-11-13
 
 The instrument runs in the container described in `deploy/`. That container is

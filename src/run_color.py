@@ -64,19 +64,26 @@ def step_render(day, data=DATA):
     return png
 
 def step_site(day, data=DATA):
-    """Publiceringssteget: den publika vyns datafil. HAR SITTER STAMPELGRINDEN.
+    """Publiceringssteget: den publika vyns datafil. HAR SITTER BEVISGRINDARNA.
 
     Inte pa frysningen. Fyra externa kalendrar som inte svarar 00:06 far inte
     kosta ett annars felfritt dygn - ett dygn gar inte att gora om. Har kostar
     samma avbrott en fordrojning: dygnet ar fryst, fargat och renderat, och
     steget tas om med --stage site nar forankringen gatt igenom.
 
-    Grinden laser en JSON-fil ur arkivet och ror inget nat. Stamplingen sjalv
-    ligger i src/stamp.py och kors i en egen container.
+    TVA GRINDAR, TVA OBEROENDE BEVIS. Stampeln binder manifestets hash till ett
+    Bitcoin-block, signaturen binder den till upphovsidentiteten. Det ena sager
+    nar, det andra vem, och dygnet publiceras forst nar bada sager det.
+
+    Bada laser en JSON-fil ur arkivet och ror inget nat. Stamplingen ligger i
+    src/stamp.py och signeringen i src/sign.py; bada kors i stampelcontainern,
+    ingen av dem har.
     """
     print("\n[site]")
     import stamp
+    import sign
     gates.gate_forankrad_stampel(sp.state_id(day), stamp.las_post(day, data))
+    gates.gate_signerat_manifest(sp.state_id(day), sign.las_post(day, data))
     from build_site import build
     out, meta = build(day, data)
     print(f"        {out.name}  ·  {meta['colours']} unika farger  ·  {meta['pubs']} publicister")

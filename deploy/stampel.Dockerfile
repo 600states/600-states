@@ -25,8 +25,23 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # paketen. ca-certificates behovs for kalendrarna - stamplingen ar det enda
 # steget i hela projektet som med avsikt talar med en frammande tjanst om ett
 # fardigt verk.
+#
+# MINISIGN AR VERSIONSLAST, git och ca-certificates ar det inte. Skillnaden ar
+# inte stadning: git avgor hur koden hamtas och ror inte resultatet, medan
+# minisign TILLVERKAR ett bevis. Verktyget som gor beviset ar en matt parameter
+# och ska bytas med avsikt, pa samma satt som de nio paketen i lasfilen.
+#
+# Uppmatt 2026-11-25 ur Debians PGP-signerade index for trixie:
+#   minisign 0.12-1 amd64, pool/main/m/minisign/minisign_0.12-1_amd64.deb
+#   17060 byte, sha256 4a3f9611a0e363e5c574129dc0195ba951c6be4b8f7ac13d64880000e3b22ebe
+#   beror libc6 (>= 2.34) och libsodium23 (>= 0.7.0)
+#
+# libsodium23 last INTE. Det ar kryptobiblioteket under klienten, och en
+# sakerhetsuppdatering dar ska na containern utan att nagon andrar en rad.
+# Faller bygget for att 0.12-1 inte langre finns pa spegeln ar det ratt
+# beteende: da ska versionen flyttas med avsikt, inte halka med.
 RUN apt-get update \
- && apt-get install -y --no-install-recommends git ca-certificates \
+ && apt-get install -y --no-install-recommends git ca-certificates minisign=0.12-1 \
  && rm -rf /var/lib/apt/lists/*
 
 # Egen lasfil, installerad som en: exakt det som star dar, inga beroenden lost

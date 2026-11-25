@@ -23,7 +23,7 @@ environment".
 | `stampel.Dockerfile` | Samma form, egen lasfil. Stamplingens miljo - se nedan |
 | `requirements-stampel.txt` | Stamplingens nio paket pa exakt version |
 | `requirements-bok.txt` | Bokgeneratorns fem paket pa exakt version. Ingen container - se nedan |
-| `compose.yml` | Tre roller: `uppdatera`, `kedja` och `stampel` |
+| `compose.yml` | Fyra roller: `uppdatera`, `kedja`, `stampel` och `signatur` |
 | `.env.exempel` | Variabelnamnen. Kopieras till `.env` pa varden. `.env` committas aldrig |
 
 Imagen innehaller inte koden. Repot monteras. Imagen beskriver miljon; klonen
@@ -156,6 +156,57 @@ SHA-256.
 vars `.ots` annu inte forankrats publiceras inte, men det produceras: ett
 natavbrott 00:06 kostar en fordrojning, aldrig ett verk. Grinden kors av
 `run_color.py --stage site`, laser arkivets tidsstampelpost och ror inget nat.
+
+## Signatur - samma image som stampeln, egen tjanst
+
+Stampeln sager NAR manifestets hash fanns. Signaturen sager VEM som star for
+den. Tva oberoende bevis over samma hash, och dygnet publiceras forst nar bada
+sager det - se `gate_forankrad_stampel` och `gate_signerat_manifest`.
+
+Verktyget ar **minisign**, Ed25519, inte GPG. Skalet ar projektets eget: ett
+bevis ska ga att kontrollera utan infrastruktur som kan forsvinna.
+GPG-verifiering skickar i praktiken en granskare till en nyckelserver, med
+utgangsdatum och aterkallelser pa kopet. Har racker en binar, en publik
+nyckelfil och ett kommando utan natverk:
+
+    minisign -Vm <manifest>.csv.sha256 -p 600states.pub
+
+Klienten ar **versionslast i imagen**, till skillnad fran `git` och
+`ca-certificates`. Den tillverkar ett bevis och ar darfor en matt parameter.
+Uppmatt 2026-11-25 ur Debians PGP-signerade index for trixie: `minisign 0.12-1`
+amd64, 17 060 byte, `sha256 4a3f9611...e3b22ebe`.
+
+| Nar | Kommando | Nat |
+|---|---|---|
+| Direkt efter frysningen, bredvid stamplingen | `docker compose run --rm signatur python src/sign.py signera` | nej |
+
+**Egen tjanst, inte `stampel`, och skalet ar nyckeln.** Stamplingen behover
+ingen privat nyckel, sa den ska inte ha en monterad. Den enda korning som ser
+nyckeln ar den som signerar.
+
+**Nyckeln rors inte av koden.** Den privata nyckeln genereras av projektagaren,
+ligger utanfor bade repot och arkivet, och monteras skrivskyddat pa en fast
+inre sokvag som `STATES_SIGN_KEY` pekar pa (`SIGN_KEY_FILE` i `.env`).
+Programmet oppnar den aldrig och skrubbar dess sokvag ur allt det loggar -
+minisign skriver ut sokvagen den fick nar filen saknas.
+
+**Nyckeln genereras utan losenord**, `minisign -G -W`. Uppmatt 2026-11-25: en
+nyckel med losenord fragar pa stdin, och i en container finns ingen att fraga -
+klienten avslutar med felkod 2. Nyckeln sakerhetskopieras separat: den gar inte
+att aterskapa, och en bruten kontinuitet ar hela pastaendet forlorat.
+
+**Den publika nyckeln `600states.pub` hor hemma i repot** och publiceras pa
+sajten. Tills projektagaren lagt in den finns den inte, och da faller grinden -
+det ar ratt beteende, inte ett fel.
+
+Signaturen laggs bredvid `<manifest>.csv.sha256` som `.sha256.minisig` och
+andrar aldrig det den bevisar. Dess betrodda kommentar ar en rad:
+
+    600 STATES <archive@600states.com>  <state_id>  <manifestets sha256>
+
+Identitetsstrangen ar byteidentisk med commitidentiteten (PARAMETER_REGISTER
+1.18). Att de tva ar samma strang provas av ett eget test, skrivet av annan
+part an den som byggde signeringen.
 
 ## Boken - egen lasfil, ingen container
 

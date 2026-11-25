@@ -231,6 +231,44 @@ def gate_forankrad_stampel(state_id, post):
                                           else " - kor forankringen igen nasta dygn"))
 
 
+def gate_signerat_manifest(state_id, post):
+    """Ett fryst manifest utan giltig signatur publiceras inte.
+
+    SAMMA FORM OCH SAMMA PLATS SOM STAMPELGRINDEN, och av narbeslaktade skal.
+    Den laser en JSON-fil ur arkivet, ror inget nat och kraver varken nyckel
+    eller signeringsklient: en grind som bara gar att prova i den miljo som
+    tillverkade beviset gar inte att prova nagon annanstans.
+
+    DEN AVGOR INTE SJALV OM SIGNATUREN STAMMER. Det gjorde minisign, i
+    signeringssteget, mot den publika nyckeln i repot, och felkoden star i
+    posten. Grinden laser den felkoden. Att lata grinden verifiera om vore att
+    lagga signeringsverktyget i det instrument som laser nyheter, och det ar
+    precis den separationen hela steget finns till for.
+
+    VAD DEN BINDER: att den verifierade betrodda kommentaren talar om DETTA
+    dygn och DEN hash posten sager sig ha signerat. En post som bar en giltig
+    signatur over ett annat dygns manifest ar inte en signatur over det har.
+    Att hashen i sin tur ar filens pa disk ar gate_frozen_emotion:s arbete, och
+    den kordes i frysningen, stamplingen och signeringen.
+
+    UID-STRANGEN PROVAS INTE HAR. Att signaturens identitet, strangen i
+    PARAMETER_REGISTER 1.18 och forfattarfaltet pa HEAD ar samma strang ar ett
+    eget prov, skrivet av annan part an den som byggde signeringen.
+    """
+    _say("dygnet har en signaturpost", bool(post),
+         f"{state_id}: " + ("posten finns" if post else "ingen post - har dygnet signerats?"))
+    si = post.get("signatur") or {}
+    _say("manifestets hash ar signerad", bool(si.get("fil")),
+         si.get("fil") or "ingen .minisig skriven")
+    _say("signaturen verifierar mot den publika nyckeln", si.get("felkod_verify") == 0,
+         f"minisign felkod {si.get('felkod_verify')} mot {si.get('publik_nyckel') or 'ingen nyckel'}")
+    falt = (si.get("betrodd_kommentar") or "").split()
+    vantat = [state_id, post.get("manifest_sha256") or ""]
+    _say("den betrodda kommentaren galler detta dygn och denna hash",
+         falt[-2:] == vantat,
+         " ".join(falt[-2:]) if falt else "ingen betrodd kommentar i posten")
+
+
 def gate_frirymd(behov, fri, matt_pa):
     """Ett dygn far inte borja skrivas nar det inte finns plats for det.
 
