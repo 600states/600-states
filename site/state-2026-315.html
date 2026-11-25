@@ -50,7 +50,13 @@ img{display:block;max-width:100%}
 
 /* padding-block och inte "padding: X 0": .wrap bar sidmarginalen i
    padding-inline, och en kortform hade nollat den. */
-.open{padding-block:clamp(56px,9vw,132px) clamp(40px,6vw,88px)}
+.open{padding-block:clamp(56px,9vw,132px) clamp(40px,6vw,88px);
+  display:grid;grid-template-columns:1fr 46%;gap:clamp(24px,4vw,64px);align-items:end}
+/* Ingen ram, ingen skugga, ingen vagg. Proportionen halls av bildens egna
+   width/height plus height:auto - 3087x2057 ar inte exakt 3:2, sa en pasatt
+   aspect-ratio hade beskurit eller strackt. object-fit far ingen verkan utan
+   en fast hojd och star som sparr om nagon satter en. */
+.open .art{width:100%;height:auto;object-fit:contain}
 .open h1{font-size:var(--step-head)}
 .open .kind{margin-top:22px;font-size:clamp(1.2rem,2.2vw,1.8rem);letter-spacing:-0.03em;line-height:1.15;max-width:26ch}
 .open .when{margin-top:18px;font-size:var(--step-small);color:var(--dim)}
@@ -92,6 +98,7 @@ footer{border-top:1px solid #231f27;padding:48px 0 72px;font-size:var(--step-mic
 footer p + p{margin-top:10px}
 
 @media (max-width:860px){
+  .open{grid-template-columns:1fr}
   .block{grid-template-columns:1fr;gap:18px}
   .field-layout{grid-template-columns:1fr}
   .readout{position:static;min-height:0}
@@ -103,9 +110,18 @@ footer p + p{margin-top:10px}
 <div class="wrap back"><p><a href="/">&larr; 600 STATES</a></p></div>
 
 <div class="wrap open">
-  <h1>2026/315</h1>
-  <p class="kind">A calibration work. Not a State, and it will not become one.</p>
-  <p class="when">Observed day: 11 November 2026, UTC</p>
+  <div>
+    <h1>2026/315</h1>
+    <p class="kind">A calibration work. Not a State, and it will not become one.</p>
+    <p class="when">Observed day: 11 November 2026, UTC</p>
+  </div>
+  <!-- SAMMA FIL som noscript-bilden langre ner, refererad en andra gang: tva
+       nedskalade kopior av samma rendering vore FYND 004 i binar form. Tom
+       alt och aria-hidden for att noscript-bilden bar hela alt-texten och
+       meningen bars av h1 och underrubriken. Inte klickbar: verket klickas i
+       faltet, inte har. -->
+  <img class="art" src="img/state_2026_315.png" alt="" aria-hidden="true"
+       width="3087" height="2057">
 </div>
 
 <section>
@@ -181,17 +197,6 @@ footer p + p{margin-top:10px}
         </dl>
         <p class="src-note">The representative source as captured for the observation day. Some links have since moved or gone behind a paywall. The manifest records what was captured and its hash; where the link no longer resolves, that record is ours and cannot be checked against the publisher.</p>
       </aside>
-    </div>
-  </div>
-</section>
-
-<section>
-  <div class="wrap block">
-    <h2>Where it goes</h2>
-    <div class="body">
-      <p>This work is being given to <b>Fundacja Wielka Orkiestra Świątecznej Pomocy</b> for its 35th final, held on <b>31 January 2027</b>, whose theme is neonatal intensive care. It goes as a physical print together with the book for the same day, and everything it raises goes to the foundation.</p>
-      <p>It is decided and planned; nothing has been ordered yet, and what happens on the day is the foundation&rsquo;s to run and to announce.</p>
-      <p>Whoever ends up with it gets a calibration work with everything on this page written out: what it is, what reproduces, what does not, and what its hash does and does not prove. <b>It is not part of the series and it is not a numbered State.</b> That is also why it is the right work to give away.</p>
     </div>
   </div>
 </section>
