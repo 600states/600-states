@@ -108,13 +108,19 @@ section{border-top:1px solid #231f27}
    10px band langs hela panelen: fargen syns lika val och lasrutan slipper
    120px hojd som inte bar nagon text. */
 .readout .swatch{position:absolute;left:0;top:0;bottom:0;width:10px;margin:0;background:#2d5580}
-.readout .txt{margin-top:12px;font-size:clamp(1rem,1.25vw,1.45rem);line-height:1.25;letter-spacing:-0.025em}
+/* Pastaendet och anteckningen ar de ENDA tva element i lasrutan vars hojd
+   beror pa observationen - de nio etikett/varde-paren ar enradiga fran 400px
+   och uppat. Star de i panelen ar panelens hojd ett tal som kan ta slut: vid
+   1280 fanns 220px luft och det varsta innehallet tog 205. Har under verket
+   far de vaxa fritt, och panelen ar lika hog varje dygn. */
+.field-sec .tile-text{margin-top:26px}
+.field-sec .txt{font-size:clamp(1.1rem,1.4vw,1.45rem);line-height:1.25;letter-spacing:-0.025em;max-width:48ch}
+.field-sec .note{margin-top:14px;font-size:var(--step-small);line-height:1.5;color:var(--paper-muted);max-width:72ch}
 .readout dl{display:grid;grid-template-columns:auto 1fr;gap:2px 16px;margin:14px 0 0;font-size:var(--step-small);line-height:1.2}
 .readout dt{color:var(--paper-muted);font-size:var(--step-micro)}
 .readout dd{margin:0;font-weight:500;overflow-wrap:anywhere}
 .readout dd a{color:inherit;text-decoration:underline;text-underline-offset:2px}
 .field-sec .src-note{margin-top:18px;font-size:var(--step-micro);line-height:1.45;color:var(--paper-muted);max-width:72ch}
-.readout .note{margin-top:12px;font-size:var(--step-small);line-height:1.5;color:var(--paper-muted)}
 
 footer{border-top:1px solid #231f27;padding:48px 0 72px;font-size:var(--step-micro);color:var(--dim)}
 footer p + p{margin-top:10px}
@@ -203,6 +209,14 @@ footer p + p{margin-top:10px}
         <div class="field-keys" id="grid" role="group" aria-label="600 tiles. Use the arrow keys to move between tiles." tabindex="0"></div>
         <canvas id="fieldcv" aria-hidden="true"></canvas>
         <noscript><img src="img/state_2026_315.png" alt="The rendered field of 600 colours for the observed day of 11 November 2026." width="3087" height="2057" loading="lazy"></noscript>
+        <!-- Pastaendet och anteckningen star HAR, direkt under verket, och
+             inte i lasrutan: de ar de enda tva element vars hojd beror pa
+             observationen, och lasrutan far aldrig vara hogre an canvasen.
+             Egen aria-live, eftersom de lamnat lasrutans. -->
+        <div class="tile-text" aria-live="polite">
+          <p class="txt">Pick a square. The observation that produced its colour appears here.</p>
+          <p class="note"></p>
+        </div>
         <p class="src-note">The representative source as captured for the observation day. Some links have since moved or gone behind a paywall. The manifest records what was captured and its hash; where the link no longer resolves, that record is ours and cannot be checked against the publisher.</p>
         <!-- Hallnoten star SIST: den tands och slacks, och hogre upp hade
              den knuffat bildtexten varje gang en ruta hills. -->
@@ -211,7 +225,6 @@ footer p + p{margin-top:10px}
       <aside class="readout" id="readout" aria-live="polite">
         <p class="idx">Tile — of 600</p>
         <div class="swatch"></div>
-        <p class="txt">Pick a square. The observation that produced its colour appears here.</p>
         <dl>
           <dt>Primary state</dt><dd>—</dd>
           <dt>Secondary</dt><dd>—</dd>

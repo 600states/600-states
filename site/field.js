@@ -12,10 +12,10 @@
  *     initField(window.STATE001);
  *
  * Sidan maste bara innehalla #grid, #fieldcv och #readout med lasrutans
- * element i samma form som index.html. Hallnoten .lock ar undantaget och
- * star under verket, inte i lasrutan - se kommentaren vid uppslagningen.
- * Saknas nagot av dem ritas inget falt
- * och sidan star kvar som den ar - en sida utan skript visar sin noscript-bild.
+ * element i samma form som index.html. Tre av dem star UTANFOR lasrutan,
+ * under verket: .txt, .note och .lock - se kommentaren vid uppslagningen.
+ * Saknas nagot av dem ritas inget falt och sidan star kvar som den ar -
+ * en sida utan skript visar sin noscript-bild.
  */
 (function(){
   "use strict";
@@ -47,12 +47,14 @@
 
     var idx  = ro.querySelector('.idx'),
         sw   = ro.querySelector('.swatch'),
-        tx   = ro.querySelector('.txt'),
-        // Hallnoten ligger UTANFOR lasrutan, under verket: den ar inte rutans
-        // data, och lasrutan far aldrig vara hogre an canvasen.
+        // TRE element ligger UTANFOR lasrutan, under verket. Pastaendet och
+        // anteckningen ar de enda vars hojd beror pa observationen, hallnoten
+        // ar inte rutans data alls. Lasrutan far aldrig vara hogre an canvasen,
+        // sa det som vaxer med dygnet far inte sta i den.
+        tx   = document.querySelector('.txt'),
+        note = document.querySelector('.note'),
         lockNote = document.querySelector('.lock'),
-        dds  = ro.querySelectorAll('dd'),
-        note = null;
+        dds  = ro.querySelectorAll('dd');
 
     function onDpr(){ paint(0); }
     function watchDpr(d){
@@ -136,7 +138,6 @@
       dds[6].textContent = t[10] + ' UTC';
       dds[7].textContent = EVIDENCE[t[11]] || t[11];
       dds[8].textContent = t[12];
-      if(!note){ note = document.createElement('p'); note.className = 'note'; ro.appendChild(note); }
       note.textContent = t[7];
     }
 
