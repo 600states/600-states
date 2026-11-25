@@ -7,3 +7,11 @@
 # LF, sa en klon pa Windows och en pa Linux skulle fa olika bytes och samma
 # publicerade SHA-256 skulle stamma pa hogst en av dem.
 protocols/** -text
+
+# Samma skal, och det galler varje fil vars hash ar publicerad. Den publika
+# signeringsnyckeln ar 113 byte med LF och dess SHA-256 star i
+# PARAMETER_REGISTER 1.18 och i NAS:ens rapport. text=auto gav varningen
+# "LF will be replaced by CRLF the next time Git touches it" vid incheckningen
+# 2026-11-25: en utcheckning pa Windows hade gett 115 byte och en annan hash an
+# den publicerade, och minisign laser filen rad for rad.
+600states.pub -text
