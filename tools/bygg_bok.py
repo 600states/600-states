@@ -21,11 +21,20 @@ Matningen ar inte en gissning om hur sidan sag ut: den AR sidan.
 
 Tre sidor matta i sin helhet - 6, 310 och 605 - gav samma koordinatskelett.
 De tva skillnader som finns ar innehallets, inte kodens: URL:en bryts till en
-eller tva rader med 6,6 punkters steg (det ar hacka() harunder, bargad
-ordagrant), och sidnumret ar hogerstallt sa dess vansterkant flyttar med
+eller tva rader med 6,6 punkters steg (det ar hacka() harunder, ett av de
+tva fragment som gar in ordagrant), och sidnumret ar hogerstallt sa dess vansterkant flyttar med
 antalet siffror. En skanning av 88 rutsidor visade dessutom att hogerspalten
 FLYTER: pastaendet borjar alltid pa samma rad, allt under det foljer efter.
 Fem olika kombinationer av radantal reproducerades exakt av modellen harunder.
+
+BARGNINGEN AR ETT UNDERLAG, INTE EN KALLA
+Transkriptet bar TVA generatorer. Den forsta satte 481.89 x 680.315 pt =
+170 x 240 mm staende och kastades nar formatet byttes till 21 x 15 cm; den
+andra skrevs fran noll och ar den PDF:en pa disk kommer ur. Bargningens
+avsnitt 5.1:s anropsrad, 5.4, 5.5 och 5.6 hor till den KASTADE generatorn -
+46 x 4 kolumner var en layout for en staende sida. Bara 5.2 och 5.3 gar in
+ordagrant. Allt annat ar uppmatt. Nar dokumentet och byten sager olika vinner
+byten.
 
 TRE STALLEN DAR DEN HAR FILEN MED AVSIKT INTE AR PDF:EN PA DISK
 1. OMSLAGET. PDF:en bar A1 - titeln i DejaVuSans-ExtraLight 40. BOKEN_SPEC
@@ -104,13 +113,7 @@ SIDA = (210 * mm, 150 * mm)
 # bara dess plats pa arket speglas.
 MARG_INRE = 23 * mm
 MARG_YTTRE = 14 * mm
-MARG_TOPP = 14 * mm
 SATSYTA = 173 * mm
-
-# MARG ar den SYMMETRISKA marginalen, och finns bara for hexindex() harunder,
-# som ar bargad ordagrant och raknar sin egen satsyta som SIDA[0] - 2*MARG.
-# Fargregistrets sidor speglar darfor inte. Se rapporten.
-MARG = MARG_YTTRE
 
 RUTOR_X = 30
 RUTOR_Y = 20
@@ -126,7 +129,7 @@ def satsyta(sidnr):
     return MARG_INRE if sidnr % 2 else MARG_YTTRE
 
 
-# ------------------------------------------------ bargat ordagrant, 5.1-5.2 --
+# ---------------------------------- bargat ordagrant: enbart 5.2 och 5.3 --
 def klocka(fm):
     """20261111000000 -> 11 Nov 2026 00:00 UTC"""
     if not fm or len(fm) < 12:
@@ -154,8 +157,8 @@ def hacka(text, font, storlek, bredd):
 def skriv(c, x, y, text, font, storlek, farg, bredd=SATSYTA, radavstand=None):
     """Bryter text pa ordgrans, ritar den, och returnerar NY y.
 
-    Anvands som y = skriv(...). Standardradavstandet anvands bara av
-    hexindex(), som ar bargad ordagrant och inte anger nagot.
+    Anvands som y = skriv(...). Varje anropare anger sitt radavstand; det
+    har standardvardet styr ingen sida i boken och ar inte uppmatt.
     """
     if radavstand is None:
         radavstand = storlek * 1.45
@@ -190,34 +193,59 @@ def radantal(text, font, storlek, bredd):
     return n + (1 if nu else 0)
 
 
-# ------------------------------------------- bargat ordagrant, 5.6 gallande --
+# --------------------------------------------------------- fargregistret --
+# UPPMATT, inte bargat. Bargningens avsnitt 5.6 har PER_KOL, KOL = 46, 4 och
+# rubrik 13 pt, och den layouten har aldrig funnits pa en liggande sida: den
+# hor till den FORSTA generatorn, som satte 170 x 240 mm staende och kastades
+# nar formatet byttes. PDF:en pa disk ar den andra generatorn. Nar dokumentet
+# och byten sager olika vinner byten.
+REG_KOL = 6
+REG_PER_KOL = 28
+REG_EFTER_RUBRIK = 23.29      # rubrikens rad till underradens
+REG_EFTER_SUB = 17.95         # underradens till forsta registerraden
+REG_RAD = 9.2
+
+
 def hexindex(c, rader, state_id, sidnr):
-    """Alla 600 hexvarden som text, tre sidor. Registret, inte bilden."""
-    PER_KOL, KOL = 46, 4
-    per_sida = PER_KOL * KOL
-    b = SIDA[0] - 2 * MARG
-    kb = b / KOL
+    """Alla 600 hexvarden som text, fyra sidor. Registret, inte bilden.
+
+    Sex kolumner a 28 rader ar uppmatt pa sidorna 606-609: 168 + 168 + 168 + 96
+    = 600, och den sista sidan fyller tre kolumner plus tolv rader. Kolumnerna
+    raknas ur den SPEGLADE satsytan och inte ur den symmetriska som utskriften
+    har: fyra sidor som inte speglar i ett tradbundet block pa 611 sidor tappar
+    sin inre kolumn ner i ryggen, och BOKEN_SPEC 3.1 gor inget undantag for
+    registret.
+    """
+    per_sida = REG_PER_KOL * REG_KOL
+    kb = SATSYTA / REG_KOL
     sidor = 0
     for start in range(0, len(rader), per_sida):
         bit = rader[start:start + per_sida]
-        y = SIDA[1] - 32 * mm
+        x0 = satsyta(sidnr + sidor)
+        y = SIDA[1] - 26 * mm
         if start == 0:
-            y = skriv(c, MARG, y, "Colour index", "SB", 13, SVART)
-            y = skriv(c, MARG, y - 3 * mm,
-                      "Every tile and the colour its reading became. The image is these "
-                      "600 values and nothing else.", "S", 7.5, GRA, b)
-            y -= 4 * mm
+            c.setFont("SB", 12)
+            c.setFillColor(SVART)
+            c.drawString(x0, y, "Colour index")
+            # Underraden ar EN rad i satsytan - 330 pt av 490 - och bryts
+            # aldrig. Radavstandet for en andra rad gar darfor inte att mata
+            # ur utskriften, sa avstandet till registret star som ett matt.
+            skriv(c, x0, y - REG_EFTER_RUBRIK,
+                  "Every tile and the colour its reading became. The image is "
+                  "these 600 values and nothing else.", "S", 7.0, GRA, SATSYTA,
+                  REG_EFTER_SUB)
+            y = y - REG_EFTER_RUBRIK - REG_EFTER_SUB
         top = y
         for i, r in enumerate(bit):
-            kx = MARG + (i // PER_KOL) * kb
-            ky = top - (i % PER_KOL) * 9.2
+            kx = x0 + (i // REG_PER_KOL) * kb
+            ky = top - (i % REG_PER_KOL) * REG_RAD
             c.setFillColor(HexColor(r["hex"]))
             c.rect(kx, ky - 1, 5.2, 5.2, stroke=0, fill=1)
             c.setFont("M", 5.6)
             c.setFillColor(GRA)
-            c.drawString(kx + 7.6, ky, f"{int(r['tile_index']):03d}")
+            c.drawString(kx + 7.4, ky, f"{int(r['tile_index']):03d}")
             c.setFillColor(SVART)
-            c.drawString(kx + 20, ky, r["hex"].upper())
+            c.drawString(kx + 19.0, ky, r["hex"].upper())
         sidfot(c, state_id, str(sidnr + sidor))
         c.showPage()
         sidor += 1
@@ -608,7 +636,11 @@ def bygg(ut, nyckel="2026_315"):
     las_typsnitt()
     d = las_dygnet(nyckel)
     pre = sorted(d["pre"], key=lambda r: int(r["tile_index"]))
-    farg = {int(r["tile_index"]): r for r in d["farg"]}
+    # Registret ska sta i RUTNATETS ordning, inte i filens. Manifestet ar
+    # redan sorterat, men boken ska inte vila pa det: ordningen ar en regel
+    # har, inte en egenskap hos en fil. Se FYND 016.
+    farg_rader = sorted(d["farg"], key=lambda r: int(r["tile_index"]))
+    farg = {int(r["tile_index"]): r for r in farg_rader}
     state_id = pre[0]["state_id"]
     dag, datum = dygnsdatum(state_id)
     sha = d["manifest_sha"]
@@ -702,7 +734,7 @@ def bygg(ut, nyckel="2026_315"):
         rutsida(c, p, farg[int(p["tile_index"])], state_id, datum, n)
 
     n += 1
-    n += hexindex(c, d["farg"], state_id, n) - 1
+    n += hexindex(c, farg_rader, state_id, n) - 1
 
     n += 1
     textsida(c, "The day in numbers", [
@@ -710,7 +742,7 @@ def bygg(ut, nyckel="2026_315"):
         ("mono", [(k, f"{v} of {len(pre)}") for k, v in
                   rakna(pre, "evidence_basis")]),
         ("rubrik", "Primary states"),
-        ("mono", rakna(d["farg"], "primary_emotion")),
+        ("mono", rakna(farg_rader, "primary_emotion")),
     ], state_id, n)
 
     n += 1
