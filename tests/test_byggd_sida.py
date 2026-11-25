@@ -28,9 +28,11 @@ KALLA = ROT / "site" / "index.html"
 FALTKOD = ROT / "site" / "field.js"
 
 sys.path.insert(0, str(ROT / "site"))
+sys.path.insert(0, str(ROT / "src"))
 sys.path.insert(0, str(ROT))
 import build as bygge
 import config
+from color_protocol import hex_of_row
 
 kraver_bygge = pytest.mark.skipif(
     not (DIST / "index.html").exists() or not (DIST / "data.js").exists(),
@@ -46,6 +48,19 @@ except SystemExit:
 
 kraver_labsdygnet = pytest.mark.skipif(
     LABS_MANIFEST is None,
+    reason="dataarkivet saknas - satt STATES_DATA (se README)")
+
+# Kalibreringsverkets fargmanifest, pa samma satt: dygnet och katalogen tas ur
+# byggets egna konstanter och skrivs inte en andra gang har.
+try:
+    MANIFEST_315 = bygge.manifest_for(
+        config.data_root() / "08_V3_STATES" / ("STATE_" + bygge.NYCKEL_315),
+        bygge.DYGN_315)
+except SystemExit:
+    MANIFEST_315 = None
+
+kraver_315 = pytest.mark.skipif(
+    MANIFEST_315 is None,
     reason="dataarkivet saknas - satt STATES_DATA (se README)")
 
 
@@ -166,6 +181,46 @@ def test_labssidans_distinkta_farger_ar_manifestets():
 
 
 @kraver_bygge
+@kraver_315
+def test_315_sidans_reproduktionstal_ar_manifestets():
+    """Talet pa 2026/315:s sida mot en egen omrakning ur dygnets manifest.
+
+    DEN HAR VAKTEN LIGGER BLAND DE OVERHOPPADE UTAN ARKIVET, av samma skal som
+    labs-dygnets: talet kommer inte ur data.js utan ur ett fryst manifest, och
+    manifestet ligger i arkivet. En farsk klon utan STATES_DATA kor alltsa inte
+    den har raden, och talet ar da bara "ett tal over noll" enligt
+    platshallarprovet.
+
+    Talet ar sidans BEVISPASTAENDE: "600 av 600 rutor reproducerar". Uppmatt
+    2026-11-25 pa a059cce, fore det har provet, med mutation pa den byggda
+    sidan: 600 -> 599 gav ATTA GRONA, 600 -> 601 gav ATTA GRONA, och en
+    oersatt platshallare gav ATTA GRONA. Bygget skrev talet och ingenting
+    jamforde det - det sjatte byggskrivna talet och det enda utan grind.
+
+    Omrakningen gors HAR och inte med byggets egna reproducerar(): ett prov som
+    anropar funktionen det provar sager bara att den ar sig lik. Jamforelsen ar
+    densamma som bygget gor men skriven en gang till pa den har sidan av
+    grinden - hex-kolumnen i det frysta manifestet mot hex_of_row() ur de fyra
+    protokollfalten.
+
+    SKRIVET AV SAMMA PART SOM ANDRADE BYGGET, som de ovan.
+    """
+    rader = list(csv.DictReader(
+        MANIFEST_315.read_text(encoding="utf-8").splitlines()))
+    assert len(rader) == 600, (
+        f"{MANIFEST_315.name} har {len(rader)} rader, inte 600")
+    ur_arkivet = sum(1 for r in rader
+                     if hex_of_row(r).upper() == r["hex"].strip().upper())
+    ur_sidan = _ur_sidan("repro-2026-" + bygge.DYGN_315, bygge.SIDA_315)
+    assert ur_sidan.isdigit(), (
+        f"sidan for 2026/{bygge.DYGN_315} sager '{ur_sidan}' dar ett tal ska "
+        "sta - bygget ersatte inte platshallaren")
+    assert int(ur_sidan) == ur_arkivet, (
+        f"sidan sager {ur_sidan} av 600 rutor reproducerar for dygn "
+        f"2026/{bygge.DYGN_315}, omrakningen ur manifestet ger {ur_arkivet}")
+
+
+@kraver_bygge
 def test_sidans_testtal_ar_en_egen_insamling():
     """Talet i tabellen mot en egen insamling av samma tva filer.
 
@@ -267,10 +322,18 @@ def test_stampeln_pekar_pa_en_commit_som_finns_i_historiken():
 @kraver_bygge
 def test_byggets_platshallare_ersattes():
     """En oersatt platshallare betyder att kallan laddats upp i stallet for
-    bygget. Bada talen provas, for de skrivs av samma loop."""
+    bygget. Alla talen provas, for de skrivs av samma loop.
+
+    SPANNET MASTE IN HAR NAR ETT NYTT SKRIVS. Sidan for 2026/315 lades till med
+    ett sjatte tal och listan kande bara till fem: en oersatt platshallare pa
+    den sidan passerade alla provningar 2026-11-25. Dygn och sidnamn tas darfor
+    ur byggets egna konstanter - en andra lista over sidor ar en lista som
+    glommer en av dem."""
     for falt, sida in (("tests", "index.html"), ("nocons", "index.html"),
-                       ("distinct", "index.html"), ("slug-001", "index.html"),
-                       ("distinct-2026-308", "labs.html")):
+                       ("distinct", "index.html"),
+                       ("slug-" + bygge.FIELD_DAY, "index.html"),
+                       ("distinct-2026-" + bygge.LABS_DAY, "labs.html"),
+                       ("repro-2026-" + bygge.DYGN_315, bygge.SIDA_315)):
         v = _ur_sidan(falt, sida)
         assert v.isdigit() and int(v) > 0, (
             f"data-{falt} ar '{v}' i den byggda {sida} - inte ett tal over noll")

@@ -123,7 +123,30 @@ section{padding:clamp(64px,8vw,140px) var(--m)}
    pa labs och nio pa startsidan - och alla elva ar bedomda och uppskjutna till
    efter seriestart. Ingen ignore ar satt i kroken: ett undertryckt fynd syns
    inte igen, och det har ska synas tills det ar atgardat.
-   De ar av tva slag, och de bedoms olika:
+   2026-11-25 kom SEX till, nar sidan for 2026/315 lades till. SJUTTON totalt,
+   samma bedomning och fortfarande ingen ignore. Vardena ar lasta ur krokens
+   egen rapport, inte ur minnet:
+     state-2026-315.html, fyra.
+       1,25x pa .readout .txt   ARVT ur startsidans faltavsnitt. Lasrutan pa
+                     315 ska vara IDENTISK med startsidans: rattas den bara
+                     har far verket en annan lasruta an serien, och tva
+                     lasrutor som ser olika ut ar samre an ett uppskjutet
+                     radavstand. Rattas nar startsidans rattas, i samma andring.
+       .field-sec    cramped-padding. Startsidan bar samma traff pa samma
+                     sektion, av samma skal: innerkanten kommer fran .wrap
+                     inuti.
+       1,15x pa .open .kind     INTE arvd, den ar sidans egen ingressrad.
+                     Display-typ av samma slag som de atta sedan 11f7b66, och
+                     bedomd likadant.
+       <section>     cramped-padding mot border-top. INTE arvd. Samma form som
+                     den tysta posten for labs i .impeccable/config.json:
+                     detektorn loser inte clamp() och ser padding-block som
+                     noll. Har star ingen ignore.
+     labs.html, tva.  low-contrast 1,7:1 (#e8c354 pa #ffffff) och
+                     aphoristic-cadence. Bada galler sidan som den redan var;
+                     kroken knyter dem inte till nagon commit och rapporterar
+                     dem som "attribution unknown".
+   De elva forsta ar av tva slag, och de bedoms olika:
      tight-leading   radavstand 1,08x till 1,25x, uppmatt med
                      `impeccable detect` 2026-11-24. Samtliga sitter pa
                      rubrik- och citattyp vars radavstand kommer ur den frysta
