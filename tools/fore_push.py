@@ -75,10 +75,22 @@ def monster(ordlista):
     return m
 
 
-# Tillatlista pa innehall. (monster, exakt text, skal). Texten provas mot den
+# Tillatlista pa innehall. (monster, vad, skal). Texten provas mot den
 # traffade strangen OCH mot hela raden, sa att en post kan vara sa smal som
 # raden tillater. Samma strang nagon annanstans slapps igenom; en ANNAN strang
 # under samma monster faller.
+#
+# VAD kan ocksa vara ett STALLE i stallet for en text: ("blobbens sha", radnr).
+# Da galler posten en enda rad i ett enda objekt. En blob ar oforanderlig, sa
+# det ar lika mycket en post pa innehall som en strang ar - inte pa ett filnamn,
+# som punkt 4 i docstringen avvisar: ett filnamn ar vitlistat aven den dag filen
+# innehaller nagot annat, en blob kan inte byta innehall.
+#
+# FORMEN FINNS FOR ATT EN TEXTPOST INTE ALLTID GAR ATT SKRIVA. Posten nedan
+# galler en regex som MATCHAR en lokal sokvag. Skrevs den raden ut har skulle
+# fore_push.py sjalv bara strangen, och grinden falla pa sin egen tillatlista -
+# samma fel som punkt 3 i docstringen beskriver for attributionen. Ett stalle
+# stavar ingenting.
 TILLATET = [
     ("kommersiell strategi", "sell",
      "COPYRIGHT.md: licensupplatelsen om vad en kopare INTE far gora med bilderna. "
@@ -96,6 +108,14 @@ TILLATET = [
      "fritt i hela repot; vad verket ska kosta stavas inte sa."),
     ("lokal sokvag", "OneDrive",
      "Samma skal som ovan: ordet star som exempel pa en synkad mapp, inte som nagons sokvag."),
+    ("lokal sokvag", ("3e9a8d6107e59ddbc7a67dabd7f157aca6fc1230", 313),
+     "blob 3e9a8d6107 i 3b5a96f, tests/test_boken.py rad 313: en regex som MATCHAR "
+     "en lokal sokvag och inte ar en. Ingen hemkatalog exponeras - raden provar att "
+     "bokgeneratorn saknar sokvagar. Raden ar omskriven i efterfoljande commit till "
+     "samma alternation som monstret ovan anvander, men bloben ligger kvar i en redan "
+     "pushad commit och SKRIVS INTE BORT: NAS:ens uppdateringssteg kor git pull "
+     "--ff-only, och en force-push bryter korning A sex dagar fore start. Posten ar "
+     "pinnad till en oforanderlig blob och en rad, sa den kan inte vaxa."),
 ]
 TILLATNA = {(p, t) for p, t, _ in TILLATET}
 
@@ -186,9 +206,11 @@ def main(repo):
             text = data.decode("utf-8", "replace")
         var = "commit: " + amnesrad(text) if typ == "commit" else ""
         for monsternamn, traffad, radnr, rad in prova(text, mon):
-            nyckel = ((monsternamn, traffad) if (monsternamn, traffad) in TILLATNA
-                      else (monsternamn, rad.strip()) if (monsternamn, rad.strip()) in TILLATNA
-                      else None)
+            # Texten, hela raden, eller stallet: bloben plus radnumret.
+            nyckel = next((n for n in ((monsternamn, traffad),
+                                       (monsternamn, rad.strip()),
+                                       (monsternamn, (sha, radnr)))
+                           if n in TILLATNA), None)
             if nyckel:
                 tillatna += 1
                 anvanda[nyckel] = anvanda.get(nyckel, 0) + 1
@@ -211,8 +233,9 @@ def main(repo):
     # ligga kvar och vitlista en strang som ingen minns varfor den stod dar.
     print("{} traffar tillatna av tillatlistans {} poster:".format(tillatna, len(TILLATET)))
     for p, t, skal in TILLATET:
+        vad = t if isinstance(t, str) else "blob {} rad {}".format(t[0][:10], t[1])
         print("      {:>4} x  {} | {}\n            {}".format(
-            anvanda.get((p, t), 0), p, t, skal))
+            anvanda.get((p, t), 0), p, vad, skal))
     if ordfel:
         print("\n" + ordfel)
     if fall:

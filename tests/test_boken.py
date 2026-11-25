@@ -310,7 +310,15 @@ def test_generatorn_bar_ingen_lokal_sokvag_och_inget_namn():
     """Samma regel som fore_push, provad dar den kan falla ett test."""
     import re
     kod = GENERATOR.read_text(encoding="utf-8")
-    for monster in (r"[A-Za-z]:\\\\", r"/Users/", r"/home/[a-z]", r"/volume\d"):
+    # HEMKATALOGERNA STAVAS SOM I fore_push.py, med en alternation och inte med
+    # de tva sokvagarna utskrivna var for sig. Skalet star i den filens egen
+    # docstring: grinden laser HELA objektdatabasen, den har filen inrakad, och
+    # en regex som stavar ut det forbjudna faller pa sig sjalv vid nasta
+    # korning. Skriv inte om den till literaler "for tydlighetens skull" - da
+    # blir grinden rod, och bloben gar inte att ta bort utan att skriva om
+    # historiken. Formen ar bredare an den var, inte smalare: den tar aven
+    # omvand snedstreck.
+    for monster in (r"[A-Za-z]:\\\\", r"[\\/](?:Users|home)[\\/]", r"/volume\d"):
         assert not re.search(monster, kod), f"lokal sokvag i generatorn: {monster}"
     assert "STATES_FONTS" in kod, "typsnittskatalogen ska komma ur miljon"
 
