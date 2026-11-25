@@ -172,7 +172,12 @@ h2{font-size:var(--step-head)}
 .field-sec .tile-text{margin-top:26px}
 .field-sec .txt{font-size:clamp(1.1rem,1.4vw,1.45rem);line-height:1.25;letter-spacing:-0.025em;max-width:48ch}
 .field-sec .note{margin-top:14px;font-size:var(--step-small);line-height:1.5;color:var(--paper-muted);max-width:72ch}
-.readout dl{display:grid;grid-template-columns:auto 1fr;gap:2px 16px;margin:14px 0 0;font-size:var(--step-small);line-height:1.2}
+/* Radavstandet ar sidans eget igen. Det drogs ner till 1.2 nar panelen bar
+   pastaendet och varje pixel rakandes; nu bar den nio enradiga falt och har
+   182px till godo vid den bindande bredden, sa den behover inte knipa.
+   Kolumnmellanrummet star kvar pa 16px: vardekolumnen ar 259px och den
+   langsta glossen tar precis 259. */
+.readout dl{display:grid;grid-template-columns:auto 1fr;gap:7px 16px;margin:26px 0 0;font-size:var(--step-small)}
 .readout dt{color:var(--paper-muted);font-size:var(--step-micro)}
 .readout dd{margin:0;font-weight:500}
 .readout dd a{color:inherit;text-decoration:underline;text-underline-offset:2px}
