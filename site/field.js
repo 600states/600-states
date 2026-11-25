@@ -12,7 +12,9 @@
  *     initField(window.STATE001);
  *
  * Sidan maste bara innehalla #grid, #fieldcv och #readout med lasrutans
- * element i samma form som index.html. Saknas nagot av dem ritas inget falt
+ * element i samma form som index.html. Hallnoten .lock ar undantaget och
+ * star under verket, inte i lasrutan - se kommentaren vid uppslagningen.
+ * Saknas nagot av dem ritas inget falt
  * och sidan star kvar som den ar - en sida utan skript visar sin noscript-bild.
  */
 (function(){
@@ -46,7 +48,9 @@
     var idx  = ro.querySelector('.idx'),
         sw   = ro.querySelector('.swatch'),
         tx   = ro.querySelector('.txt'),
-        lockNote = ro.querySelector('.lock'),
+        // Hallnoten ligger UTANFOR lasrutan, under verket: den ar inte rutans
+        // data, och lasrutan far aldrig vara hogre an canvasen.
+        lockNote = document.querySelector('.lock'),
         dds  = ro.querySelectorAll('dd'),
         note = null;
 

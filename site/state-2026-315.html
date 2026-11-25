@@ -74,25 +74,47 @@ section{border-top:1px solid #231f27}
 /* Verket. Platt, i sin egen geometri, pa samma yta som startsidans falt - och
    lasrutan ar startsidans, hamtad ur field.js och inte kopierad hit. */
 .field-sec{background:var(--paper);color:var(--paper-ink);border-top:0}
+/* Samma geometri som startsidans falt. Sidans prosa star pa 1280, men
+   faltet ar samma falt och delar .field-layout: pa 1280 blev kolumnerna
+   757/413 i stallet for 900/487, och en smalare panel ar en HOGRE panel. */
+/* Verkets kolumn maler i hela pixlar: tilePx = floor((bredd - 29)/30), sa
+   canvasens hojd hoppar i steg om 20px. Vid 1280 ligger steget precis fel
+   med sidans vanliga marginal - faltet far darfor en egen, smalare, och
+   verket vaxer over steget. Matt: 763px kolumn ger 499px verk, 787px ger
+   519px. Lasrutan ar 507. */
+.field-sec .wrap{max-width:1680px;padding-inline:clamp(16px,1.2vw,32px)}
 .field-sec .inner{padding-block:clamp(40px,6vw,88px)}
 .field-sec h2{font-size:clamp(1.5rem,2.6vw,2.4rem)}
-.field-layout{display:grid;grid-template-columns:1fr 34%;gap:clamp(24px,3vw,56px);align-items:start;margin-top:40px}
+/* LASRUTAN FAR ALDRIG VARA HOGRE AN VERKET, fran 1280px och uppat.
+   Matt 2026-11-25 over alla 600 rutor, inte mot en tom ruta: panelen bar
+   upp till 877px mot en canvas pa 599. Bredden ensam racker inte - en
+   bredare panel tar hojd ur lasrutan LANGSAMMARE an den tar hojd ur
+   verket, sa pa startsidan VAXER overhanget av att bredda: 487px gav 278,
+   520px gav 297, 600px gav 311. Darfor flyttas bordan i stallet: den
+   statiska kallnoten och hallnoten ar inte rutans data och star under
+   verket, datablocket far tatare rader, och kolumnen har ett GOLV pa
+   420px - under det bryter "3/3 read the same way every time" till tva
+   rader och panelen vaxer fortare an verket. */
+.field-layout{display:grid;grid-template-columns:1fr clamp(400px,32%,560px);gap:clamp(20px,3.9vw - 30px,56px);align-items:start;margin-top:40px}
 .field-keys{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)} /* taste-skill-ignore: visually hidden keyboard layer, not a rule */
 .field-keys button{position:absolute;width:1px;height:1px;border:0;padding:0;margin:0} /* taste-skill-ignore: visually hidden, not a rule */
 #fieldcv{display:block;margin-inline:auto;max-width:100%;cursor:pointer}
 .field-keys:focus-visible + #fieldcv{outline:3px solid var(--accent);outline-offset:4px}
 .field-cap{margin-top:24px;font-size:var(--step-small);color:var(--paper-muted);max-width:72ch}
-.readout{background:#f2f0ee;padding:clamp(20px,2vw,32px);min-height:420px;position:sticky;top:32px}
+.readout{background:#f2f0ee;padding:clamp(16px,1.3vw,22px);padding-left:calc(clamp(16px,1.3vw,22px) + 10px);min-height:0;position:sticky;top:32px}
 .readout .idx{font-size:var(--step-micro);color:var(--paper-muted)}
-.readout .lock{margin-top:9px;font-size:var(--step-micro);line-height:1.4;font-weight:500;color:var(--paper-ink)}
-.readout .swatch{width:100%;height:84px;margin:16px 0 20px;background:#2d5580}
-.readout .txt{font-size:clamp(1.1rem,1.4vw,1.45rem);line-height:1.25;letter-spacing:-0.025em}
-.readout dl{display:grid;grid-template-columns:auto 1fr;gap:7px 18px;margin:26px 0 0;font-size:var(--step-small)}
-.readout dt{color:var(--paper-muted)}
+.field-sec .lock{margin-top:16px;font-size:var(--step-micro);line-height:1.4;font-weight:500;color:var(--paper-ink)}
+/* Rutans farg ar panelens KANT, inte ett block i flodet. 84px block blev
+   10px band langs hela panelen: fargen syns lika val och lasrutan slipper
+   120px hojd som inte bar nagon text. */
+.readout .swatch{position:absolute;left:0;top:0;bottom:0;width:10px;margin:0;background:#2d5580}
+.readout .txt{margin-top:12px;font-size:clamp(1rem,1.25vw,1.45rem);line-height:1.2;letter-spacing:-0.025em}
+.readout dl{display:grid;grid-template-columns:auto 1fr;gap:2px 16px;margin:14px 0 0;font-size:var(--step-small);line-height:1.2}
+.readout dt{color:var(--paper-muted);font-size:var(--step-micro)}
 .readout dd{margin:0;font-weight:500;overflow-wrap:anywhere}
 .readout dd a{color:inherit;text-decoration:underline;text-underline-offset:2px}
-.readout .src-note{margin-top:18px;font-size:var(--step-micro);line-height:1.45;color:var(--paper-muted)}
-.readout .note{margin-top:22px;font-size:var(--step-small);line-height:1.5;color:var(--paper-muted)}
+.field-sec .src-note{margin-top:18px;font-size:var(--step-micro);line-height:1.45;color:var(--paper-muted);max-width:72ch}
+.readout .note{margin-top:12px;font-size:var(--step-small);line-height:1.38;color:var(--paper-muted)}
 
 footer{border-top:1px solid #231f27;padding:48px 0 72px;font-size:var(--step-micro);color:var(--dim)}
 footer p + p{margin-top:10px}
@@ -101,7 +123,10 @@ footer p + p{margin-top:10px}
   .open{grid-template-columns:1fr}
   .block{grid-template-columns:1fr;gap:18px}
   .field-layout{grid-template-columns:1fr}
-  .readout{position:static;min-height:0}
+  /* Ingen sticky, alltsa ingen positionerad forfader: bandet maste tillbaka
+     i flodet, annars hamnar det pa sidan i stallet for pa panelen. */
+  .readout{position:static;min-height:0;padding-left:clamp(16px,1.3vw,22px)}
+  .readout .swatch{position:static;width:100%;height:10px;margin:14px 0 0}
 }
 </style>
 </head>
@@ -178,10 +203,13 @@ footer p + p{margin-top:10px}
         <div class="field-keys" id="grid" role="group" aria-label="600 tiles. Use the arrow keys to move between tiles." tabindex="0"></div>
         <canvas id="fieldcv" aria-hidden="true"></canvas>
         <noscript><img src="img/state_2026_315.png" alt="The rendered field of 600 colours for the observed day of 11 November 2026." width="3087" height="2057" loading="lazy"></noscript>
+        <p class="src-note">The representative source as captured for the observation day. Some links have since moved or gone behind a paywall. The manifest records what was captured and its hash; where the link no longer resolves, that record is ours and cannot be checked against the publisher.</p>
+        <!-- Hallnoten star SIST: den tands och slacks, och hogre upp hade
+             den knuffat bildtexten varje gang en ruta hills. -->
+        <p class="lock" hidden>Held on this tile, so you can reach the source. Click it again, or press Escape, to follow the pointer.</p>
       </div>
       <aside class="readout" id="readout" aria-live="polite">
         <p class="idx">Tile — of 600</p>
-        <p class="lock" hidden>Held on this tile, so you can reach the source. Click it again, or press Escape, to follow the pointer.</p>
         <div class="swatch"></div>
         <p class="txt">Pick a square. The observation that produced its colour appears here.</p>
         <dl>
@@ -195,7 +223,6 @@ footer p + p{margin-top:10px}
           <dt>Evidence</dt><dd>—</dd>
           <dt>Observation</dt><dd>—</dd>
         </dl>
-        <p class="src-note">The representative source as captured for the observation day. Some links have since moved or gone behind a paywall. The manifest records what was captured and its hash; where the link no longer resolves, that record is ours and cannot be checked against the publisher.</p>
       </aside>
     </div>
   </div>
