@@ -149,6 +149,28 @@ def skriv_post(day, post, data=DATA):
                       json.dumps(post, ensure_ascii=False, indent=1))
 
 
+def _matpost(day, post, data):
+    """Matpunkt 9, PARAMETER_REGISTER 1.17. Lases ur posten stamplingen redan
+    skrivit; inget tal raknas om har.
+
+    TXID SKRIVS ALDRIG. Klienten skriver ut txid for hogst en av fyra
+    kalendrar, sa ett falt med den vore ett pastaende om fler vittnen an som
+    gar att visa - samma beslut som i attesteringar(). Nyckeln star kvar med
+    None sa att det syns att 1.17 bad om den och att den inte gar att fylla,
+    i stallet for att se ut som en glomska.
+    """
+    import measurements
+    st = post.get("stampel") or {}
+    fo = post.get("forankring") or {}
+    kal = fo.get("kalendrar") or []
+    measurements.notera(day, "stampel", data, **{measurements.STAMPEL: {
+        "stamplad_at": st.get("at"), "ots": st.get("ots"),
+        "forankrad_at": fo.get("at"),
+        "blockhojder": [k["block_height"] for k in kal],
+        "merkle_rotter": [k["merkle_root"] for k in kal],
+        "txid": None}})
+
+
 def step_stampla(day, data=DATA):
     print(f"\n[stampla] {sp.state_id(day)}")
     emo = gates.gate_frozen_emotion(day, data)
@@ -191,6 +213,7 @@ def step_stampla(day, data=DATA):
     post["stampel"] = {"ots": ots.name, "ots_sha256": _sha(ots),
                        "klient": version, "at": start}
     skriv_post(day, post, data)
+    _matpost(day, post, data)
     print(f"        {ots.name}  sha256 {post['stampel']['ots_sha256'][:16]}  ·  {version}")
     print("        vantande kalenderattesteringar - forankras i nasta dygns korning B")
     return post
@@ -246,6 +269,7 @@ def step_forankra(day, data=DATA):
 
     post["forankring"] = {"at": start, "ots_sha256": _sha(ots), "kalendrar": kal}
     skriv_post(day, post, data)
+    _matpost(day, post, data)
     # Forankringen lyckades: .ots ar andrad med avsikt och nya ots_sha256 star
     # i posten. Kopian tas bort. Den ar en ofullstandig version av samma bevis,
     # och en fil som ser ut som bevis men binder mindre an originalet ar nagot

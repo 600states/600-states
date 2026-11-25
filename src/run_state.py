@@ -40,7 +40,7 @@ Steg, i ordning:
     candidates  mentions -> kandidatlista         grind: dygn, mention_rows, register
     pool        bevisfangst pa hela poolen        grind: rubriktackning
     regioner    Events -> land och region         forsta steget som ror Events
-    select      600 valda bland lasbara           grind: 600, regionkvoter, cap
+    select      600 valda bland lasbara           grind: 600, regionkvoter, cap, matposten
     input       klassificerarens input            grind: varje rad har text
     --- klassificeringen kors har och lagger passen pa plats ---
     emotion     kontroll av emotionsmanifestet    grind: ID-mangd, vokabular, spridning
@@ -49,6 +49,11 @@ Steg, i ordning:
 
 Avbryter med felkod nar en grind stoppar. En regel som inte kan stoppa en
 korning ar inte en regel.
+
+NATTENS MATPOST vaxer genom korningen: stegen skriver de tal 1.17 raknar upp
+dar talen uppstar, och grinden fore frysningen faller om ett obligatoriskt falt
+saknas. Talen har funnits i utskrifterna hela tiden - en logg ar inte en fil,
+och poolens bevisandel raknades for hand tre natter i rad. Se src/measurements.py.
 """
 import collections, csv, json, shutil, sys
 from datetime import date, datetime, timedelta, timezone
@@ -59,7 +64,7 @@ import statepaths as sp
 from atomic import atomic_write, write_text
 from config import (DATA, RAW_GDELT, REGISTRY_FILE as REGISTRY, registry_version,
                     raw_day_dir, canonical_batch_size, require_data, LUCKLOGG)
-import candidates, ranking, select_day, pool_evidence, gates
+import candidates, ranking, select_day, pool_evidence, gates, measurements
 from vocab import EMOTION_STATES
 from build_classifier_input import claim_of, readable, is_digest
 
@@ -208,6 +213,8 @@ def step_candidates(day, mentions):
         c["event_ids"] = sorted(c["event_ids"]) if isinstance(c["event_ids"], set) else c["event_ids"]
     write_text(sp.workdir(DATA, day) / "pool.json", json.dumps(pool, ensure_ascii=False))
     print(f"        {len(cands)} kandidater i poolen")
+    # Matpunkt 1. Talet stod bara i utskriften ovan; en logg ar inte en fil.
+    measurements.notera(day, "candidates", **{measurements.KANDIDATER: len(cands)})
     return pool
 
 def step_pool(day, budget):
@@ -221,6 +228,15 @@ def step_pool(day, budget):
     pool_evidence.attach(pool)
     gates.gate_pool_evidence(pool)
     write_text(pj, json.dumps(pool, ensure_ascii=False))
+    # MATPUNKT 2: HELA POOLEN, inte de valda. Det ar den NAS raknade for hand
+    # tre natter i rad, for att korningen inte skrev den. Den valdas andel ar
+    # matpunkt 3, en annan storhet, och skrivs i step_select under ett annat
+    # namn - de far aldrig skrivas ihop.
+    poolens = measurements.fonsterandel(pool_evidence.basis(c, day) for c in pool)
+    measurements.notera(day, "pool", **{measurements.POOLENS_ANDEL: poolens})
+    if poolens["andel"] is not None:
+        print(f"        poolens fonsterandel: {poolens['i_fonstret']}/{poolens['av']}"
+              f" = {poolens['andel']:.3%}")
     return pool
 
 def step_regioner(day):
@@ -234,6 +250,14 @@ def step_regioner(day):
     pool = json.loads(pj.read_text(encoding="utf-8"))
     candidates.regioner(pool, day)
     write_text(pj, json.dumps(pool, ensure_ascii=False))
+    # MATPUNKT 7. Talen LASES ur snapshotmanifestet, som ager dem (1.16), och
+    # raknas inte om har. Sokvagen kommer ur acquire.snapshot_paths av samma
+    # skal: ett filnamn som byggs pa tva stallen glider isar. Steget ar det
+    # forsta som ror Events alls, sa det ar har de blir relevanta.
+    import acquire
+    manifest = json.loads(acquire.snapshot_paths(day)[2].read_text(encoding="utf-8"))
+    measurements.notera(day, "regioner", **{measurements.EVENTS: {
+        k: manifest.get(k) for k in ("events_last_404_utc", "events_frozen_at_utc")}})
     med = sum(1 for c in pool if c["action_geo_country"])
     print(f"        {med}/{len(pool)} kandidater fick land ur Events")
     for k, v in collections.Counter(c["review_region"] for c in pool).most_common():
@@ -291,8 +315,12 @@ def step_select(day):
     #
     # Golvet stoppar ingenting. Ett dygn under det fryses och publiceras som
     # alla andra och far bara inget nummer; serien ar numrerad, inte urvald.
-    med = sum(1 for r in rader if r["evidence_basis"] == pool_evidence.FONSTERNIVAN)
-    andel = (f"{med}/{len(rader)} i fonstret = {med / len(rader):.1%}, "
+    # MATPUNKT 3: DE VALDA, inte poolen. Raknas ur raderna som redan bar sin
+    # bevisniva - en andra beraikning av samma tal vore FYND 004 i
+    # berakningsform - och golvprovningen nedan laser samma tal.
+    valdas = measurements.fonsterandel(r["evidence_basis"] for r in rader)
+    med = valdas["i_fonstret"]
+    andel = (f"{med}/{len(rader)} i fonstret = {valdas['andel']:.1%}, "
              f"golv {pool_evidence.GOLV_KANONISK:.0%}")
     # TVA SKAL, INTE ETT. Ett dygn som fick for fa bevis i tid och ett dygn som
     # ligger utanfor serien ar inte samma utfall, och den som laser loggen ska
@@ -320,6 +348,25 @@ def step_select(day):
     # "manifestet saknar datering" gar att veta innan filen ar skriven i stallet
     # for efterat, nar den redan ar den frysta posten. Jamfor 8f065a8.
     gates.gate_evidence_time(rader, pool_evidence.BEVISNIVAER)
+
+    # MATPUNKT 3, 5 och 6 skrivs har, dar talen uppstar. Unika domaner lases ur
+    # urvalsrapporten och raknas inte om.
+    #
+    # UTGIVARE OCH DOMAN AR SAMMA SAK I DEN HAR KEDJAN. Kallregistret bar
+    # doman och source_tier, inget utgivarnamn, och max_per_publicist i
+    # rapporten raknas pa c["domain"]. Att skriva samma tal under tva nycklar
+    # vore FYND 004 i sifferform, sa det star en gang och heter det det ar.
+    measurements.notera(day, "select", **{
+        measurements.DE_VALDAS_ANDEL: valdas,
+        measurements.DOMANER: report["unika_domaner"],
+        measurements.SERIEN: {"series": s, "skal": skal}})
+
+    # GRINDEN LIGGER FORE SKRIVNINGEN, av samma skal som grinden ovan: att
+    # matposten saknar ett falt ska ga att veta innan filen som gor dygnet
+    # permanent finns pa disk. Posten LASES fran disk - en grind pa det vi just
+    # hade i minnet provar inte att skrivningen skedde.
+    gates.gate_matpost(sp.state_id(day), measurements.las(day),
+                       measurements.OBLIGATORISKA)
 
     pre = sp.pre_manifest(DATA, day)
     with atomic_write(pre) as fh:
@@ -357,7 +404,12 @@ def step_input(day):
                       "neutral_source_claim": claim, "claim_source": src,
                       "review_region": c["review_region"], "selection_layer": c["selection_layer"],
                       "source_tier": c["source_tier"], "representative_domain": c["domain"]})
-    gates.gate_claims(items, readable, is_digest)
+    # MATPUNKT 4. Fordelningen raknas i grinden, som redan har den; att rakna
+    # den en andra gang har vore FYND 004 i berakningsform. Steget kor EFTER
+    # frysningen, sa faltet kan inte vara obligatoriskt i matpostgrinden - se
+    # measurements.VALFRIA.
+    kallor = gates.gate_claims(items, readable, is_digest)
+    measurements.notera(day, "input", **{measurements.TEXTKALLAN: kallor})
     d = sp.classifier_input(DATA, day); d.mkdir(parents=True, exist_ok=True)
     bs = canonical_batch_size()          # ur specen, aldrig hardkodad
     for k in range(0, len(items), bs):

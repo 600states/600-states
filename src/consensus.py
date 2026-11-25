@@ -85,6 +85,11 @@ def build(day, passdir, data=DATA):
     digest = hashlib.sha256(out.read_bytes()).hexdigest()
     with atomic_write(sp.sha_sidecar(out)) as fh:
         fh.write(f"{digest}  {out.name}\n")
+    # Matpunkt 10, PARAMETER_REGISTER 1.17. Skrivs av det steg som ager talet -
+    # hashen uppstar har, i frysningen, och raknas inte om nagon annanstans.
+    # Frysningen kor efter step_select, sa faltet ar valfritt i matpostgrinden.
+    import measurements
+    measurements.notera(day, "consensus", data, **{measurements.MANIFEST_SHA: digest})
     agree = Counter(r["primary_agreement"] for r in rs)
     print(f"{sp.state_id(day)}: {len(rs)} rader · agreement {dict(agree)} · sha256 {digest[:16]}")
     return out

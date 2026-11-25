@@ -61,10 +61,55 @@ def gate_evidence_time(rows, nivaer):
          f"{len(fel)} rader utanfor {list(nivaer)}"
          + (f" (t.ex. ruta {fel[0].get('tile_index')}: {fel[0].get('evidence_basis')!r})" if fel else ""))
 
+def gate_matpost(state_id, post, obligatoriska):
+    """Ett dygn utan nattens matpost fryses inte. PARAMETER_REGISTER 1.17.
+
+    EN MATPUNKT UTAN GRIND AR ETT ONSKEMAL. Posten skrivs av stegen dar talen
+    uppstar, och det har ar det enda stallet som kan saga att de gjorde det.
+    Grinden ligger FORE atomic_write(pre), bredvid gate_evidence_time, av samma
+    skal: "matposten saknar ett falt" ska ga att veta innan filen som gor dygnet
+    permanent finns pa disk.
+
+    DEN LASER, DEN RAKNAR INTE. Talen ar redan matta av de steg som ager dem;
+    en grind som raknade om dem vore en andra definition av varje matpunkt, och
+    da vore det grindens tal som stod i loggen och stegets i filen.
+
+    OBLIGATORISKA KOMMER UTIFRAN, ur measurements.OBLIGATORISKA. Listan hor
+    till posten och inte till grinden: stavades falten pa bada stallena skulle
+    ett omdopt falt se ut som ett saknat.
+
+    INGET VARDE PROVAS MOT ETT TAL HAR, och det far aldrig heller goras. 1.17
+    forbjuder malvarden pa de tio matpunkterna. Grinden provar att talet FINNS,
+    aldrig att det ar bra.
+    """
+    _say("dygnet har en matpost", bool(post),
+         f"{state_id}: " + ("posten finns" if post else "ingen post - har stegen kort?"))
+    for k in obligatoriska:
+        v = post.get(k)
+        print(f"        {k}: {v!r}" if not isinstance(v, dict) else f"        {k}: {v}")
+    # ETT FALT SOM BARA BAR None AR INTE SKRIVET. Matpunkt 7 ar tva tider, och
+    # den ena FAR vara None - events_last_404_utc betyder "ingen 404 sags", och
+    # det ar en matning. Ar BADA None har ingen last snapshotmanifestet, och da
+    # ser ett oskrivet falt ut som ett skrivet. Noll ar daremot ett tal och
+    # racker: ett dygn med noll kandidater ar matt, inte omatt.
+    def tomt(v):
+        if isinstance(v, dict):
+            return not v or all(x is None for x in v.values())
+        return v is None or v == [] or v == ""
+    saknas = [k for k in obligatoriska if tomt(post.get(k))]
+    _say("varje obligatoriskt falt i matposten ar skrivet", not saknas,
+         f"{len(obligatoriska) - len(saknas)}/{len(obligatoriska)} skrivna"
+         + (f", saknas: {', '.join(saknas)}" if saknas else ""))
+
 def gate_claims(items, is_readable, is_digest=None):
     """is_readable ar SAMMA funktion som urvalsfiltret anvander. Tva egna
     definitioner av "lasbar" var orsaken till att urvalet slappte igenom rader
-    som inputbygget inte kunde lasa - se FYND 003."""
+    som inputbygget inte kunde lasa - se FYND 003.
+
+    Returnerar claim_source-fordelningen, matpunkt 4 i 1.17. Den raknades redan
+    har; att rakna den en andra gang i anroparen vore FYND 004 i
+    berakningsform.
+    """
     empty = [i for i in items if not is_readable(str(i["neutral_source_claim"]))]
     dist = collections.Counter(i["claim_source"] for i in items)
     print("        claim_source:", dict(dist))
@@ -74,6 +119,7 @@ def gate_claims(items, is_readable, is_digest=None):
         d = [i for i in items if is_digest(i["neutral_source_claim"])]
         _say("ingen sammanfattningsartikel", not d,
              f"{len(d)} rader" + (f" (t.ex. ruta {d[0]['tile_index']}: {d[0]['neutral_source_claim'][:50]})" if d else ""))
+    return dict(dist)
 
 def gate_emotion(inputs, rows, vocab):
     ids_in = {i["observation_id"] for i in inputs}

@@ -117,6 +117,18 @@ def signature_record(DATA, day):
     """
     return _f(DATA, day, "SIGNATURE.json")
 
+def measurement_record(DATA, day):
+    """Dygnets matpost. PARAMETER_REGISTER 1.17.
+
+    Flera tal om nattens utfall fanns i loggar men inte i en fil, och poolens
+    bevisandel raknades for hand tre natter i rad. Ett tal som en manniska
+    raknar varje natt i aratal raknas forr eller senare fel.
+
+    POSTEN LIGGER I DYGNETS KATALOG, bredvid manifestet och de tva andra
+    posterna, och av samma skal: den beskriver dygnet och ska folja med det.
+    """
+    return _f(DATA, day, "MEASUREMENTS.json")
+
 def frozen(path):
     """Dygnets egen fil, aven om den frystes under en tidigare manifestversion.
 
