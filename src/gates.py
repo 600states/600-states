@@ -124,12 +124,23 @@ def gate_matpost(state_id, post, obligatoriska):
     #
     # DYGNET LASES UR POSTEN, och faltnamnet ur measurements: en andra
     # stavning av nagon av dem vore FYND 004. notera() skriver "day" vid
-    # varje skrivning, sa en post pa disk bar det alltid; bar den det anda
-    # inte vet grinden inte vilket dygn det galler, och far da inte gissa
-    # att det ar efter seriestarten.
+    # varje skrivning, sa en post pa disk bar det alltid - men en post utan
+    # dygn far inte stanga av provningen tyst: i_serien("") ar falskt, och
+    # en grind som inte vet vilket dygn den galler skulle da gissa at det
+    # hall som slapper igenom. Den faller i stallet, under eget namn: att
+    # posten bar sitt dygn och att nyckeln fanns ar tva pastaenden, och den
+    # som laser loggen ska se vilket av dem som brast.
+    #
+    # "day" star inte i OBLIGATORISKA och ska inte goras det. Den listan ar
+    # vad STEGEN ska ha matt; dygnet skrivs av notera() vid varje skrivning,
+    # och ett falt som alltid finns i listan skulle gora listan till tva
+    # saker.
     if measurements.NYCKELN in obligatoriska:
+        dygn = post.get("day")
+        _say("posten bar sitt dygn", bool(dygn), f"day: {dygn!r}" if dygn
+             else "day saknas - da gar det inte att veta om dygnet hor till serien")
         har = bool(post.get(measurements.NYCKELN))
-        i_serien = pool_evidence.i_serien(post.get("day") or "")
+        i_serien = pool_evidence.i_serien(dygn)
         _say("klassificerarens nyckel fanns i miljon", har or not i_serien,
              ("satt" if har else "TOM ELLER OSATT - kedjan kan inte klassificera")
              + ("" if i_serien else
