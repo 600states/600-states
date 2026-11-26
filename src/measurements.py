@@ -31,6 +31,7 @@ kraver n, min, max, median och datum for sista matningen - och sa lange tecknet
 inte ar lika over alla n far ingen riktning pastas alls.
 """
 import json
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -55,6 +56,17 @@ KORNING = "korning"                         # 8
 STAMPEL = "stampel"                         # 9
 MANIFEST_SHA = "manifest_sha256"            # 10
 
+# MATPUNKT 11, tillagd 2026-11-26. De tio i 1.17 mater DYGNET; den har mater
+# MILJON dygnet kordes i. NAS:ens .env bar ANTHROPIC_API_KEY= med tomt varde
+# i fyra natter utan att en enda rapport sa ifran: korning B stannar vid
+# emotionsgrinden med rc 3 och nar aldrig classify.py, som har sin egen
+# grind. En kedja som inte kan klassificera nagonting alls ska inte behova
+# en manniska som rakar lagga marke till det.
+#
+# Den ar obligatorisk utan att nagot steg behovde flytta sig: notera()
+# skriver den vid varje skrivning, alltsa langt fore frysningen.
+NYCKELN = "nyckel_narvarande"               # 11
+
 # OBLIGATORISK BETYDER "gar att skriva nar dygnet fryses". Grinden sitter fore
 # atomic_write(pre) i step_select, och ett falt vars kalla kors EFTER den
 # punkten kan omojligt finnas dar. En grind som kraver ett falt ingen kan
@@ -67,7 +79,8 @@ MANIFEST_SHA = "manifest_sha256"            # 10
 #
 # Listan ar inte en ambitionsniva. Flyttas ett falt hit maste dess kalla forst
 # ha flyttat fore frysningen.
-OBLIGATORISKA = (KANDIDATER, POOLENS_ANDEL, DE_VALDAS_ANDEL, DOMANER, SERIEN, EVENTS)
+OBLIGATORISKA = (KANDIDATER, POOLENS_ANDEL, DE_VALDAS_ANDEL, DOMANER, SERIEN,
+                 EVENTS, NYCKELN)
 VALFRIA = (TEXTKALLAN, KORNING, STAMPEL, MANIFEST_SHA)
 
 
@@ -75,6 +88,18 @@ def _nu():
     """Nar steget kordes. Mater omvarlden och valjer ingenting - samma undantag
     som bevisens hamtningstidpunkt, se AGENTS.md."""
     return f"{datetime.now(timezone.utc):%Y-%m-%dT%H:%M:%SZ}"
+
+
+def nyckel_narvarande():
+    """Ar ANTHROPIC_API_KEY satt och icketom i den har miljon? En bool.
+
+    VARDET LAMNAR ALDRIG FUNKTIONEN. Inte nyckeln, inte ett prefix, inte de
+    sista fyra tecknen, inte langden - en langd ar ocksa en upplysning om en
+    hemlighet, och posten ligger i arkivet, som inte ar hemligt.
+
+    Den mater omvarlden och valjer ingenting - samma undantag som _nu().
+    """
+    return bool(os.environ.get("ANTHROPIC_API_KEY", "").strip())
 
 
 def fonsterandel(nivaer):
@@ -114,9 +139,15 @@ def notera(day, steg, data=DATA, **falt):
     post = las(day, data)
     post["day"] = day
     post["state_id"] = sp.state_id(day)
+    # MATPUNKT 11 SKRIVS AV SKRIVNINGEN, inte av ett steg. Den mater miljon
+    # posten skrevs i, och den miljon ar det skrivande stegets egen - ett
+    # falt som bara ETT steg skrev hade sagt lika lite om de ovriga som
+    # loggen sa i fyra natter. Den star i journalen vid varje skrivning av
+    # samma skal: en journal som tiger om vad den skrev ar FYND 001.
+    post[NYCKELN] = nyckel_narvarande()
     post.update(falt)
     post.setdefault("skrivningar", []).append(
-        {"steg": steg, "at": _nu(), "falt": sorted(falt)})
+        {"steg": steg, "at": _nu(), "falt": sorted(set(falt) | {NYCKELN})})
     write_text(sp.measurement_record(data, day),
                json.dumps(post, ensure_ascii=False, indent=1))
     return post

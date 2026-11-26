@@ -5,6 +5,9 @@ pa den renderade bilden - se parameterregistret avsnitt 0.
 """
 import collections
 
+import measurements
+import pool_evidence
+
 class GateFailure(Exception):
     pass
 
@@ -81,6 +84,11 @@ def gate_matpost(state_id, post, obligatoriska):
     INGET VARDE PROVAS MOT ETT TAL HAR, och det far aldrig heller goras. 1.17
     forbjuder malvarden pa de tio matpunkterna. Grinden provar att talet FINNS,
     aldrig att det ar bra.
+
+    MATPUNKT 11 PROVAS MOT SITT VARDE, och det ar inget malvarde. En bool har
+    inget riktvarde att sla - den sager ja eller nej - och golvet i 1.15 ar
+    samma sorts grind: den stoppar ett dygn och belonar ingen. Se kommentaren
+    vid provningen for varfor den inte faller fore seriestarten.
     """
     _say("dygnet har en matpost", bool(post),
          f"{state_id}: " + ("posten finns" if post else "ingen post - har stegen kort?"))
@@ -100,6 +108,32 @@ def gate_matpost(state_id, post, obligatoriska):
     _say("varje obligatoriskt falt i matposten ar skrivet", not saknas,
          f"{len(obligatoriska) - len(saknas)}/{len(obligatoriska)} skrivna"
          + (f", saknas: {', '.join(saknas)}" if saknas else ""))
+
+    # SAKNAS OCH FALSE AR TVA OLIKA UTFALL, och det ar hela skalet till att
+    # matpunkt 11 finns. Saknas faltet har ingen matt alls, och det faller
+    # ovan som varje annat obligatoriskt falt. Ar det FALSE har nagon matt,
+    # och svaret var nej: kedjan star utan nyckel och kan inte klassificera
+    # nagonting.
+    #
+    # FORE SERIESTART FALLER DET INTE. Ett missat observationsfonster ar
+    # oaterkalleligt och en tom nyckel ar det inte, sa natten ska ga klart
+    # och posten bara sitt false. Fran seriestarten ar ett dygn utan
+    # klassificering anda ett forlorat dygn, och da ska grinden saga ifran i
+    # stallet for loggen. Datumet ar pool_evidence.SERIESTART och skrivs
+    # ingen andra gang har.
+    #
+    # DYGNET LASES UR POSTEN, och faltnamnet ur measurements: en andra
+    # stavning av nagon av dem vore FYND 004. notera() skriver "day" vid
+    # varje skrivning, sa en post pa disk bar det alltid; bar den det anda
+    # inte vet grinden inte vilket dygn det galler, och far da inte gissa
+    # att det ar efter seriestarten.
+    if measurements.NYCKELN in obligatoriska:
+        har = bool(post.get(measurements.NYCKELN))
+        i_serien = pool_evidence.i_serien(post.get("day") or "")
+        _say("klassificerarens nyckel fanns i miljon", har or not i_serien,
+             ("satt" if har else "TOM ELLER OSATT - kedjan kan inte klassificera")
+             + ("" if i_serien else
+                f", fore {pool_evidence.SERIESTART} stoppar det inte forvarvet"))
 
 def gate_claims(items, is_readable, is_digest=None):
     """is_readable ar SAMMA funktion som urvalsfiltret anvander. Tva egna

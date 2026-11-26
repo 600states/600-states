@@ -37,6 +37,7 @@ def _komplett():
         m.SERIEN: {"series": "CANONICAL", "skal": ""},
         m.EVENTS: {"events_last_404_utc": "2026-12-01T07:25:27Z",
                    "events_frozen_at_utc": "2026-12-01T07:30:29Z"},
+        m.NYCKELN: True,
     }
 
 
@@ -70,10 +71,10 @@ def test_de_tva_andelarna_ar_skilda_storheter():
     assert post[m.POOLENS_ANDEL] is not post[m.DE_VALDAS_ANDEL]
 
 
-def test_obligatoriska_och_valfria_tacker_alla_tio_utan_overlapp():
+def test_obligatoriska_och_valfria_tacker_alla_elva_utan_overlapp():
     alla = set(m.OBLIGATORISKA) | set(m.VALFRIA)
     assert not (set(m.OBLIGATORISKA) & set(m.VALFRIA)), "ett falt ar bade och"
-    assert len(alla) == 10, f"{len(alla)} falt, inte tio"
+    assert len(alla) == 11, f"{len(alla)} falt, inte elva"
     assert len(m.OBLIGATORISKA) == len(set(m.OBLIGATORISKA)), "dubblett"
 
 
