@@ -28,8 +28,18 @@ DYGN = "20261201"
 
 
 def _komplett():
-    """En post som grinden ska slappa igenom. Bara obligatoriska falt."""
+    """En post som grinden ska slappa igenom.
+
+    DYGNET AR INTE OBLIGATORISKT OCH STAR ANDA HAR. OBLIGATORISKA ar listan
+    over vad STEGEN ska ha matt; "day" skrivs av notera() vid varje skrivning
+    och hor inte dit. Men grinden provar sedan 31e7a8c att posten BAR sitt
+    dygn, fore nyckelprovningen - utan dygn gar det inte att veta om dygnet
+    hor till serien, och en grind som inte vet det ska inte gissa at det hall
+    som slapper igenom. En fixtur utan "day" ar darfor inte en komplett post
+    langre, utan en trasig.
+    """
     return {
+        "day": DYGN,
         m.KANDIDATER: 3826,
         m.POOLENS_ANDEL: {"av": 3826, "i_fonstret": 3630, "andel": 3630 / 3826},
         m.DE_VALDAS_ANDEL: {"av": 600, "i_fonstret": 570, "andel": 0.95},

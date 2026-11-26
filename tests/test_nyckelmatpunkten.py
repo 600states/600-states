@@ -29,6 +29,12 @@ emotionsmanifestets sha256-sidecar, som skrivs langt senare - men ett stoppat
 urval ar anda en stillastaende natt, och den som laser loggen 06:40 den 1
 december ska se ratt sak.
 
+POSTEN MASTE BARA SITT DYGN, och det provas har ocksa. Grinden fick 31e7a8c
+ett eget _say for det, fore nyckelprovningen: utan dygn gar det inte att veta
+om dygnet hor till serien, och ett okant dygn last som "fore seriestart" hade
+stangt av matpunkt 11 tyst. De tva pastaendena faller var for sig och ska
+synas var for sig i loggen.
+
 DATUMET STAR INTE HAR. Proven flyttar pool_evidence.SERIESTART och kraver att
 gransen foljer med. Ett prov som skrev "20261201" en andra gang vore FYND 004
 i provform: dagen seriestarten andras skulle provet fortsatta vara gront pa
@@ -120,20 +126,41 @@ def test_gransen_foljer_SERIESTART_och_star_inte_i_grinden(monkeypatch):
 
 # ---------- posten utan dygn: grinden gissar inte ----------
 
-def test_post_utan_dygn_faller_INTE_pa_false(capsys):
-    """PINNAT, INTE REKOMMENDERAT.
+@pytest.mark.parametrize("dygn", ["", None])
+def test_post_utan_dygn_faller_pa_sitt_eget_namn(dygn):
+    """Grinden gissar inte, och den tiger inte heller.
 
-    Grinden valjer att inte gissa att en post utan "day" hor till serien.
-    Foljden ar att en post som tappat sitt dygn stanger av matpunkt 11 tyst,
-    aven efter seriestarten - "day" star inte i OBLIGATORISKA och inget annat
-    prov fangar det. notera() skriver faltet vid varje skrivning, sa en post pa
-    disk bar det alltid, och darfor ar halet i dag teoretiskt.
+    Forst pinnade det har provet motsatsen: en post utan "day" slapptes
+    igenom, eftersom i_serien("") ar falskt och ett okant dygn alltsa lastes
+    som "fore seriestart". Foljden var att en post som tappat sitt dygn stangde
+    av matpunkt 11 TYST, ocksa efter seriestarten - "day" star inte i
+    OBLIGATORISKA och inget annat prov fangade det. Halet var teoretiskt sa
+    lange notera() skriver faltet vid varje skrivning, och det ar precis den
+    sortens "i dag kan det inte handa" som den har sviten finns for att inte
+    lita pa.
 
-    Provet star har for att valet ska vara SYNLIGT och inte en bieffekt. Andras
-    beslutet till att en post utan dygn ska falla, ar det det har provet som
-    ska bytas - och da med vett, inte for att det blev rott."""
-    kor(post("", **{measurements.NYCKELN: False}))
-    assert "stoppar det inte forvarvet" in capsys.readouterr().out
+    Beslutet andrades 2026-11-26 och grinden med det (31e7a8c): en grind som
+    inte vet vilket dygn den galler far inte gissa at det hall som slapper
+    igenom. Provet bytte da riktning, med vett och inte for att det blev rott.
+    """
+    p = post("", **{measurements.NYCKELN: False})
+    if dygn is None:
+        del p["day"]
+    with pytest.raises(gates.GateFailure) as e:
+        kor(p)
+    assert "dygn" in str(e.value).lower()
+
+
+def test_dygnsprovet_och_nyckelprovet_ar_TVA_pastaenden(capsys):
+    """De ska kunna falla var for sig, och synas var for sig i loggen.
+
+    Slas de ihop till ett _say sager en rod rad inte om det var dygnet eller
+    nyckeln som fattades, och den som laser loggen 06:40 den 1 december far
+    gissa."""
+    kor(post(EFTER, **{measurements.NYCKELN: True}))
+    ut = capsys.readouterr().out
+    assert "posten bar sitt dygn" in ut
+    assert "klassificerarens nyckel fanns i miljon" in ut
 
 
 # ---------- vardet lamnar aldrig matningen ----------
