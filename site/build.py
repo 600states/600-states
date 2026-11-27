@@ -10,13 +10,24 @@ COPYRIGHT.md. Sokvagen till arkivet kommer ur STATES_DATA, aldrig hardkodad.
 
 Malmappen blir exakt det som ska ligga i public_html. Ingenting annat.
 """
+import html as html_mod
 import io, json, os, re, shutil, subprocess, sys
+from datetime import date, datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 import config
+import statepaths as sp
+import pool_evidence
 
 HERE = Path(__file__).resolve().parent
+
+
+def _d(day: str) -> date:
+    """YYYYMMDD -> datum. Samma strang som kedjan raknar sina dygn ur."""
+    return datetime.strptime(day, "%Y%m%d").date()
+
 DAYS = ["001", "002", "003", "004"]     # kalibreringsdygnen sidan visar
 FIELD_DAY = "001"                       # dygnet bakom det klickbara faltet
 
@@ -45,6 +56,19 @@ LABS_DIR = "STATE_2026_308"
 SIDA_315 = "state-2026-315.html"
 NYCKEL_315 = "2026_315"
 DYGN_315 = "315"
+
+# SERIENS FORSTA DYGN far en egen sida, byggd som 315:s: en kallfil, tre
+# konstanter har och en datafil. Ingen mall, ingen arkivlista och ingen
+# slinga - generaliseringen gors nar det finns en handfull dygn att
+# generalisera ur, inte pa ett.
+#
+# DYGNET STAR EN GANG. Nyckeln och ordningstalet raknas ur det med samma
+# funktioner som kedjan bygger sina filnamn med; tre stavningar av samma
+# dygn vore FYND 004 i datumform.
+DAG_335 = "20261201"
+NYCKEL_335 = sp.state_key(DAG_335)
+DYGN_335 = "%03d" % sp.ordinal(DAG_335)
+SIDA_335 = "state-2026-335.html"
 
 
 def distinkta_farger(data_root: Path, day: str, katalog: str) -> int:
@@ -83,6 +107,149 @@ def render_for(state_dir: Path, day: str) -> Path:
     if not found:
         raise SystemExit("hittar ingen rendering i " + str(state_dir))
     return found[-1]
+
+
+def _block(html: str, namn: str):
+    """Ett <p> eller <div> markt data-when-<namn>, med sin indragning."""
+    return re.search(r"[ \t]*<(p|div)\b[^>]*\bdata-when-%s\b[^>]*>.*?</\1>\n?"
+                     % namn, html, re.S)
+
+
+def valj(html: str, sida: str, aktiv, alternativ) -> str:
+    """Behall ETT av sidans data-when-block och ta bort de ovriga.
+
+    BADA TEXTERNA STAR I KALLFILEN. Ett seriedygn kan bli CANONICAL eller
+    UNQUALIFIED och vilket det blir vet ingen i forvag; en sida som bara bar
+    det ena utfallet publicerar ett osant pastaende den dag dygnet gar den
+    andra vagen. Bygget VALJER darfor mellan texter som gar att lasa i
+    kallfilen, i stallet for att satta ihop en mening sjalvt - en mening som
+    bara finns i bygget gar inte att granska dar sidan skrivs.
+
+    Samma mekanism bar bevislaget, som ar tre tillstand och inte tva, och
+    signaturen, som ar ett eget bevis i en egen post.
+
+    aktiv=None tar bort alla alternativ. Saknas ett block stannar bygget: ett
+    bortfallet block ar ett utfall sidan inte langre kan uttrycka, och det ska
+    inte ga att tappa bort tyst.
+
+    shortcut: grinden kraver ETT block per utfall, inte varje forekomst. Star
+    samma utfall pa tva stallen och det ena tas bort byggs sidan anda, med
+    utfallet sagt en gang i stallet for tva. Uppgradera den dagen sidan har
+    fler an tva utfall att halla reda pa, eller nar ett bortfall har kostat
+    nagot - en rakning per namn i bygget vore sidans layout skriven har.
+    """
+    for namn in alternativ:
+        if not _block(html, namn):
+            raise SystemExit("hittar inget data-when-%s-block i %s - sidan kan "
+                             "inte langre saga det utfallet" % (namn, sida))
+    # ALLA forekomster, inte den forsta: ett utfall kan behova sagas bade i
+    # ingressen och i brodtexten, och ett kvarlamnat block vore sidan som
+    # pastar bada utfallen samtidigt.
+    for namn in alternativ:
+        while True:
+            m = _block(html, namn)
+            if not m:
+                break
+            behall = re.sub(r"\s+data-when-%s\b" % namn, "", m.group(0)) if namn == aktiv else ""
+            html = html[:m.start()] + behall + html[m.end():]
+    return html
+
+
+def fyll(html: str, sida: str, namn: str, varde) -> str:
+    """Ett span i kallfilen, ifyllt av bygget. Samma form som data-tests."""
+    html, n = re.subn(r"(<span data-%s>)[^<]*(</span>)" % namn,
+                      lambda m: m.group(1) + str(varde) + m.group(2), html, count=1)
+    if n != 1:
+        raise SystemExit("hittar ingen plats for %s i %s" % (namn, sida))
+    return html
+
+
+def dygnet_finns(data_root: Path, day: str, nyckel: str, dygn: str) -> bool:
+    """Har dygnet kort an? Tre filer kravs, och de skrivs av tre olika steg.
+
+    Sidan byggs for ett dygn som ligger i framtiden tills natten har kort det.
+    Att stoppa hela bygget tills dess vore att gora sajten obyggbar i en vecka;
+    att bygga en sida av tomma falt vore varre. Bygget sager vilket det blev.
+    """
+    st = data_root / "08_V3_STATES" / ("STATE_" + nyckel)
+    return (sp.pre_manifest(data_root, day).exists()
+            and bool(sorted(st.glob("600_STATES_2026_%s_EMOTION_COLOR_MANIFEST_v*_CONSENSUS.csv" % dygn)))
+            and (st / ("site_%s.json" % nyckel)).exists())
+
+
+def dygnets_falt(data_root: Path, day: str, nyckel: str, dygn: str, distinkta: int) -> dict:
+    """Sidans tal och tillstand, ur arkivets egna filer. Inget skrivs for hand.
+
+    Varje varde kommer fran det stalle i kedjan som AGER det:
+
+      series och canonical_index  pre-manifestet. De falten finns bara i v3.4
+                                  och skrivs av run_state nar dygnet fryses.
+      bevisandelen                raknad over samma rader, pa evidence_basis
+                                  mot pool_evidence.FONSTERNIVAN. Golvet lases
+                                  ur GOLV_KANONISK och star inte en andra gang.
+      manifestets sha256          sidecaren bredvid emotionsmanifestet - samma
+                                  hash som stampeln och signaturen intygar.
+      bevislaget                  tidsstampelposten: stamplad, forankrad eller
+                                  ingetdera. TXID FINNS INTE och namns inte,
+                                  se FYND 025; posten bar blockhojd och
+                                  merkle-rot per kalender.
+      signaturen                  signaturposten, en egen fil och ett eget
+                                  bevis. Saknas den sager sidan det.
+
+    RADERNA MASTE VARA ENSE om series och ordningstal. De skrivs per rad av
+    kedjan, och tva varden i samma manifest vore ett dygn som ar tva dygn.
+    """
+    import csv
+    st = data_root / "08_V3_STATES" / ("STATE_" + nyckel)
+    rader = list(csv.DictReader(io.open(sp.pre_manifest(data_root, day),
+                                        encoding="utf-8", newline="")))
+    if len(rader) != 600:
+        raise SystemExit("vantade 600 rader i pre-manifestet for %s, fick %d"
+                         % (sp.state_id(day), len(rader)))
+    for falt in ("series", "canonical_index", "evidence_basis"):
+        if falt not in rader[0]:
+            raise SystemExit("pre-manifestet for %s saknar %s - ar det v3.4?"
+                             % (sp.state_id(day), falt))
+    for falt in ("series", "canonical_index"):
+        varden = {r[falt].strip() for r in rader}
+        if len(varden) != 1:
+            raise SystemExit("raderna ar oense om %s i %s: %s"
+                             % (falt, sp.state_id(day), sorted(varden)))
+    series = rader[0]["series"].strip()
+    i_fonstret = sum(1 for r in rader
+                     if (r.get("evidence_basis") or "").strip() == pool_evidence.FONSTERNIVAN)
+
+    sidecar = sp.sha_sidecar(sp.emotion_manifest(data_root, day))
+    if not sidecar.exists():
+        raise SystemExit("saknas: " + sidecar.name + " - dygnet ar inte fryst")
+
+    ts = json.loads(io.open(sp.timestamp_record(data_root, day), encoding="utf-8").read()) \
+        if sp.timestamp_record(data_root, day).exists() else {}
+    sig = json.loads(io.open(sp.signature_record(data_root, day), encoding="utf-8").read()) \
+        if sp.signature_record(data_root, day).exists() else {}
+    stampel, forankring = ts.get("stampel") or {}, ts.get("forankring") or {}
+    bevis = "anchored" if forankring else ("stamped" if stampel.get("at") else "unstamped")
+    kal = forankring.get("kalendrar") or []
+    signatur = (sig.get("signatur") or {}).get("betrodd_kommentar") or ""
+
+    d = _d(day)
+    return {
+        "state_id": sp.state_id(day),
+        "observerat": "%d %s %d" % (d.day, d.strftime("%B"), d.year),
+        "series": series,
+        "index": rader[0]["canonical_index"].strip(),
+        "fonster": "%d of %d" % (i_fonstret, len(rader)),
+        "golv": "%.0f%%" % (pool_evidence.GOLV_KANONISK * 100),
+        "sha": io.open(sidecar, encoding="utf-8").read().split()[0],
+        "distinkta": distinkta,
+        "bevis": bevis,
+        "stamplad_at": stampel.get("at") or "",
+        # Blockhojd OCH merkle-rot per kalender, hela roten: den ska ga att
+        # sla upp tecken for tecken i en blockutforskare.
+        "forankring": "; ".join("block %s &middot; merkleroot %s"
+                                % (k["block_height"], k["merkle_root"]) for k in kal),
+        "signatur": html_mod.escape(signatur),
+    }
 
 
 def build_data(data_root: Path, out: Path, nyckel: str = FIELD_DAY,
@@ -356,10 +523,27 @@ def main(argv):
     # Kalibreringsverkets egen datafil, samma funktion och samma kontroller.
     # En andra vag hit vore en andra definition av vad en ruta ar.
     build_data(data_root, out, NYCKEL_315, DYGN_315, "data_2026_315.js", "STATE2026315")
+    # Seriens forsta dygn. Finns det inte an byggs sidan inte, och startsidans
+    # lank till den tas bort i samma bygge - en lank till en sida som inte
+    # laddades upp ar en 404 pa en sajt vars hela tes ar sparbarhet.
+    bygg_335 = dygnet_finns(data_root, DAG_335, NYCKEL_335, DYGN_335)
+    falt_335 = None
+    if bygg_335:
+        talen_335 = build_data(data_root, out, NYCKEL_335, DYGN_335,
+                               "data_2026_335.js", "STATE2026335")
+        # Talet kommer ur payloaden, dar det redan raknats. En andra rakning
+        # over samma manifest vore samma varde pa tva stallen - FYND 004.
+        falt_335 = dygnets_falt(data_root, DAG_335, NYCKEL_335, DYGN_335,
+                                talen_335["distinct"])
+        print("  %-14s %s, %s" % ("dygnet:", falt_335["state_id"], falt_335["series"]))
+    else:
+        print("  %-14s %s finns inte i arkivet an - %s byggs inte, och"
+              " startsidans lank till den tas bort i samma bygge"
+              % ("NOTERA:", sp.state_id(DAG_335), SIDA_335))
     # Varje sida stamplas, och en sida utan stampel faller bygget: en sida som
     # inte gar att binda till en version ar inte sparbar, och det ar hela
     # skalet till att stampeln finns.
-    for sida in ("index.html", "labs.html", SIDA_315):
+    for sida in ["index.html", "labs.html", SIDA_315] + ([SIDA_335] if bygg_335 else []):
         html = io.open(HERE / sida, encoding="utf-8").read()
         html, n = re.subn(r'(<meta name="build" content=")[^"]*(">)', r"\g<1>" + stamp + r"\g<2>", html, count=1)
         if n != 1:
@@ -397,6 +581,16 @@ def main(argv):
                 raise SystemExit("hittar ingen plats for slugandelen i " + sida)
             print("  %-14s %d av %d rutor lasta ur webbadressen (S), dygn %s"
                   % ("urladress:", slug, talen["n"], FIELD_DAY))
+            # EN LANK, INTE EN LISTA. Finns dygnet inte tas stycket bort helt:
+            # hellre ingen lank an en lank till ingenting.
+            html = valj(html, sida, "latest" if bygg_335 else None, ("latest",))
+            if bygg_335:
+                html = fyll(html, sida, "latest-id", falt_335["state_id"])
+                if ('href="/%s"' % SIDA_335) not in html:
+                    raise SystemExit("startsidans lank pekar inte pa " + SIDA_335)
+                print("  %-14s lank till %s" % ("startsidan:", falt_335["state_id"]))
+            else:
+                print("  %-14s ingen lank till det senaste dygnet" % "startsidan:")
         if sida == SIDA_315:
             r = reproducerar(data_root, NYCKEL_315, DYGN_315)
             html, k = re.subn(r"(<span data-repro-2026-%s>)[^<]*(</span>)" % DYGN_315,
@@ -405,6 +599,37 @@ def main(argv):
                 raise SystemExit("hittar ingen plats for reproduktionstalet i " + sida)
             print("  %-14s %d av 600 rutor reproducerar ur protokollet, dygn 2026/%s"
                   % ("farg:", r, DYGN_315))
+        if sida == SIDA_335:
+            f = falt_335
+            # Sidan valjer sina texter ur arkivets falt och fyller sina tal.
+            html = valj(html, sida, "canonical" if f["series"] == "CANONICAL"
+                        else "unqualified", ("canonical", "unqualified"))
+            html = valj(html, sida, f["bevis"], ("unstamped", "stamped", "anchored"))
+            html = valj(html, sida, "signed" if f["signatur"] else "unsigned",
+                        ("signed", "unsigned"))
+            for namn, nyckel in (("state-id", "state_id"), ("observed", "observerat"),
+                                 ("window", "fonster"), ("floor", "golv"),
+                                 ("sha", "sha"), ("distinct", "distinkta")):
+                html = fyll(html, sida, namn, f[nyckel])
+            if f["series"] == "CANONICAL":
+                html = fyll(html, sida, "index", f["index"])
+            if f["bevis"] != "unstamped":
+                html = fyll(html, sida, "stamp-at", f["stamplad_at"])
+            if f["bevis"] == "anchored":
+                html = fyll(html, sida, "anchor", f["forankring"])
+            if f["signatur"]:
+                html = fyll(html, sida, "signature", f["signatur"])
+            # TVA GRINDAR SOM FANGAR DET JAG GLOMMER. Ett kvarlamnat block ar
+            # tva utfall pa en sida; ett tomt span ar ett pastaende utan tal.
+            # Bada faller bygget i stallet for att ligga ute.
+            kvar = sorted(set(re.findall(r"data-when-[a-z]+", html)))
+            if kvar:
+                raise SystemExit("%s bar kvar ovalda block: %s" % (sida, kvar))
+            kvar = sorted(set(re.findall(r"<span data-[a-z-]+>&mdash;</span>", html)))
+            if kvar:
+                raise SystemExit("%s bar tomma span: %s" % (sida, kvar))
+            print("  %-14s %s, bevis: %s, signatur: %s"
+                  % ("sidan:", f["series"], f["bevis"], "ja" if f["signatur"] else "nej"))
         if sida == "labs.html":
             d = distinkta_farger(data_root, LABS_DAY, LABS_DIR)
             html, k = re.subn(r"(<span data-distinct-2026-%s>)[^<]*(</span>)" % LABS_DAY,
@@ -445,6 +670,12 @@ def main(argv):
     dst = out / "img" / ("state_%s.png" % NYCKEL_315)
     shutil.copyfile(src, dst)
     print("  img/%s  %7d bytes" % (dst.name, dst.stat().st_size))
+
+    if bygg_335:
+        src = render_for(data_root / "08_V3_STATES" / ("STATE_" + NYCKEL_335), DYGN_335)
+        dst = out / "img" / ("state_%s.png" % NYCKEL_335)
+        shutil.copyfile(src, dst)
+        print("  img/%s  %7d bytes" % (dst.name, dst.stat().st_size))
 
     print("\nKlart: " + str(out))
     print("Ladda upp innehallet i mappen till /600states.com/public_html/ .")

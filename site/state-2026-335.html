@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2026/335 — one observed day</title>
+<meta name="description" content="One UTC day of observed news, read through the frozen protocols and rendered by the instrument. What the manifest says about it, and what its evidence record proves.">
+<link rel="canonical" href="https://600states.com/state-2026-335.html">
+<meta name="build" content="dev">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* RUMMET AR TYPOGRAFI, YTA OCH TYSTNAD.
+   Galleriet ar en LAYOUT, inte en rendering: verket ligger platt i sin egen
+   geometri, utan ram, vagg, gallerijus eller skugga. En komponerad bild av
+   verket vore precis det projektet sager att det inte gor. */
+:root{
+  --bg:#0a0a0b; --ink:#ffffff; --muted:#dbd5dd; --dim:#a79fa9;
+  --accent:#e8c354; --accent-ink:#0a0a0b;
+  --paper:#ffffff; --paper-ink:#101014; --paper-muted:#5d5a63;
+  --m:clamp(16px,2.2vw,32px);
+  --step-small:clamp(1rem,0.97rem + 0.12vw,1.0625rem);
+  --step-micro:clamp(0.8125rem,0.79rem + 0.1vw,0.875rem);
+  --step-body:clamp(1.0625rem,1rem + 0.25vw,1.1875rem);
+  --step-head:clamp(2.2rem,1.2rem + 4.2vw,5.2rem);
+}
+:root:not([data-theme="light"]){color-scheme:dark}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Hanken Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:var(--step-body);line-height:1.45;letter-spacing:-0.005em;
+  font-weight:400;-webkit-font-smoothing:antialiased;overflow-x:hidden;
+}
+/* Designgrinden flaggar tre radavstand under 1.3 pa den har sidan: h1/h2 pa
+   0.9 harunder, .open .kind pa 1.15 och .field-sec .txt pa 1.25. Alla tre
+   sitter pa typ fran 1.1rem och uppat, och sidans enda brodtextelement,
+   .field-sec .note pa 72 teckens bredd, ligger pa 1.5. Tatt radavstand ar
+   ratt for stor text; luftigt radavstand pa en 3.4rem-rubrik ser trasigt ut.
+   Regeln ar skriven for brodtext och traffar har en annan kategori.
+
+   Ingen ignore-post ar satt, med avsikt. En tystad regel slutar rapportera
+   de fall den har ratt om, och den har sidan far mer text. Faller grinden pa
+   ett radavstand som INTE sitter pa displaygrad ar det ett riktigt fynd. */
+h1,h2{font-weight:500;letter-spacing:-0.05em;line-height:0.9;margin:0}
+p{margin:0}
+a{color:inherit}
+img{display:block;max-width:100%}
+::selection{background:var(--accent);color:var(--accent-ink)}
+:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+
+.wrap{max-width:1280px;margin-inline:auto;padding-inline:var(--m)}
+.back{padding:28px 0 0;font-size:var(--step-micro);color:var(--dim)}
+.back a{text-decoration:none}
+.back a:hover{color:var(--accent)}
+
+/* padding-block och inte "padding: X 0": .wrap bar sidmarginalen i
+   padding-inline, och en kortform hade nollat den. */
+.open{padding-block:clamp(56px,9vw,132px) clamp(40px,6vw,88px);
+  display:grid;grid-template-columns:1fr 46%;gap:clamp(24px,4vw,64px);align-items:end}
+/* Ingen ram, ingen skugga, ingen vagg. Proportionen halls av bildens egna
+   width/height plus height:auto - 3087x2057 ar inte exakt 3:2, sa en pasatt
+   aspect-ratio hade beskurit eller strackt. object-fit far ingen verkan utan
+   en fast hojd och star som sparr om nagon satter en. */
+.open .art{width:100%;height:auto;object-fit:contain}
+.open h1{font-size:var(--step-head)}
+.open .kind{margin-top:22px;font-size:clamp(1.2rem,2.2vw,1.8rem);letter-spacing:-0.03em;line-height:1.15;max-width:26ch}
+.open .when{margin-top:18px;font-size:var(--step-small);color:var(--dim)}
+
+section{border-top:1px solid #231f27}
+.block{padding-block:clamp(40px,6vw,88px);display:grid;grid-template-columns:34% 1fr;gap:clamp(20px,3vw,56px);align-items:start}
+.block h2{font-size:clamp(1.5rem,2.6vw,2.4rem)}
+.block .body p + p{margin-top:1.1em}
+.block .body{max-width:68ch;color:var(--muted)}
+.block .body b{color:var(--ink);font-weight:500}
+.lnk{color:var(--accent);text-underline-offset:3px}
+.fig{margin-top:1.5em;font-size:var(--step-small);color:var(--dim)}
+.fig b{color:var(--ink)}
+/* Hashen och merkle-rotterna ar 64 tecken som ska ga att jamfora tecken
+   for tecken mot en blockutforskare. Proportionell text gor det till en
+   olasbar strang; monospace och radbrytning var som helst ar vad de ar. */
+.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:0.86em;letter-spacing:0;word-break:break-all}
+
+/* Verket. Platt, i sin egen geometri, pa samma yta som startsidans falt - och
+   lasrutan ar startsidans, hamtad ur field.js och inte kopierad hit. */
+.field-sec{background:var(--paper);color:var(--paper-ink);border-top:0}
+/* Samma geometri som startsidans falt. Sidans prosa star pa 1280, men
+   faltet ar samma falt och delar .field-layout: pa 1280 blev kolumnerna
+   757/413 i stallet for 900/487, och en smalare panel ar en HOGRE panel. */
+/* Verkets kolumn maler i hela pixlar: tilePx = floor((bredd - 29)/30), sa
+   canvasens hojd hoppar i steg om 20px. Vid 1280 ligger steget precis fel
+   med sidans vanliga marginal - faltet far darfor en egen, smalare, och
+   verket vaxer over steget. Matt: 763px kolumn ger 499px verk, 787px ger
+   519px. Lasrutan ar 507. */
+.field-sec .wrap{max-width:1680px;padding-inline:clamp(16px,1.2vw,32px)}
+.field-sec .inner{padding-block:clamp(40px,6vw,88px)}
+.field-sec h2{font-size:clamp(1.5rem,2.6vw,2.4rem)}
+/* LASRUTAN FAR ALDRIG VARA HOGRE AN VERKET, fran 1280px och uppat.
+   Matt 2026-11-25 over alla 600 rutor, inte mot en tom ruta: panelen bar
+   upp till 877px mot en canvas pa 599. Bredden ensam racker inte - en
+   bredare panel tar hojd ur lasrutan LANGSAMMARE an den tar hojd ur
+   verket, sa pa startsidan VAXER overhanget av att bredda: 487px gav 278,
+   520px gav 297, 600px gav 311. Darfor flyttas bordan i stallet: den
+   statiska kallnoten och hallnoten ar inte rutans data och star under
+   verket, datablocket far tatare rader, och kolumnen har ett GOLV pa
+   420px - under det bryter "3/3 read the same way every time" till tva
+   rader och panelen vaxer fortare an verket. */
+.field-layout{display:grid;grid-template-columns:1fr clamp(400px,32%,560px);gap:clamp(20px,3.9vw - 30px,56px);align-items:start;margin-top:40px}
+.field-keys{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)} /* taste-skill-ignore: visually hidden keyboard layer, not a rule */
+.field-keys button{position:absolute;width:1px;height:1px;border:0;padding:0;margin:0} /* taste-skill-ignore: visually hidden, not a rule */
+#fieldcv{display:block;margin-inline:auto;max-width:100%;cursor:pointer}
+.field-keys:focus-visible + #fieldcv{outline:3px solid var(--accent);outline-offset:4px}
+.field-cap{margin-top:24px;font-size:var(--step-small);color:var(--paper-muted);max-width:72ch}
+.readout{background:#f2f0ee;padding:clamp(16px,1.3vw,22px);padding-left:calc(clamp(16px,1.3vw,22px) + 10px);min-height:0;position:sticky;top:32px}
+.readout .idx{font-size:var(--step-micro);color:var(--paper-muted)}
+.field-sec .lock{margin-top:16px;font-size:var(--step-micro);line-height:1.4;font-weight:500;color:var(--paper-ink)}
+/* Rutans farg ar panelens KANT, inte ett block i flodet. 84px block blev
+   10px band langs hela panelen: fargen syns lika val och lasrutan slipper
+   120px hojd som inte bar nagon text. */
+.readout .swatch{position:absolute;left:0;top:0;bottom:0;width:10px;margin:0;background:#2d5580}
+/* Pastaendet och anteckningen ar de ENDA tva element i lasrutan vars hojd
+   beror pa observationen - de nio etikett/varde-paren ar enradiga fran 400px
+   och uppat. Star de i panelen ar panelens hojd ett tal som kan ta slut: vid
+   1280 fanns 220px luft och det varsta innehallet tog 205. Har under verket
+   far de vaxa fritt, och panelen ar lika hog varje dygn. */
+.field-sec .tile-text{margin-top:26px}
+.field-sec .txt{font-size:clamp(1.1rem,1.4vw,1.45rem);line-height:1.25;letter-spacing:-0.025em;max-width:48ch}
+.field-sec .note{margin-top:14px;font-size:var(--step-small);line-height:1.5;color:var(--paper-muted);max-width:72ch}
+/* Radavstandet ar sidans eget igen. Det drogs ner till 1.2 nar panelen bar
+   pastaendet och varje pixel rakandes; nu bar den nio enradiga falt och har
+   182px till godo vid den bindande bredden, sa den behover inte knipa.
+   Kolumnmellanrummet star kvar pa 16px: vardekolumnen ar 259px och den
+   langsta glossen tar precis 259. */
+.readout dl{display:grid;grid-template-columns:auto 1fr;gap:7px 16px;margin:26px 0 0;font-size:var(--step-small)}
+.readout dt{color:var(--paper-muted);font-size:var(--step-micro)}
+.readout dd{margin:0;font-weight:500;overflow-wrap:anywhere}
+.readout dd a{color:inherit;text-decoration:underline;text-underline-offset:2px}
+.field-sec .src-note{margin-top:18px;font-size:var(--step-micro);line-height:1.45;color:var(--paper-muted);max-width:72ch}
+
+footer{border-top:1px solid #231f27;padding:48px 0 72px;font-size:var(--step-micro);color:var(--dim)}
+footer p + p{margin-top:10px}
+
+@media (max-width:860px){
+  .open{grid-template-columns:1fr}
+  .block{grid-template-columns:1fr;gap:18px}
+  .field-layout{grid-template-columns:1fr}
+  /* Ingen sticky, alltsa ingen positionerad forfader: bandet maste tillbaka
+     i flodet, annars hamnar det pa sidan i stallet for pa panelen. */
+  .readout{position:static;min-height:0;padding-left:clamp(16px,1.3vw,22px)}
+  .readout .swatch{position:static;width:100%;height:10px;margin:14px 0 0}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap back"><p><a href="/">&larr; 600 STATES</a></p></div>
+
+<div class="wrap open">
+  <div>
+    <h1><span data-state-id>&mdash;</span></h1>
+    <!-- TVA UTFALL, BADA SKRIVNA HAR. Ett seriedygn ar CANONICAL bara om minst
+         golvet av raderna bar sitt bevis fangat inne i dygnet; under golvet
+         produceras verket anda men blir inte ett av de 600. Vilket av dem det
+         blir gar inte att veta i forvag, sa bygget VALJER mellan de tva
+         blocken ur manifestets egna falt och tar bort det andra. En sida som
+         bara bar det ena utfallet publicerar ett osant pastaende den dag
+         dygnet gar den andra vagen. -->
+    <p class="kind" data-when-canonical>A State. One of the 600.</p>
+    <p class="kind" data-when-unqualified>Produced, but not one of the 600. The work exists; the number does not.</p>
+    <p class="when">Observed day: <span data-observed>&mdash;</span>, UTC</p>
+  </div>
+  <!-- SAMMA FIL som noscript-bilden langre ner, refererad en andra gang: tva
+       nedskalade kopior av samma rendering vore FYND 004 i binar form. -->
+  <img class="art" src="img/state_2026_335.png" alt="" aria-hidden="true"
+       width="3087" height="2057">
+</div>
+
+<section>
+  <div class="wrap block">
+    <h2>What this is</h2>
+    <div class="body">
+      <p>One UTC day of observed news, read through the same frozen protocols as every other day and rendered by the same instrument: 600 observations, 600 colours, laid out in the order they happened across a 30&nbsp;&times;&nbsp;20 field.</p>
+      <div data-when-canonical>
+        <p>It is a <b>State</b>, and it carries a number: <b>State <span data-index>&mdash;</span></b>. The number is not awarded. It follows from one measurement and nothing else &mdash; <b><span data-window>&mdash;</span></b> of this day&rsquo;s rows carry their source content captured inside the observation window itself, against a floor of <span data-floor>&mdash;</span>. A day at or above that floor is numbered; a day below it is not.</p>
+        <p>What the number does not say is that the day was read correctly, that the selection was the right one, or that the colours are beautiful. It says that the evidence behind the work was taken while the day was still happening.</p>
+      </div>
+      <div data-when-unqualified>
+        <p>It is <b>not one of the 600</b>, and it cannot become one. <b><span data-window>&mdash;</span></b> of this day&rsquo;s rows carry their source content captured inside the observation window itself, and the floor for a numbered State is <span data-floor>&mdash;</span>. This day fell below it.</p>
+        <p>The work was produced anyway, by the same instrument and the same protocols, and it is published here with its manifest like any other day. What it does not get is a number. The series is 600 days whose evidence was taken while the day was still happening, and a day that misses that is not one of them &mdash; the rule is about the window, not about the picture.</p>
+      </div>
+      <p>The day is read once, frozen once. <b>One day, one run, one outcome.</b> There is no second attempt at it, for this instrument or any other.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap block">
+    <h2>What the record says</h2>
+    <div class="body">
+      <p>The manifest for this day is frozen, and it hashes to <b class="mono"><span data-sha>&mdash;</span></b>. That proves the file has not changed since it was written. It does not prove when it was written: that clock is ours.</p>
+      <p>The part that does not depend on trusting us is the timestamp. An OpenTimestamps proof binds the manifest&rsquo;s hash to a Bitcoin block, in two steps &mdash; the stamp is taken right after the freeze, and the anchor follows once the calendars have attested it, a day later. Both states are reported here as they are.</p>
+      <!-- TRE TILLSTAND, INTE TVA. Ett dygn som stamplats men inte forankrats
+           ar en MATNING och inget fel; PARAMETER_REGISTER 1.17. Saknas posten
+           helt sags det rakt ut i stallet for att raden doljs. Bygget valjer
+           ett av de tre blocken ur tidsstampelposten. TXID NAMNS INTE: posten
+           bar blockhojd och merkle-rot, se FYND 025. -->
+      <p class="fig" data-when-unstamped><b>Not timestamped yet.</b> No timestamp record exists for this day, so nothing external has been asked to witness the hash.</p>
+      <p class="fig" data-when-stamped><b>Stamped, not yet anchored.</b> The stamp was taken <span data-stamp-at>&mdash;</span>. The calendars have not returned an attestation yet; until they do, the proof is pending and this page says so.</p>
+      <p class="fig" data-when-anchored><b>Anchored.</b> Stamped <span data-stamp-at>&mdash;</span>, and the hash is bound to Bitcoin: <span data-anchor>&mdash;</span>. Each height and root can be looked up in any block explorer, against this manifest&rsquo;s hash.</p>
+      <!-- Signaturen ar ett eget bevis och en egen post. En lasare som bara
+           har det ena ska se att det andra saknas. -->
+      <p class="fig" data-when-signed><b>Signed.</b> The manifest hash carries a minisign signature, verified by the chain against the published public key at the moment it was written: <span data-signature>&mdash;</span>.</p>
+      <p class="fig" data-when-unsigned><b>Not signed.</b> No signature record exists for this day. The hash stands on the timestamp and on the archive, not on our key.</p>
+      <p>This field carries <b><span data-distinct>&mdash;</span> distinct colours</b> across its 600 tiles, counted by the build from the frozen manifest.</p>
+    </div>
+  </div>
+</section>
+
+<section class="field-sec">
+  <div class="wrap inner">
+    <h2>The work</h2>
+    <p class="field-cap">600 observations of that day, in chronological order, left to right and top to bottom. Nothing has been moved, nothing composed, no colour chosen. Click any square to read the observation behind it.</p>
+    <div class="field-layout">
+      <div>
+        <div class="field-keys" id="grid" role="group" aria-label="600 tiles. Use the arrow keys to move between tiles." tabindex="0"></div>
+        <canvas id="fieldcv" aria-hidden="true"></canvas>
+        <noscript><img src="img/state_2026_335.png" alt="The rendered field of 600 colours for this observed day." width="3087" height="2057" loading="lazy"></noscript>
+        <!-- Pastaendet och anteckningen star HAR, direkt under verket, och
+             inte i lasrutan: de ar de enda tva element vars hojd beror pa
+             observationen, och lasrutan far aldrig vara hogre an canvasen. -->
+        <div class="tile-text" aria-live="polite">
+          <p class="txt">Pick a square. The observation that produced its colour appears here.</p>
+          <p class="note"></p>
+        </div>
+        <p class="src-note">The representative source as captured for the observation day. Some links have since moved or gone behind a paywall. The manifest records what was captured and its hash; where the link no longer resolves, that record is ours and cannot be checked against the publisher.</p>
+        <!-- Hallnoten star SIST: den tands och slacks, och hogre upp hade
+             den knuffat bildtexten varje gang en ruta hills. -->
+        <p class="lock" hidden>Held on this tile, so you can reach the source. Click it again, or press Escape, to follow the pointer.</p>
+      </div>
+      <aside class="readout" id="readout" aria-live="polite">
+        <p class="idx">Tile &mdash; of 600</p>
+        <div class="swatch"></div>
+        <dl>
+          <dt>Primary state</dt><dd>&mdash;</dd>
+          <dt>Secondary</dt><dd>&mdash;</dd>
+          <dt>Intensity</dt><dd>&mdash;</dd>
+          <dt>Confidence</dt><dd>&mdash;</dd>
+          <dt>Agreement</dt><dd>&mdash;</dd>
+          <dt>Source</dt><dd>&mdash;</dd>
+          <dt>Observed</dt><dd>&mdash;</dd>
+          <dt>Evidence</dt><dd>&mdash;</dd>
+          <dt>Observation</dt><dd>&mdash;</dd>
+        </dl>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p><a href="/">600 STATES</a> &middot; <a href="/labs.html">600 LABS</a></p>
+    <p>Source: <a href="https://github.com/600states/600-states">github.com/600states/600-states</a></p>
+    <p>The artwork is the Proof of State. The manifest is the Proof of Work.</p>
+  </div>
+</footer>
+
+<script src="data_2026_335.js"></script>
+<script src="field.js"></script>
+<script>
+if(window.initField) initField(window.STATE2026335);
+</script>
+</body>
+</html>
