@@ -558,6 +558,50 @@ def usage_fields(msg):
     except Exception:
         return dict(vars(u))
 
+def bokfor_fallet(rec, omgang, p, n, orsak, msg=None, requests=1,
+                  jobb=None, obs=None):
+    """En rad for ett anrop som skickades och inte blev en sparad batch.
+
+    JOURNALEN BOKFORDE RESULTAT, INTE ANROP. Ett svar som kom tillbaka,
+    kostade pengar och foll pa parsning eller validering slapptes som
+    kostnad: usage lastes forst efter sista felgrenen. Uppmatt 2026-11-27 av
+    NAS pa 2026/329 - 33 bokforda anrop mot 48 debiterade, 15 fallna med
+    109 414 indata- och 236 153 utdatatokens som ingen rad bar. Pa 2026/315
+    var det ett anrop av 1 801: samma defekt, tva storleksordningar. A21.
+
+    TRE UTFALL SOM INTE FAR SLAS IHOP:
+
+      ok      lyckat anrop. Skrivs som forut, utan utfallsfalt.
+      fallet  svaret kom tillbaka och kostade. msg finns och msg.usage gar
+              att lasa, sa TALEN BOKFORS - markta som fallna.
+      okand   API:et rapporterade sjalvt fel. Uppmatt i klientens kontrakt,
+              anthropic 2.5.0: MessageBatchSucceededResult bar message,
+              MessageBatchErroredResult bar error, Canceled och Expired bar
+              bara type. Det finns alltsa ingen usage att lasa, och raden
+              sager att anropet skedde och att kostnaden ar OKAND.
+
+    EN NOLLRAD OCH EN SAKNAD RAD LJUGER BADA. Noll ar ett tal och pastar att
+    anropet var gratis; en rad som inte finns pastar att anropet inte
+    gjordes. null sager att det skedde och att vi inte vet vad det kostade,
+    och det ar det enda som gor skillnaden synlig i efterhand.
+    """
+    u = usage_fields(msg) if msg is not None else {}
+    rad = {"run": omgang, "pass": p, "batch": n,
+           "utfall": "fallet" if u else "okand", "orsak": orsak,
+           "rows": 0, "requests": requests,
+           "input_tokens": u.get("input_tokens") if u else None,
+           "output_tokens": u.get("output_tokens") if u else None,
+           "cache_read": u.get("cache_read_input_tokens") if u else None,
+           "cache_write": u.get("cache_creation_input_tokens") if u else None}
+    if obs is not None:
+        rad["obs"] = obs
+    if jobb:
+        rad["batch_id"] = [jobb] if isinstance(jobb, str) else sorted(jobb)
+    rec["calls"].append(rad)
+    print(f"    bokfort som {rad['utfall']}: {orsak}"
+          + ("" if u else " - kostnaden ar okand, inte noll"))
+    return rad
+
 def block_types(msg):
     """Vilka blocktyper svaret bestod av. Ett tomt textblock och ett uteblivet
     svar ser likadana ut i texten, men inte har."""
@@ -751,13 +795,36 @@ def skriv_journal(day, gammal, rec, parse_fel):
         return
     c = gammal.get("calls", []) + rec["calls"]
     ut = {**gammal, **rec, "calls": c}
+    # TRE UTFALL, TRE SUMMOR. Ett fallet anrop ar inte ett lyckat och inte
+    # en lucka: input/output/cache_read raknar de LYCKADE, som forut, och
+    # fallna_tokens star bredvid. Skillnaden mellan dem ar vad ett dygn
+    # kostade utover vad det producerade, och den gick forut inte att se.
+    ok = [x for x in c if x.get("utfall", "ok") == "ok"]
+    fallna = [x for x in c if x.get("utfall") == "fallet"]
+    okanda = [x for x in c if x.get("utfall") == "okand"]
+
+    def beg(rader):
+        return sum(x.get("requests", 1) for x in rader)
+
     ut["totals"] = {"calls": len(c),
-                    "input": sum(x["input_tokens"] for x in c),
-                    "output": sum(x["output_tokens"] for x in c),
-                    "cache_read": sum(x["cache_read"] for x in c),
+                    "input": sum(x["input_tokens"] for x in ok),
+                    "output": sum(x["output_tokens"] for x in ok),
+                    "cache_read": sum(x["cache_read"] for x in ok),
                     "parse_failures":
-                        gammal.get("totals", {}).get("parse_failures", 0) + parse_fel}
-    inspelade = {f"pass{x['pass']}_batch_{x['batch']:02d}" for x in c
+                        gammal.get("totals", {}).get("parse_failures", 0) + parse_fel,
+                    # Talet som gar att jamfora mot batch_latency_seconds[].
+                    # requests - det enda stallet dar 1 801 mot 1 800 syntes.
+                    "begaran": {"skickade": beg(c), "bokforda": beg(ok),
+                                "fallna_kanda": beg(fallna),
+                                "fallna_okanda": beg(okanda)},
+                    "fallna_tokens": {
+                        "input": sum(x["input_tokens"] for x in fallna),
+                        "output": sum(x["output_tokens"] for x in fallna),
+                        "cache_read": sum(x["cache_read"] for x in fallna)}}
+    # Bara LYCKADE rader raknas som inspelade: en fallen rad for samma
+    # batch sager inte att passfilen ar bokford, och skulle annars dolja
+    # ett dygn dar passfilen finns men bara felraderna gor det.
+    inspelade = {f"pass{x['pass']}_batch_{x['batch']:02d}" for x in ok
                  if "pass" in x and "batch" in x}
     ut["unrecorded"] = sorted({f.stem for f in passdir(day).glob("pass*_batch_*.json")}
                               - inspelade)
@@ -836,6 +903,7 @@ def kor_i_batch(client, model, prompt, day, todo, d, rec, omgang, slapp=False):
             items = per_batch[nnr]
             if felmeddelande:
                 print(f"  pass{pnr} batch{nnr:02d}: {felmeddelande}")
+                bokfor_fallet(rec, omgang, pnr, nnr, felmeddelande, msg, jobb=bid)
                 continue
             try:
                 rows, artefakter = parse(msg, items)
@@ -843,12 +911,15 @@ def kor_i_batch(client, model, prompt, day, todo, d, rec, omgang, slapp=False):
                 parse_fel_totalt += 1
                 print(f"  pass{pnr} batch{nnr:02d}: JSONDecodeError: {e}")
                 spara_misslyckat(d, pnr, nnr, rond, msg)
+                bokfor_fallet(rec, omgang, pnr, nnr, "JSONDecodeError", msg, jobb=bid)
                 continue
             fel, dg = godkann(rows, items)
             if fel:
                 print(f"  pass{pnr} batch{nnr:02d}: {len(fel)} valideringsfel pa "
                       f"{len(rows)} rader")
                 spara_misslyckat(d, pnr, nnr, rond, msg, fel)
+                bokfor_fallet(rec, omgang, pnr, nnr,
+                              f"{len(fel)} valideringsfel", msg, jobb=bid)
                 continue
             skriv_svar(d, pnr, nnr, rows, dg, artefakter, msg, rec, omgang,
                        None, jobb=bid)
@@ -961,6 +1032,8 @@ def kor_i_batch_en(client, model, prompt, day, todo, d, rec, omgang, slapp=False
             p, n, i = tyd_kund_id_en(cid)
             if felmeddelande:
                 print(f"  {cid}: {felmeddelande}")
+                bokfor_fallet(rec, omgang, p, n, felmeddelande, msg,
+                              jobb=bid, obs=i)
                 continue
             items = per_batch[n]
             it = items[i - 1]
@@ -970,11 +1043,15 @@ def kor_i_batch_en(client, model, prompt, day, todo, d, rec, omgang, slapp=False
                 parse_fel_totalt += 1
                 print(f"  {cid}: JSONDecodeError: {e}")
                 write_text(k / f"FAILED_{cid}.txt", raw_text(msg))
+                bokfor_fallet(rec, omgang, p, n, "JSONDecodeError", msg,
+                              jobb=bid, obs=i)
                 continue
             fel, dg = godkann(rows, [it])
             if fel:
                 print(f"  {cid}: {len(fel)} valideringsfel — {fel[0][:80]}")
                 write_text(k / f"FAILED_{cid}.txt", raw_text(msg))
+                bokfor_fallet(rec, omgang, p, n, f"{len(fel)} valideringsfel",
+                              msg, jobb=bid, obs=i)
                 continue
             u = msg.usage
             write_text(k / f"{cid}.json", json.dumps(
@@ -1091,6 +1168,7 @@ def kor_direkt(client, model, prompt, todo, d, rec, omgang, budget=None):
                     print(f"  pass{p} batch{n:02d}: {type(e).__name__}: {e}")
                     print("  INGET OMFORSOK — felet uppstod innan begaran accepterades")
                     spara_misslyckat(d, p, n, attempt, msg)
+                    bokfor_fallet(rec, omgang, p, n, type(e).__name__, msg)
                     raise
                 # Bara fel som uppstod efter att begaran gick ivag far ett nytt
                 # forsok. Ett fel fore dess ar ett konfigurationsfel - fel
@@ -1116,12 +1194,14 @@ def kor_direkt(client, model, prompt, todo, d, rec, omgang, budget=None):
                     parse_fel_totalt += 1
                 print(f"  pass{p} batch{n:02d} forsok {attempt}: {type(e).__name__}: {e}")
                 spara_misslyckat(d, p, n, attempt, msg)
+                bokfor_fallet(rec, omgang, p, n, type(e).__name__, msg)
                 time.sleep(2 * attempt); continue
             fel, dg = godkann(rows, items)
             if fel:
                 print(f"  pass{p} batch{n:02d} forsok {attempt}: {len(fel)} valideringsfel "
                       f"pa {len(rows)} rader")
                 spara_misslyckat(d, p, n, attempt, msg, fel)
+                bokfor_fallet(rec, omgang, p, n, f"{len(fel)} valideringsfel", msg)
                 if attempt == MAX_TRIES:
                     print("  GER UPP pa denna batch"); break
                 continue
