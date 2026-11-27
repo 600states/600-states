@@ -55,13 +55,25 @@ def stub(monkeypatch, svar):
     """svar: {forsta argumentet: (felkod, utskrift)} eller en funktion."""
     kallade = []
 
-    def _k(*argv):
+    def _k(*argv, dolj=()):
+        # dolj tillkom med A26: _kor skrubbar vardens sokvagar ur klientens
+        # utskrift innan den hamnar i posten. Stubben maste ta emot det
+        # produktionsvagen faktiskt skickar - annars provar den en signatur
+        # som inte langre finns, och sju prov blir roda av en stubbe som inte
+        # foljde med. Vardet sparas pa funktionen sa att ett prov kan lasa VAD
+        # som skulle doljas, utan att de ovriga provens kallade-lista andras.
         kallade.append(argv)
+        # VARJE anrop med sin doljlista, inte bara det sista. Ett falt som
+        # bar sista anropets varde provar att NAGOT anrop skrubbar, inte att
+        # det muterade gor det: tas dolj bort fran upgrade raddar verify
+        # provet. Det var sa den har stubben sag ut i sitt forsta utkast.
+        _k.anrop.append((argv, dolj))
         if callable(svar):
             return svar(*argv)
         nyckel = next((a for a in argv if not a.startswith("-")), "")
         return svar.get(nyckel, (0, ""))
 
+    _k.anrop = []
     monkeypatch.setattr(stamp, "_kor", _k)
     return kallade
 
@@ -249,3 +261,93 @@ def test_den_publika_meningen_star_i_koden():
     for krav in ("--no-bitcoin verify", "FELKOD 1", "blockhojd", "merkle-rot",
                  "kraver en Bitcoin-nod"):
         assert krav in t, f"den publika meningen saknar: {krav}"
+
+
+# ------------------------------------------- A25 och A26, provade 2026-11-27
+#
+# Bada kommer ur forankringsprovets dygn 2 pa NAS:en, och bada ar samma form:
+# en regel som fanns pa ett stalle men inte pa det andra.
+
+def test_klientens_bak_fil_ligger_inte_kvar_efter_forankringen(arkiv, monkeypatch):
+    """A25. ots upgrade skriver <manifest>.csv.ots.bak med ORIGINALETS
+    ofullstandiga bevis, och den hamnar bredvid manifestet i arkivet. stamp.py
+    tar bort sin EGEN kopia av just det skalet - en fil som ser ut som bevis
+    men binder mindre an originalet verifierar nagon forr eller senare i
+    stallet for den riktiga. Vems hand som skrev filen andrar inte vad den ar.
+    """
+    emo = _stamplad(arkiv, monkeypatch)
+    ots = sp.ots_sidecar(emo)
+    bak = ots.with_name(ots.name + ".bak")
+
+    def svar(*argv):
+        if "upgrade" in argv:
+            bak.write_bytes(b"originalets ofullstandiga bevis")
+            return 0, UPGRADE_KLAR
+        return 1, VERIFY_FORANKRAD
+
+    stub(monkeypatch, svar)
+    stamp.step_forankra(DAG, arkiv)
+    assert not bak.exists(), (
+        f"{bak.name} ligger kvar i arkivet efter en lyckad forankring")
+
+
+def test_kontrollprov_bak_filen_ar_aterstallningsvagen_tills_forankringen_lyckats(
+        arkiv, monkeypatch):
+    """Provet ovan pastar en franvaro. En franvaro som aldrig var en narvaro
+    bevisar ingenting - och filen far inte heller tas bort for tidigt: fram
+    till forankringen ar den vagen tillbaka till originalets bytes."""
+    emo = _stamplad(arkiv, monkeypatch)
+    ots = sp.ots_sidecar(emo)
+    bak = ots.with_name(ots.name + ".bak")
+
+    def svar(*argv):
+        if "upgrade" in argv:
+            bak.write_bytes(b"originalets ofullstandiga bevis")
+            return 1, UPGRADE_VANTANDE
+        return 1, ""
+
+    stub(monkeypatch, svar)
+    post = stamp.step_forankra(DAG, arkiv)
+    assert "forankring" not in post
+    assert bak.exists(), (
+        "aterstallningsvagen togs bort trots att forankringen inte lyckades")
+
+
+def test_utskriften_bar_ingen_sokvag_ur_arkivet(monkeypatch, tmp_path):
+    """A26. Klienten skriver ut sokvagen den fick - "Assuming target filename
+    is '/srv/...'" - och den raden hamnade ordagrant i postens falt utskrift.
+    Posten ar manifestets proveniensansprak och kan citeras publikt."""
+    class Svar:
+        returncode = 0
+        stdout = f"Assuming target filename is '{tmp_path}/m.csv.ots'\n"
+        stderr = ""
+
+    monkeypatch.setattr(stamp.subprocess, "run", lambda *a, **k: Svar())
+    kod, ut = stamp._kor("upgrade", "m.csv.ots", dolj=stamp._dolj(tmp_path))
+    assert str(tmp_path) not in ut
+    assert "<arkivet>" in ut
+
+
+def test_kontrollprov_utan_dolj_star_sokvagen_kvar(monkeypatch, tmp_path):
+    """Provet ovan ar vardelost om utskriften alltid saknar sokvagen - da
+    provar det klientens text och inte skrubbningen."""
+    class Svar:
+        returncode = 0
+        stdout = f"Assuming target filename is '{tmp_path}/m.csv.ots'\n"
+        stderr = ""
+
+    monkeypatch.setattr(stamp.subprocess, "run", lambda *a, **k: Svar())
+    kod, ut = stamp._kor("upgrade", "m.csv.ots")
+    assert str(tmp_path) in ut
+
+
+def test_forankringen_skickar_doljlistan_till_klienten(arkiv, monkeypatch):
+    """Skrubbningen i _kor ar vardelos om produktionsvagen aldrig ber om den.
+    Det har provet binder enheten ovan till den vag som faktiskt kors."""
+    _stamplad(arkiv, monkeypatch)
+    stub(monkeypatch, {"upgrade": (0, UPGRADE_KLAR), "verify": (1, VERIFY_FORANKRAD)})
+    stamp.step_forankra(DAG, arkiv)
+    assert stamp._kor.anrop, "klienten anropades inte alls"
+    utan = [argv for argv, dolj in stamp._kor.anrop if not dolj]
+    assert not utan, f"dessa klientanrop ber inte om skrubbning: {utan}"
+    assert all(d[0][1] == "<arkivet>" for _, d in stamp._kor.anrop)
