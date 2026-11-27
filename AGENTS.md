@@ -329,6 +329,12 @@ because the source registry is CRLF and the rest LF - normalised line endings
 would give a Windows clone and a Linux clone different bytes, and one published
 SHA-256 could match at most one of them.
 
+**In `.gitattributes` the LAST matching line wins, not the first.** A protective
+line such as `-text` must therefore stand AFTER the general rule, not before it:
+put `protocols/** -text` above `* text=auto eol=lf` and the general rule overrides
+it, the frozen copies get normalised, and the published SHA-256 stops matching the
+file it names. Checked by `tests/test_radslutsreglerna.py`.
+
 ## This repository is public
 
 Never commit, in code, comments, documentation, test fixtures or commit
