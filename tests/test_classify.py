@@ -322,20 +322,22 @@ def test_kontrollprov_en_lyckad_rad_gor_passfilen_bokford(tmp_path, monkeypatch)
     assert json.loads(fil.read_text(encoding="utf-8"))["unrecorded"] == []
 
 
-def test_skickade_kan_inte_upptacka_ett_OBOKFORT_anrop(tmp_path, monkeypatch):
-    """DEN HAR LUCKAN AR OPPEN OCH PROVET PINNAR DEN.
+def test_journalen_doljer_inte_skillnaden_mellan_talen(tmp_path, monkeypatch):
+    """ARBETSDELNINGEN, SKRIVEN 2026-11-27 EFTER ad50b48.
 
-    totals.begaran.skickade raknas ur de BOKFORDA raderna sjalva, sa
+    skriv_journal BOKFOR, den domer inte. Journalen ar manifestets
+    proveniensansprak, och den ska skriva vad som hande aven nar det inte
+    gick ihop - en journal som vagrar bli till nar nagot ar fel tar bort
+    just det spar som behovs for att forsta felet.
+
+    totals.begaran.skickade raknas ur de bokforda raderna sjalva, sa
     identiteten skickade = bokforda + fallna + okanda ar sann per
-    konstruktion och kan aldrig brista. Ett anrop som ingen felgren bokforde
-    ar darfor osynligt aven i det nya talet - och bokforingen sker nu pa nio
-    stallen i stallet for tva.
+    konstruktion. Det oberoende talet ar batch_latency_seconds[].requests,
+    skrivet ur jobbfilen FORE resultatslingan. Provet visar att de tva kan
+    saga olika saker OCH att bada talen star kvar i filen.
 
-    Det enda oberoende talet ar batch_latency_seconds[].requests, som skrivs
-    ur len(jobb["begaran"]) FORE resultatslingan. Har visar provet att de tva
-    talen kan saga olika saker utan att nagot faller.
-
-    NAR GRINDEN BYGGS VANDS DET HAR PROVET. Det ar meningen.
+    DET AR GRINDEN SOM UPPTACKER SKILLNADEN, inte skrivningen - se
+    test_grinden_faller_nar_ett_skickat_anrop_saknar_rad nedan.
     """
     fil = _journal(tmp_path, monkeypatch)
     rec = {**BAS, "calls": [anrop(1, 1, 0), anrop(1, 1, 0)],
@@ -439,3 +441,101 @@ def test_ett_400_kors_aldrig_om():
     assert classify.ska_forsoka_igen(status(503))       # tillfalligt
     assert classify.ska_forsoka_igen(json.JSONDecodeError("x", "y", 0))
     assert not classify.ska_forsoka_igen(ValueError("lokalt fel"))
+
+
+# ---- grinden som upptacker ett obokfort anrop (ad50b48) -----------------
+
+def batchrad(bid="b1"): return {**anrop(1, 1, 0), "batch_id": bid}
+def jobb(bid="b1", n=1): return {"batch_id": bid, "requests": n, "seconds": 1.0}
+
+
+def test_grinden_faller_nar_ett_skickat_anrop_saknar_rad(tmp_path, monkeypatch):
+    """Tre skickade enligt jobbet, tva bokforda. Det egna talet foljer med
+    ner i felet; det oberoende gor det inte."""
+    _journal(tmp_path, monkeypatch)
+    classify.skriv_journal("20260101", {}, {**BAS, "calls": [batchrad(), batchrad()],
+                                            "batch_latency_seconds": [jobb(n=3)]}, 0)
+    with pytest.raises(classify.gates.GateFailure) as e:
+        classify.gate_journalen_tacker_anropen("20260101", tmp_path)
+    assert "saknar rad" in str(e.value)
+
+
+def test_grinden_faller_aven_at_andra_hallet(tmp_path, monkeypatch):
+    """En rad utan skickat anrop ar ocksa en journal som inte ar lika med
+    dygnet. Faller bara det ena hallet provar provet riktningen, inte
+    likheten."""
+    _journal(tmp_path, monkeypatch)
+    classify.skriv_journal("20260101", {}, {**BAS, "calls": [batchrad(), batchrad()],
+                                            "batch_latency_seconds": [jobb(n=1)]}, 0)
+    with pytest.raises(classify.gates.GateFailure) as e:
+        classify.gate_journalen_tacker_anropen("20260101", tmp_path)
+    assert "har rad utan att ha skickats" in str(e.value)
+
+
+def test_kontrollprov_grinden_slapper_igenom_nar_talen_stammer(tmp_path, monkeypatch):
+    """Proven ovan ar vardelosa om grinden faller pa allt."""
+    _journal(tmp_path, monkeypatch)
+    classify.skriv_journal("20260101", {}, {**BAS, "calls": [batchrad(), batchrad()],
+                                            "batch_latency_seconds": [jobb(n=2)]}, 0)
+    classify.gate_journalen_tacker_anropen("20260101", tmp_path)
+
+
+def test_utan_oberoende_tal_faller_grinden_inte_men_sager_det(tmp_path, monkeypatch, capsys):
+    """Tredje tillstandet. Ett jobb utan created_at lamnar ingen rad i
+    batch_latency_seconds, och da FINNS inget oberoende tal. Leverantorens
+    metadata ar inte var bokforing och far inte stoppa ett fryst dygn - men
+    tystnad far aldrig lasas som 'lika'."""
+    _journal(tmp_path, monkeypatch)
+    classify.skriv_journal("20260101", {}, {**BAS, "calls": [batchrad()]}, 0)
+    classify.gate_journalen_tacker_anropen("20260101", tmp_path)
+    ut = capsys.readouterr().out
+    assert "INGET OBEROENDE TAL" in ut
+    assert "b1" in ut
+
+
+def test_batchraderna_vaxer_over_omgangar_och_raknas_inte_tva_ganger(
+        tmp_path, monkeypatch, capsys):
+    """FORUTSATTNINGEN SOM INTE HOLL fore ad50b48: {**gammal, **rec} lat en
+    senare omgangs batch_latency_seconds ERSATTA den tidigare. Ett dygn taget
+    i tva processer - normallaget med --slapp - tappade forsta jobbets
+    oberoende tal medan dess anrop lag kvar bland raderna.
+
+    ANDRA OMGANGEN SKICKAR BARA SITT EGET JOBB. Det ar hela poangen: en
+    process som hamtar b2 vet ingenting om b1. Skickar provet bada ser
+    ersattning och sammanslagning likadana ut, och provet prover ingenting -
+    sa sag forsta versionen av det har provet ut.
+
+    Faller sammanslagningen bort hamnar b1 utan oberoende tal, och grinden
+    degraderar tyst till tredje tillstandet i stallet for att jamfora. Den
+    faller inte - den slutar prova. Darfor provas UTSKRIFTEN."""
+    _journal(tmp_path, monkeypatch)
+    classify.skriv_journal("20260101", {}, {**BAS, "calls": [batchrad("b1")],
+                                            "batch_latency_seconds": [jobb("b1")]}, 0)
+    gammal = classify.las_journal("20260101", BAS)
+    classify.skriv_journal("20260101", gammal,
+                           {**BAS, "calls": [batchrad("b2")],
+                            "batch_latency_seconds": [jobb("b2")]}, 0)
+    capsys.readouterr()
+    classify.gate_journalen_tacker_anropen("20260101", tmp_path)
+    ut = capsys.readouterr().out
+    assert "INGET OBEROENDE TAL" not in ut, "b1 tappade sitt oberoende tal"
+    assert "2 skickade enligt jobben, 2 bokforda" in ut
+
+
+def test_samma_jobb_tva_ganger_raknas_en_gang(tmp_path, monkeypatch):
+    """En aterupptagen korning hamtar samma jobb igen. Det ar samma skickade
+    anrop, inte nya - raknas det tva ganger faller grinden pa en atergang."""
+    _journal(tmp_path, monkeypatch)
+    classify.skriv_journal("20260101", {}, {**BAS, "calls": [batchrad("b1")],
+                                            "batch_latency_seconds": [jobb("b1")]}, 0)
+    gammal = classify.las_journal("20260101", BAS)
+    classify.skriv_journal("20260101", gammal,
+                           {**BAS, "calls": [], "batch_latency_seconds": [jobb("b1")]}, 0)
+    classify.gate_journalen_tacker_anropen("20260101", tmp_path)   # faller inte
+
+
+def test_en_journal_som_inte_finns_ar_inget_godkant(tmp_path, monkeypatch, capsys):
+    """Grinden far inte tiga sig forbi en saknad journal."""
+    _journal(tmp_path, monkeypatch)
+    classify.gate_journalen_tacker_anropen("20260101", tmp_path)
+    assert "ingen korjournal" in capsys.readouterr().out
