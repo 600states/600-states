@@ -2,7 +2,7 @@
 
     python3 src/classify.py <AAAAMMDD> [--pass N] [--budget N] [--model ID]
                             [--avvikande-modell]
-                                      [--dry-run] [--live] [--slapp] [--en-i-taget]
+                            [--dry-run] [--live] [--slapp] [--femtio-per-begaran]
 
 Leveransen ar Batch API (halva listpriset, faststallt 2026-11-06). --live kor
 direkta anrop i stallet, till fullt pris: for en enskild batch man vill se
@@ -10,12 +10,13 @@ svaret pa med en gang. --slapp skickar batchjobbet och gar ur; nasta korning
 hamtar det. Jobbfilen pa disk ar skyddet mot att betala for samma jobb tva
 ganger.
 
---en-i-taget skickar EN observation per begaran i stallet for femtio. Matvag for
-FYND 009: med en observation finns ingen rad att halka mellan, och identiteten
-kommer ur begaran. Den frysta prompten och specen ar oforandrade - avvikelsen
-galler canonical_batch_size, och den noteras. Passfilerna blir identiska i form.
-Journalen markerar dygnet med delivery_form, sa att det aldrig kan forvaxlas med
-ett dygn kort pa den beslutade formen.
+LEVERANSFORMEN AR EN OBSERVATION PER BEGARAN, 1 800 begaran per dygn. Den star
+i PARAMETER_REGISTER 1.11, beslutad 2026-11-10, och ar standardvagen har sedan
+2026-11-27. --femtio-per-begaran kor den gamla formen, femtio observationer i
+samma anrop: den noteras i journalen och faller pa ett seriedygn, se
+gate_leveransform. Den frysta prompten och specen ar oforandrade i bada fallen
+- formen ar en leveransparameter, inte ett protokollbyte - och passfilerna blir
+identiska i form.
 
 Kedjans andra ande. Tidigare kordes klassificeringen utanfor kedjan, for hand,
 vilket gjorde ett dygn omojligt att kora oovervakat.
@@ -49,6 +50,7 @@ import gates
 from atomic import write_text
 from vocab import EMOTION_STATES, ORDER
 from config import DATA, FROZEN, SPEC_FILE, styrande_modell, specens_modellfalt
+import pool_evidence
 
 PROMPT_FILE = FROZEN / "600_STATES_Emotion_Classification_Execution_Prompt_v2.1_FROZEN.txt"
 PASSES      = (1, 2, 3)
@@ -218,6 +220,29 @@ def gate_instrument(model=None, tillat_avvikelse=False):
     gates._say("promptens sha256 stammer mot specen", want == got, f"{got[:16]} mot {want[:16]}")
     gate_modellidentitet(model, tillat_avvikelse)
     return PROMPT_FILE.read_text(encoding="utf-8"), spec
+
+def gate_leveransform(day, form):
+    """Ett seriedygn far inte klassificeras i femtioform. Beslut 2026-11-27.
+
+    row_independence_required: true star i den FRYSTA exekveringsspecen, och
+    FYND 010 slog fast att femtio observationer i samma anrop aldrig kan
+    uppfylla den. Ett seriedygn kort i fel form uppfyller alltsa inte ett
+    fryst krav - och det gar inte att rata i efterhand, for dygnet kors en
+    gang. Darfor faller grinden i stallet for att varna, och den ligger fore
+    forsta betalda anropet, bredvid prompt- och modellgrinden.
+
+    FORE SERIESTART GAR FEMTIOFORMEN IGENOM och noteras i journalen: de
+    dygnen ar inkorningar och blir aldrig ett av de 600. Dygnet lases som
+    pool_evidence.i_serien gor det, och SERIESTART star inte en andra gang.
+    """
+    i_serien = pool_evidence.i_serien(day)
+    gates._say("leveransformen ar den beslutade",
+               form == LEVERANSFORM or not i_serien,
+               form + ("" if form == LEVERANSFORM else
+                       (f", seriedygn fran {pool_evidence.SERIESTART}"
+                        if i_serien else
+                        f", fore {pool_evidence.SERIESTART} - inkorning,"
+                        " noteras i journalen")))
 
 def batches(day):
     d = sp.classifier_input(DATA, day)
@@ -421,6 +446,35 @@ def anropsparametrar(model, prompt, items):
 #   behover: batchen far ta upp till 24 timmar utan att en process halls vid
 #   liv under tiden.
 LEVERANS = "batch"
+
+# LEVERANSFORMEN STAR HAR, EN GANG, och lases harifran av anropsbyggandet,
+# journalen och gate_leveransform. Tre stallen som vart och ett vet vad som ar
+# standard vore tre former - FYND 004.
+#
+# BESLUTET FANNS, KODEN KORDE DEN ANDRA FORMEN. Uppmatt 2026-11-27 ur arkivets
+# korjournaler: 2026/308 och 2026/329 kordes femtio per anrop, 36 begaran;
+# 2026/315 kordes en observation per begaran, 1 800. PARAMETER_REGISTER 1.11
+# sager en observation per begaran, 1 800 begaran per dygn, och att
+# row_independence_required ar uppfylld sedan 2026-11-10. Samma form som FYND
+# 001-004: regeln stod i ett dokument, aldrig i den kodvag som avgor.
+#
+# Skalen till att enformen ar den beslutade, och inte bara den dyrare:
+#   row_independence_required: true star i den FRYSTA exekveringsspecen, och
+#   FYND 010 slog fast att femtio i samma anrop aldrig kan uppfylla den.
+#   FYND 009:s ID-glidning ar strukturellt omojlig i enform - identiteten
+#   kommer ur begaran, inte ur en rad modellen ska halla reda pa. Natten
+#   2026/329 reproducerade felet 8 ganger av 8 pa samma ID i femtioform.
+#   Den publicerade kostnaden $9,32/dygn ar matt PA 2026/315, alltsa i enform.
+FORM_EN = "en_observation_per_begaran"
+FORM_FEMTIO = "femtio_per_begaran"
+LEVERANSFORM = FORM_EN
+FORM_NOT = {
+    FORM_EN: ("beslutad form, PARAMETER_REGISTER 1.11, beslutad 2026-11-10, "
+              "bekraftad 2026-11-27"),
+    FORM_FEMTIO: ("avvikelse fran den beslutade formen i PARAMETER_REGISTER "
+                  "1.11; dygnet uppfyller inte row_independence_required i "
+                  "den frysta specen. Se FYND 009 och FYND 010"),
+}
 
 def jobbfil(day):
     return passdir(day) / "batch_jobb.json"
@@ -819,17 +873,19 @@ def endir(d):
     return k
 
 def kor_i_batch_en(client, model, prompt, day, todo, d, rec, omgang, slapp=False):
-    """EN OBSERVATION PER BEGARAN. Matvag, annu inte beslutad leveransform.
+    """EN OBSERVATION PER BEGARAN. Den beslutade leveransformen sedan
+    2026-11-10, standardvagen har sedan 2026-11-27.
 
-    Varfor den finns: observation_id glider ett steg i svansen av en batch om
+    Varfor den ar det: observation_id glider ett steg i svansen av en batch om
     femtio (FYND 009), och felet gar inte att reparera - tva rader gor anspraak
     pa samma observation. Med en observation per begaran finns ingen rad att
     halka mellan. Identiteten kommer ur begaran, inte ur modellens avskrift.
 
     DEN FRYSTA PROMPTEN RORS INTE. Prompten sager "one object per supplied
     observation"; med en observation ar svaret en array om ett objekt, och
-    kontraktet haller ordagrant. Det enda som avviker fran specen ar
-    canonical_batch_size, och den avvikelsen noteras redan i utskriften.
+    kontraktet haller ordagrant. Formen ar en leveransparameter och inget
+    protokollbyte; det enda som skiljer mot specens canonical_batch_size ar
+    hur manga observationer en begaran bar, och det noteras i utskriften.
 
     PASSFILEN BLIR IDENTISK I FORM. De femtio enskilda svaren sats ihop i
     indatans ordning och skrivs som en vanlig passfil, sa att konsensus, farg
@@ -872,7 +928,7 @@ def kor_i_batch_en(client, model, prompt, day, todo, d, rec, omgang, slapp=False
             write_text(jobbfil(day), json.dumps(
                 {"id": bid, "model": model, "prompt_sha256": sha(PROMPT_FILE),
                  "skickat": time.strftime("%Y%m%dT%H%M%SZ", time.gmtime()),
-                 "form": "en_i_taget",
+                 "form": FORM_EN,
                  "begaran": [b["custom_id"] for b in begaran]},
                 ensure_ascii=False, indent=1))
             print(f"  batchjobb {bid} skickat — {len(begaran)} begaran")
@@ -1077,11 +1133,17 @@ def kor_direkt(client, model, prompt, todo, d, rec, omgang, budget=None):
     return parse_fel_totalt, 0
 
 def run(day, only_pass=None, budget=None, model=DEFAULT_MODEL, dry=False,
-        leverans=None, slapp=False, en_i_taget=False, tillat_avvikande_modell=False):
+        leverans=None, slapp=False, femtio=False, tillat_avvikande_modell=False):
     sp.state_id(day)
     print(f"=== {sp.state_id(day)} — klassificering ===")
     gate_dygnet_ar_oppet(day)
     prompt, spec = gate_instrument(model, tillat_avvikande_modell)
+    # --live skickar hela batchar i ett anrop och ar darfor femtioform
+    # oavsett flagga: formen ar vad en begaran faktiskt bar, inte vad den
+    # heter. Annars hade vagen till fel form statt oppen under ett annat namn.
+    form = (FORM_FEMTIO if femtio or (leverans or LEVERANS) != "batch"
+            else LEVERANSFORM)
+    gate_leveransform(day, form)
     bs = batches(day)
     n_obs = sum(len(b) for _, b in bs)
     gates._say("input tacker 600 observationer", n_obs == 600, f"{n_obs} i {len(bs)} batchar")
@@ -1097,13 +1159,15 @@ def run(day, only_pass=None, budget=None, model=DEFAULT_MODEL, dry=False,
     if dry:
         chars = len(prompt) + len(OUTPUT_RULE)
         print(f"  TORRKORNING — inget anrop gors")
-        if en_i_taget:
+        if form == FORM_EN:
             # En torrkorning som rapporterar fel antal begaran ar varre an
             # ingen: siffrorna harifran citeras i beslutsunderlag.
             n_beg = sum(len(items) for _, _, items in todo)
-            print(f"  EN I TAGET: {n_beg:,} begaran, en observation i varje")
+            print(f"  {form}: {n_beg:,} begaran, en observation i varje")
             print(f"  prefixet lases da {n_beg:,} ganger i stallet for {len(todo)} —"
                   f" det ar hela kostnadsfragan")
+        else:
+            print(f"  {form}: {len(todo):,} begaran, {len(bs[0][1])} observationer i varje")
         print(f"  cachat prefix {chars:,} tecken, cirka {chars // 4:,} tokens")
         print(f"  per anrop tillkommer batchen, cirka {len(json.dumps(bs[0][1])) // 4:,} tokens")
         print(f"  modell {model}")
@@ -1137,7 +1201,9 @@ def run(day, only_pass=None, budget=None, model=DEFAULT_MODEL, dry=False,
            "temperature": TEMPERATUR,
            "temperature_note": TEMPERATUR_NOT,
            "prompt_sha256": sha(PROMPT_FILE), "spec_sha256": sha(SPEC_FILE),
-           "batch_size": len(bs[0][1]), "calls": []}
+           "batch_size": len(bs[0][1]),
+           "delivery_form": form, "delivery_form_note": FORM_NOT[form],
+           "calls": []}
     # Grinden gar fore anropen, inte efter: upptacks ett byte av instrument
     # forst vid skrivningen ar pengarna redan utlagda pa ett dygn som anda inte
     # kan bli ett verk.
@@ -1148,13 +1214,7 @@ def run(day, only_pass=None, budget=None, model=DEFAULT_MODEL, dry=False,
     gjorda = parse_fel_totalt = 0
     utgang = 0
     try:
-        if en_i_taget:
-            # Matvag, se FYND 009. Noteras i journalen sa att ett dygn kort sa
-            # aldrig kan forvaxlas med ett kort pa den beslutade formen.
-            rec["delivery_form"] = "en_observation_per_begaran"
-            rec["delivery_form_note"] = (
-                "matvag 2026-11-09, ej beslutad leveransform. Frysta prompten och "
-                "specen oforandrade; avvikelsen galler canonical_batch_size. Se FYND 009")
+        if form == FORM_EN:
             parse_fel_totalt, utgang = kor_i_batch_en(
                 client, model, prompt, day, todo, d, rec, omgang, slapp)
         elif (leverans or LEVERANS) == "batch":
@@ -1200,7 +1260,7 @@ def main():
                      "--dry-run" in a,
                      "direkt" if "--live" in a else None,
                      "--slapp" in a,
-                     "--en-i-taget" in a,
+                     "--femtio-per-begaran" in a,
                      "--avvikande-modell" in a))
     except gates.GateFailure as e:
         print(f"\nKEDJAN STOPPAD: {e}"); sys.exit(1)
