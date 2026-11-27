@@ -141,12 +141,31 @@ def test_delresultat_overlever_och_bara_det_som_saknas_begars(tmp_path, monkeypa
 
 
 def test_dygnet_markeras_i_journalen():
-    """Ett dygn kort pa matvagen far aldrig forvaxlas med ett kort pa den
-    beslutade formen."""
-    import inspect
-    src = inspect.getsource(classify.run)
-    assert 'rec["delivery_form"] = "en_observation_per_begaran"' in src
-    assert "FYND 009" in src
+    """Ett dygn kort pa avvikelsen far aldrig forvaxlas med ett pa beslutad form.
+
+    OMSKRIVET 2026-11-27. Provet lastes tidigare en radstrang ur run():
+    'rec["delivery_form"] = "en_observation_per_begaran"'. Den raden fanns i
+    matvagens EGEN gren, och darfor bara nar matvagen kordes. Sedan 9a758b6
+    skriver journalposten delivery_form for BADA formerna, och raden finns
+    inte langre.
+
+    En stranggrep i kallkoden provar hur koden ser ut, inte vad den gor - och
+    den blir rod av en omskrivning som gor saken battre. Provet laser nu
+    SAKEN: de tva formerna ar olika strangar, de har var sin not, och
+    avvikelsens not sager vad avvikelsen kostar."""
+    assert classify.FORM_EN != classify.FORM_FEMTIO
+    assert classify.LEVERANSFORM == classify.FORM_EN, \
+        "beslutad form ar en observation per begaran, PARAMETER_REGISTER 1.11"
+
+    not_en = classify.FORM_NOT[classify.FORM_EN]
+    not_femtio = classify.FORM_NOT[classify.FORM_FEMTIO]
+    assert not_en and not_femtio and not_en != not_femtio, \
+        "tva former med samma not gar inte att skilja at i journalen"
+
+    # Avvikelsens not ska saga vad den kostar, inte bara att den ar en avvikelse.
+    assert "row_independence_required" in not_femtio, \
+        "noten namner inte det frysta krav dygnet inte uppfyller"
+    assert "row_independence_required" not in not_en
 
 
 def test_ett_slappt_jobb_ar_inte_ett_haveri():

@@ -97,7 +97,10 @@ def test_en_enda_stavning_av_identiteten_i_koden():
     for p in sorted((ROT / "src").rglob("*.py")) + sorted((ROT / "tools").rglob("*.py")):
         for n, rad in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):
             if sign.UID in rad:
-                traffar.append(f"{p.relative_to(ROT)}:{n}")
+                # as_posix(): utan den renderas sokvagen med omvand
+                # snedstreck pa Windows, och provet blir gront i Linux-VM:en
+                # och rott pa den maskin som avgor. Det hande 2026-11-26.
+                traffar.append(f"{p.relative_to(ROT).as_posix()}:{n}")
     assert traffar == ["src/sign.py:88"], (
         f"identiteten star pa {len(traffar)} stallen: {traffar}. Den hor "
         f"hemma i sign.UID och lases darifran.")
