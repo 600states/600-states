@@ -147,6 +147,11 @@ def basis(c, day):
 # lagt ar svaret ett nytt kriterium med eget namn, aldrig ett nytt varde har.
 GOLV_KANONISK = 0.90
 
+# De tre falten v3.4 lade till. Ett manifest inne i serien som saknar dem gar
+# inte att lanka och inte att numrera ur arkivet - se kedja(). Formerna star
+# i src/statepaths.py; har star bara vad kedjan kraver av dem.
+SERIEFALT = ("series", "canonical_index", "prev_canonical_sha256")
+
 # COMMISSIONED kan inte raknas fram ur rader; den satts for verk utanfor den
 # lopande serien och star da i filen. serie() avgor de tva den kan avgora.
 SERIER = ("CANONICAL", "COMMISSIONED", "UNQUALIFIED")
@@ -252,10 +257,18 @@ def kedja(DATA, day):
 
     Dygn fore SERIESTART ingar inte, varken i talet eller i brotten.
 
-    Brott ar allt som gor arkivet otolkat: ett dygn utan manifest, ett dygn med
-    tva former, en lagrad lank som inte stammer mot filen fore den, ett lagrat
-    ordningstal som inte ar sin egen plats i serien. Grinden avgor vad de
-    kostar - den har funktionen rakna och rapporterar.
+    ETT BROTT AR EN MOTSAGELSE MELLAN TVA FRYSTA FAKTA. En FRANVARO ar ingen
+    motsagelse: ett dygn som aldrig frus ner ett pre-manifest blev aldrig ett
+    verk, och det ar samma sak som ett dygn som aldrig kordes. Serien ar 600
+    VERK och inte 600 datum i foljd, sa ett missat dygn kostar en dags
+    fordrojning - och ett haveri som dessutom stoppade varje foljande natt
+    gjorde en forlorad dag till en forlorad serie. A27a, 2026-11-27.
+
+    Brott ar alltsa: ett dygn med tva former, ett manifest som inte gar att
+    lasa, ett manifest inne i serien som saknar v3.4-falten, en lagrad lank
+    som inte stammer mot filen fore den, och ett lagrat ordningstal som inte
+    ar sin egen plats. Grinden avgor vad de kostar - den har funktionen
+    raknar och rapporterar.
     """
     # Lasningen gar genom frozen(), som bade haller fast "ett dygn har en form"
     # och sager ifran nar den byter version. Den sista raden skrivs ut en gang
@@ -276,24 +289,63 @@ def kedja(DATA, day):
             continue
         try:
             fil = sp.frozen(sp.pre_manifest(Path(DATA), _dygn(*nyckel)))
-        except (FileNotFoundError, ValueError) as e:
-            brott.append(f"{d.name}: {e if not isinstance(e, FileNotFoundError) else 'inget pre-manifest'}")
+        except FileNotFoundError:
+            # DYGNET BLEV ALDRIG ETT VERK. Katalogen finns for att nagot steg
+            # hann skriva i den, men frysningen skedde inte. Det ar inte
+            # skiljbart fran ett dygn utan katalog, och ingendera far stoppa
+            # en senare natt. Luckan rapporteras av luckloggen i preflighten
+            # och av publiceringens grind, inte har.
             continue
-        rader = list(csv.DictReader(open(fil, encoding="utf-8")))
+        except ValueError as e:
+            # Tva former i samma katalog: tva frysta filer sager olika saker
+            # om samma dygn, och vilken som galler ar inte kodens val.
+            brott.append(f"{d.name}: {e}")
+            continue
+        try:
+            rader = list(csv.DictReader(open(fil, encoding="utf-8")))
+        except (OSError, UnicodeDecodeError, csv.Error) as e:
+            # EN OLASBAR FIL FALLER MED BESKED. Ett okastat undantag har gav
+            # en spargfoljd i stallet for en grindrad, och den som laser
+            # loggen ska se vilket dygn det var.
+            brott.append(f"{d.name}: {fil.name} gar inte att lasa: "
+                         f"{type(e).__name__}: {e}")
+            continue
+        # FRAN SERIESTART KRAVS V3.4-FORMEN. A27c, 2026-11-27: ett fryst
+        # manifest utan de tre falten raknades som CANONICAL - _serie_i_fil
+        # raknar fram serien ur raderna - och BADA kontrollerna nedan hoppades
+        # over, for den ena ar villkorad pa att faltet finns och den andra
+        # godtog tom strang. Dygnet tog alltsa ett nummer utan att vara lankat,
+        # tyst. Ett tal raknat ratt pa fel grund, FYND 014:s form.
+        #
+        # Fallbacken i _serie_i_fil star kvar oforandrad: den ar ratt for
+        # dygnen som frystes fore beslutet, och de ligger alla fore SERIESTART
+        # - dar den har slingan aldrig tittar.
+        huvud = rader[0] if rader else {}
+        saknade = [k for k in SERIEFALT if k not in huvud]
+        if saknade:
+            brott.append(f"{d.name}: {fil.name} "
+                         + ("ar tom" if not rader
+                            else "saknar " + ", ".join(saknade))
+                         + " - fran SERIESTART kravs v3.4-formen")
+            continue
         if _serie_i_fil(rader) == "CANONICAL":
             kanoniska.append((d.name, fil, rader))
 
     forra = None
     for plats, (namn, fil, rader) in enumerate(kanoniska, 1):
-        huvud = rader[0] if rader else {}
+        huvud = rader[0]
         vantad = _sha(forra) if forra else ""
-        if "prev_canonical_sha256" in huvud:
-            star = (huvud.get("prev_canonical_sha256") or "").strip()
-            if star != vantad:
-                brott.append(f"{namn}: lanken bakat ar {star[:16] or 'tom'}, "
-                             f"filen fore ar {vantad[:16] or 'ingen'}")
-        if (huvud.get("canonical_index") or "").strip() not in ("", f"{plats:03d}"):
-            brott.append(f"{namn}: bar ordningstal {huvud['canonical_index']}, "
+        # Falten FINNS, sedan A27c: slingan ovan slapper inte in ett dygn
+        # utan dem. Darfor provas de rakt, utan villkor och utan att tom
+        # strang godtas - ett kanoniskt dygn inne i serien bar sitt nummer
+        # och sin lank, annars ar talet inte raknat ur arkivet.
+        star = (huvud["prev_canonical_sha256"] or "").strip()
+        if star != vantad:
+            brott.append(f"{namn}: lanken bakat ar {star[:16] or 'tom'}, "
+                         f"filen fore ar {vantad[:16] or 'ingen'}")
+        if (huvud["canonical_index"] or "").strip() != f"{plats:03d}":
+            brott.append(f"{namn}: bar ordningstal "
+                         f"{huvud['canonical_index'] or '(tomt)'}, "
                          f"men ar nummer {plats:03d} i arkivet")
         forra = fil
     return len(kanoniska), (_sha(forra) if forra else ""), brott
