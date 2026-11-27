@@ -72,10 +72,34 @@ OTS = "ots"
 ATTESTERING = re.compile(r"Bitcoin block (\d+) has merkleroot ([0-9a-fA-F]{32,})")
 
 
-def _kor(*argv):
-    """(felkod, all utskrift). Klienten loggar pa stderr, sa bada stromarna slas ihop."""
+def _dolj(data):
+    """Sokvagar som inte hor hemma i en post som kan citeras publikt."""
+    return ((str(data), "<arkivet>"),)
+
+
+def _kor(*argv, dolj=()):
+    """(felkod, all utskrift med de givna strangarna utbytta).
+
+    Klienten loggar pa stderr, sa bada stromarna slas ihop.
+
+    DOLJ TAR SOKVAGAR. Klienten skriver ut sokvagen den fick - "Assuming
+    target filename is '/srv/...'" - och den raden hamnade ordagrant i
+    tidsstampelpostens falt utskrift. Posten ar manifestets
+    proveniensansprak och kan citeras publikt; vardens sokvagar hor inte
+    hemma dar, av samma skal som config.py anger for STATES_DATA.
+
+    Regeln fanns redan, men bara i ett av de tva bevisprogrammen: sign._kor
+    bar den sedan tidigare och den har gjorde det inte. En regel med tva
+    svar ar FYND 004:s form. Programmen delar med avsikt ingen kod - de ar
+    tva korningar med olika behorighet - sa raden star pa bada stallena och
+    ar avsiktligt likalydande. A26.
+    """
     r = subprocess.run([OTS, *argv], capture_output=True, text=True)
-    return r.returncode, (r.stdout or "") + (r.stderr or "")
+    ut = (r.stdout or "") + (r.stderr or "")
+    for hemligt, ersattning in dolj:
+        if hemligt:
+            ut = ut.replace(hemligt, ersattning)
+    return r.returncode, ut
 
 
 def klientversion():
@@ -193,7 +217,7 @@ def step_stampla(day, data=DATA):
     # Alltsa inte: att verifieringen lyckas, att den returnerar noll, eller att
     # vem som helst verifierar med ett kommando. Felkoden ar 1.
     version, start = klientversion(), _nu()
-    kod, ut = _kor("stamp", str(emo))
+    kod, ut = _kor("stamp", str(emo), dolj=_dolj(data))
     forsok = {"steg": "stampla", "at": start, "felkod": kod,
               "klient": version, "utskrift": ut.strip()[:500]}
     post.setdefault("forsok", []).append(forsok)
@@ -234,12 +258,12 @@ def step_forankra(day, data=DATA):
 
     start = _nu()
     kopia = kopia_fore_upgrade(ots)
-    upp_kod, upp_ut = _kor("upgrade", str(ots))
+    upp_kod, upp_ut = _kor("upgrade", str(ots), dolj=_dolj(data))
     # FELKODEN AVGOR INTE. ots --no-bitcoin verify avslutar med felkod 1 aven
     # nar beviset ar helt - den verifierar inte automatiskt, den talar om vad
     # som ska kontrolleras for hand. Det som avgor ar om klienten kan skriva ut
     # en blockhojd och en merkle-rot: finns de ar hashen bunden till ett block.
-    ver_kod, ver_ut = _kor("--no-bitcoin", "verify", str(ots))
+    ver_kod, ver_ut = _kor("--no-bitcoin", "verify", str(ots), dolj=_dolj(data))
     kal = attesteringar(ver_ut)
     post.setdefault("forsok", []).append(
         {"steg": "forankra", "at": start, "felkod_upgrade": upp_kod,
