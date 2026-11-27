@@ -795,6 +795,21 @@ def skriv_journal(day, gammal, rec, parse_fel):
         return
     c = gammal.get("calls", []) + rec["calls"]
     ut = {**gammal, **rec, "calls": c}
+    # BATCHMETADATAN VAXER OCKSA. {**gammal, **rec} lat omgangens lista
+    # ERSATTA den tidigare, sa ett dygn hamtat i en andra process -
+    # normallaget med --slapp - tappade forsta jobbets oberoende tal
+    # medan dess anrop lag kvar bland raderna. Samma skal som for calls,
+    # och grinden nedan vilar pa att talet ar helt.
+    #
+    # Nycklat pa batch_id: hamtas samma jobb en gang till - en
+    # aterupptagen korning - ar det samma skickade anrop, inte nya.
+    bl, sedda = [], set()
+    for x in gammal.get("batch_latency_seconds", []) + rec.get("batch_latency_seconds", []):
+        if x.get("batch_id") not in sedda:
+            sedda.add(x.get("batch_id"))
+            bl.append(x)
+    if bl:
+        ut["batch_latency_seconds"] = bl
     # TRE UTFALL, TRE SUMMOR. Ett fallet anrop ar inte ett lyckat och inte
     # en lucka: input/output/cache_read raknar de LYCKADE, som forut, och
     # fallna_tokens star bredvid. Skillnaden mellan dem ar vad ett dygn
@@ -836,6 +851,84 @@ def skriv_journal(day, gammal, rec, parse_fel):
               f"forst {ut['unrecorded'][0]}")
     write_text(journalfil(day), json.dumps(ut, ensure_ascii=False, indent=1))
     print(f"\n  {ut['totals']}")
+
+def gate_journalen_tacker_anropen(day, data=DATA):
+    """Varje skickat anrop ska ha en rad - provat mot ett tal som INTE
+    kommer ur bokforingen.
+
+    A21 gav varje skickat anrop en rad, och totals.begaran.skickade
+    summerar de raderna. Den identiteten ar sann per konstruktion:
+    skickade = bokforda + fallna + okanda kan aldrig brista, och ett anrop
+    som ingen felgren bokforde ar osynligt aven i det nya talet. Nio
+    bokforingsstallen som vilar pa att nagon kom ihag dem ar inte en
+    matning.
+
+    DET OBEROENDE TALET SKRIVS FORE BOKFORINGEN. batch_latency_seconds far
+    sin requests ur jobbfilen i samma stund jobbet hamtas, alltsa innan en
+    enda rad bokforts, och kan darfor saga nagot som bokforingen inte kan
+    saga om sig sjalv. Pa 2026/315 stod 1 801 mot 1 800 och ingenting
+    jamforde dem.
+
+    TRE TILLSTAND, OCH DE FAR INTE SLAS IHOP:
+
+      lika        varje skickat anrop har en rad
+      olika       FALLER. Ar det oberoende talet storre bokfordes inte
+                  varje anrop; ar det mindre bokfordes anrop som aldrig
+                  skickades. Bada betyder att journalen inte ar lika med
+                  dygnet.
+      inget tal   ett jobb utan created_at eller ended_at lamnar ingen
+                  rad i batch_latency_seconds, och da FINNS inget
+                  oberoende tal. Det sags rakt ut och lases aldrig som
+                  lika - men det faller inte heller: leverantorens
+                  metadata ar inte var bokforing, och ett uteblivet falt
+                  hos dem far inte stoppa ett fryst dygn.
+
+    DIREKTVAGEN HAR INGEN BATCHMETADATA. --live skickar ett anrop i taget
+    utan jobb, sa dess rader bar inget batch_id och det finns ingenting att
+    jamfora dem mot. Grinden hoppar inte over dem tyst: den skriver ut hur
+    manga rader som inte tacks, sa att den som laser vet vad provet inte
+    sag. Samma sak for femtioformen, som i dag inte skriver nagon
+    fordrojning alls.
+    """
+    p = journalfil(day)
+    if not p.exists():
+        print("        ingen korjournal att prova")
+        return
+    j = json.loads(p.read_text(encoding="utf-8"))
+    c = j.get("calls", [])
+    bl = j.get("batch_latency_seconds", [])
+
+    def jobben(rad):
+        b = rad.get("batch_id")
+        return [] if not b else (b if isinstance(b, list) else [b])
+
+    batchrader = [x for x in c if jobben(x)]
+    utan_batch = len(c) - len(batchrader)
+    if utan_batch:
+        print(f"        {utan_batch} rader utan batchmetadata (direktvagen eller"
+              f" femtioformen) - jamforelsen tacker dem inte")
+    if not batchrader and not bl:
+        print("        inga batchjobb i journalen - ingenting att jamfora")
+        return
+
+    i_rader = {b for x in batchrader for b in jobben(x)}
+    med_tal = {x.get("batch_id") for x in bl}
+    utan_tal = sorted(i_rader - med_tal)
+    if utan_tal:
+        print(f"        INGET OBEROENDE TAL for {len(utan_tal)} jobb"
+              f" ({', '.join(utan_tal)}): jobbet saknade created_at eller"
+              f" ended_at. Journalens eget tal gar inte att prova for dygnet,"
+              f" och det ar inte samma sak som att det stammer.")
+        return
+
+    oberoende = sum(x.get("requests", 0) for x in bl)
+    bokforda = sum(x.get("requests", 1) for x in batchrader)
+    gates._say("varje skickat anrop har en rad i journalen", oberoende == bokforda,
+               f"{oberoende} skickade enligt jobben, {bokforda} bokforda"
+               + ("" if oberoende == bokforda else
+                  f" - {abs(oberoende - bokforda)} anrop "
+                  + ("saknar rad" if oberoende > bokforda else "har rad utan att ha skickats")))
+
 
 def gate_dygnet_ar_oppet(day, data=DATA):
     """EN DAG, EN KORNING, ETT UTFALL. Beslut 2026-11-06.
@@ -1325,6 +1418,9 @@ def run(day, only_pass=None, budget=None, model=DEFAULT_MODEL, dry=False,
             if not (d / f"pass{p}_batch_{n:02d}.json").exists()]
     gates._say("alla 3 pass tacker alla batchar", not kvar,
                "komplett" if not kvar else f"{len(kvar)} saknas, forst {kvar[0]}")
+    # Grinden laser journalen FRAN DISK, efter att den skrivits: ett prov
+    # pa det vi just hade i minnet provar inte att skrivningen skedde.
+    gate_journalen_tacker_anropen(day)
     print(f"\n  klart — kor nu: python3 src/consensus.py {day} {d}")
     return 0
 
