@@ -84,25 +84,11 @@ def _dygnskataloger():
     return sorted((DATA / sp.GENERATION_DIR).glob("STATE_[0-9][0-9][0-9][0-9]_[0-9][0-9][0-9]"))
 
 def _luckor(day):
-    """Kalenderdygn utan fryst pre-manifest, fran seriens forsta dygn till dygnet fore day.
-
-    EN LUCKA STOPPAR INGENTING. Kedjan ar en kedja av kanoniska dygn, inte av
-    kalenderdygn, sa en missad dag bryter den inte - och att stoppa nasta dygn
-    skulle gora ett haveri till tva. Luckan ska synas, inte blockera.
-    """
-    # SERIENS FORSTA DYGN AR EN PARAMETER, inte den aldsta katalogen pa disk.
-    # Den har listan borjade forut vid det aldsta dygnet som rakade finnas, och
-    # det ar samma tal som pool_evidence.SERIESTART - uttryckt en andra gang,
-    # av arkivets innehall. Luckor finns bara inne i serien.
-    d = datetime.strptime(pool_evidence.SERIESTART, "%Y%m%d").date()
-    slut = _dag("STATE_" + sp.state_key(day))
-    ut = []
-    while d < slut:
-        dygn = d.strftime("%Y%m%d")
-        if not sp.har_pre_manifest(DATA, dygn):
-            ut.append(dygn)
-        d += timedelta(days=1)
-    return ut
+    """Dygnets luckor. EN DEFINITION, ETT STALLE: pool_evidence.luckor,
+    dar SERIESTART bor. Sajtbygget laser samma funktion - den som
+    publicerar ett pastaende om obruten produktion far inte rakna
+    luckorna pa sitt eget satt."""
+    return pool_evidence.luckor(DATA, day)
 
 def _logga_luckor(nu_utc, day, luckor):
     """Loggen skrivs aven nar det inte finns nagra luckor: en logg som bara

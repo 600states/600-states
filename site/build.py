@@ -12,7 +12,7 @@ Malmappen blir exakt det som ska ligga i public_html. Ingenting annat.
 """
 import html as html_mod
 import io, json, os, re, shutil, subprocess, sys
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -110,8 +110,13 @@ def render_for(state_dir: Path, day: str) -> Path:
 
 
 def _block(html: str, namn: str):
-    """Ett <p> eller <div> markt data-when-<namn>, med sin indragning."""
-    return re.search(r"[ \t]*<(p|div)\b[^>]*\bdata-when-%s\b[^>]*>.*?</\1>\n?"
+    """Ett element markt data-when-<namn>, med sin indragning.
+
+    Fyra taggar racker, och de ar de fyra sidan faktiskt bar ett
+    pastaende i: ett stycke, ett block, en mening inne i ett stycke och
+    en punkt i en lista. Ett anspraak som star mitt i en mening ska inte
+    behova en egen rubrik for att ga att valja bort."""
+    return re.search(r"[ \t]*<(p|div|span|li)\b[^>]*\bdata-when-%s\b[^>]*>.*?</\1>\n?"
                      % namn, html, re.S)
 
 
@@ -161,6 +166,70 @@ def fyll(html: str, sida: str, namn: str, varde) -> str:
                       lambda m: m.group(1) + str(varde) + m.group(2), html, count=1)
     if n != 1:
         raise SystemExit("hittar ingen plats for %s i %s" % (namn, sida))
+    return html
+
+
+def luckans_logg(dygn: str) -> str:
+    """Forsta raden i _LUCKOR.log som namner dygnet, eller tom strang.
+
+    LOGGEN BLIR LAST HAR. Den har skrivits av varje korning A sedan den kom
+    till och lasts av ingenting - en logg utan lasare ar en fil, inte en
+    matning. Arkivet svarar pa OM det finns en lucka; loggen svarar pa NAR
+    den sags och av vilken korning, och det ar den uppgiften en publicerad
+    mening om ett forlorat dygn behover for att ga att folja.
+    """
+    if not config.LUCKLOGG.exists():
+        return ""
+    # LUCKANS DYGN, INTE KORNINGENS. Raden lyder "... korning 20261122
+    # luckor 1: 20261121", och ett blott `dygn in rad` matchade korningens
+    # eget datum - alltsa sa loggen att den sett en lucka den aldrig
+    # rapporterat. Bara listan efter kolonet raknas.
+    for rad in io.open(config.LUCKLOGG, encoding="utf-8"):
+        m = re.search(r"luckor \d+: (.*)$", rad)
+        if m and dygn in [x.strip() for x in m.group(1).split(",")]:
+            return rad.strip()
+    return ""
+
+
+def gate_obruten_produktion(data_root: Path, html: str, sida: str) -> str:
+    """Sidan far inte pasta obruten produktion medan en lucka finns.
+
+    GRINDEN STOPPAR INTE BYGGET. Ett tappat dygn fylls aldrig - dygnet har
+    passerat - sa en grind som vagrade bygga pa en lucka hade gjort sajten
+    opublicerbar for alltid, vilket ar samma form som felet A27a rattade:
+    ett forlorat dygn som blir en forlorad serie. Grinden byter i stallet ut
+    pastaendet mot ett som ar sant, och bada texterna star i kallfilen.
+
+    TRE TILLSTAND, INTE TVA:
+
+      ingen lucka                 anspraaket star kvar
+      lucka som loggen sett       luckmeningen, med radens tid och korning
+      lucka som loggen INTE sett  luckmeningen, och ett eget besked om att
+                                  loggen tiger. Det ar inte ett fel och
+                                  faller inte: en utebliven korning A har
+                                  inte skrivit nagon rad, och att vagra
+                                  publicera da vore att lata en utebliven
+                                  korning stoppa utgivningen.
+
+    Dygnet SJALVT raknas inte - nattens korning har inte skett nar bygget
+    gors - och det foljer av att luckor() stannar vid dygnet fore.
+    """
+    idag = datetime.now(timezone.utc).strftime("%Y%m%d")
+    luckor = pool_evidence.luckor(data_root, idag)
+    html = valj(html, sida, "lucka" if luckor else "obruten", ("obruten", "lucka"))
+    if not luckor:
+        print("  %-14s inga luckor efter %s" % ("produktion:", pool_evidence.SERIESTART))
+        return html
+
+    html = fyll(html, sida, "missed",
+                "%d day%s" % (len(luckor), "" if len(luckor) == 1 else "s"))
+    html = fyll(html, sida, "missed-days",
+                ", ".join("%s-%s-%s" % (d[:4], d[4:6], d[6:]) for d in luckor))
+    print("  %-14s %d lucka/luckor: %s" % ("produktion:", len(luckor), ", ".join(luckor)))
+    for dygn in luckor:
+        rad = luckans_logg(dygn)
+        print("                 %s: %s" % (dygn, rad if rad else
+                                           "ARKIVET HAR LUCKAN, LOGGEN HAR INTE SETT DEN"))
     return html
 
 
@@ -584,6 +653,7 @@ def main(argv):
             # EN LANK, INTE EN LISTA. Finns dygnet inte tas stycket bort helt:
             # hellre ingen lank an en lank till ingenting.
             html = valj(html, sida, "latest" if bygg_335 else None, ("latest",))
+            html = gate_obruten_produktion(data_root, html, sida)
             if bygg_335:
                 html = fyll(html, sida, "latest-id", falt_335["state_id"])
                 if ('href="/%s"' % SIDA_335) not in html:

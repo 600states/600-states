@@ -245,6 +245,32 @@ def _serie_i_fil(rader):
     return stod or serie(rader)
 
 
+def luckor(DATA, day):
+    """Kalenderdygn utan fryst pre-manifest, fran SERIESTART till dygnet fore day.
+
+    EN LUCKA STOPPAR INGENTING. Kedjan ar en kedja av kanoniska dygn, inte av
+    kalenderdygn, sa en missad dag bryter den inte - och att stoppa nasta dygn
+    skulle gora ett haveri till tva. Luckan ska synas, inte blockera.
+
+    FUNKTIONEN BOR HAR, dar SERIESTART bor. Den lag forut privat i run_state
+    och lastes av ingen: loggen den skriver har aldrig haft en lasare. Nu
+    laser sajtbygget samma funktion, och den som publicerar ett pastaende om
+    obruten produktion far inte rakna luckorna pa sitt eget satt - tva
+    definitioner av en lucka ar FYND 004 i kalenderform.
+
+    Dygnet SJALVT raknas inte: det har inte kort an nar fragan stalls.
+    """
+    d = datetime.strptime(SERIESTART, "%Y%m%d").date()
+    slut = datetime.strptime(str(day), "%Y%m%d").date()
+    ut = []
+    while d < slut:
+        dygn = d.strftime("%Y%m%d")
+        if not sp.har_pre_manifest(Path(DATA), dygn):
+            ut.append(dygn)
+        d += timedelta(days=1)
+    return ut
+
+
 def kedja(DATA, day):
     """Arkivets kanoniska kedja fram till, men inte med, day.
 

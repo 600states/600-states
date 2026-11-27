@@ -352,7 +352,14 @@ h2{font-size:var(--step-head)}
       <p class="r"><b>What it is.</b> A daily data artwork. Each of the 600 tiles stands for one News Observation: one thing the monitored news flow established that day. Interpreted under a frozen emotion model, translated into one RGB value by a frozen formula, placed in chronological order.</p>
       <p class="r"><b>What it is not.</b> No image model makes the picture. No tile is chosen because its colour helps the composition, and no colour is adjusted once the day is frozen. An ugly day is a valid result, not a bug to be corrected.</p>
       <p class="r"><b>Why it is public.</b> The claim that nothing was tuned cannot be demonstrated after the fact. So the instrument and every frozen constant in it are published before the series begins, each with its SHA-256 beside it.</p>
-      <p class="r"><b>When it begins.</b> Sharp start 1 December 2026, day 335 of 2026. One State per UTC day from then on. The days already behind us will never have one. Write to <a href="mailto:archive@600states.com">archive@600states.com</a>.</p>
+      <!-- TVA UTFALL, BADA SKRIVNA HAR. Anspraaket om obruten produktion
+           och meningen om ett forlorat dygn ar tva texter, och bygget
+           valjer mellan dem ur arkivet - se gate_obruten_produktion i
+           build.py. En sida som bara bar det forsta pastar obruten
+           produktion aven den dag den brutits. Luckmeningen ar godkand
+           ordagrant av claims gate, MESSAGE_BANK avsnitt 0. -->
+      <p class="r"><b>When it begins.</b> Sharp start 1 December 2026, day 335 of 2026. <span data-when-obruten>One State per UTC day from then on.</span> The days already behind us will never have one. Write to <a href="mailto:archive@600states.com">archive@600states.com</a>.</p>
+      <p class="r" data-when-lucka><span data-missed>&mdash;</span> produced no State: <span data-missed-days>&mdash;</span>. A missed day is not produced later; the day has passed. The series is 600 works, not 600 dates, so it takes one day longer instead. State numbers count works.</p>
     </div>
   </div>
 </section>
@@ -493,7 +500,7 @@ h2{font-size:var(--step-head)}
     <p class="sub r">days of 2026 will never be a State. The 335th will.</p>
     <div class="grid3">
       <div class="r"><span id="untilBig">26</span><p>days left before the first State is observed. After that, the calendar does the counting.</p></div>
-      <div class="r"><span>1</span><p>State per UTC day. A date happens once; its State is produced once. There can be another January 1. There can never be another January 1, 2026.</p></div>
+      <div class="r" data-when-obruten><span>1</span><p>State per UTC day. A date happens once; its State is produced once. There can be another January 1. There can never be another January 1, 2026.</p></div>
       <div class="r"><span>0</span><p>second drafts. A day cannot be redesigned after it happens. Neither can a State.</p></div>
     </div>
   </div>
@@ -589,7 +596,7 @@ h2{font-size:var(--step-head)}
     <ul class="r">
       <li>The series</li>
       <li>Opens 1 December 2026</li>
-      <li>One State per UTC day</li>
+      <li data-when-obruten>One State per UTC day</li>
       <li>30 × 20, 600 tiles</li>
     </ul>
   </div>
