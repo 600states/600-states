@@ -38,6 +38,11 @@ DODSMATRIS, korda mutationer:
   --live ger inte langre FORM_FEMTIO  -> live_ar_femtioform          FALLER
   FORM_NOT tom for avvikelsen         -> (test_en_i_taget)           FALLER
 
+PROVEN KRAVER INTE ARKIVET. Forsta versionen gjorde det, och var darmed rod
+i korningen utan arkiv - upptackt av matt.py 2026-11-27, efter att jag
+rapporterat dem som grona. De var mata med arkivet pa plats. Se fixturen
+utan_arkivberoende for hur det loses, och varfor inte med en skip.
+
 Skrivet av den andra parten an den som byggde grinden, enligt AGENTS.md.
 """
 import sys
@@ -119,12 +124,31 @@ def test_gransen_foljer_SERIESTART_och_star_inte_i_grinden(monkeypatch):
 
 # ---------- --live ar femtioform utan att heta det ----------
 
-def test_live_ar_femtioform_aven_utan_flagga():
+@pytest.fixture
+def utan_arkivberoende(monkeypatch):
+    """Later run() na formklausulen utan att arkivet finns.
+
+    gate_instrument laser den frysta prompten och specen ur arkivet och faller
+    med FileNotFoundError langt fore gate_leveransform. Proven nedan handlar om
+    FORMEN, inte om instrumentet, och instrumentgrinden har sina egna prov.
+
+    ALTERNATIVET VAR ATT HOPPA OVER PROVEN utan arkiv. Det avvisades: da vore
+    klausulen oprovad pa varje maskin som inte har arkivet, och ett overhoppat
+    prov ar inte ett godkant prov. Att patcha en grind som provas pa annat
+    hall ar en mindre lognen an att inte prova alls.
+
+    Specens enda falt som lases efter formgrinden ar canonical_batch_size, och
+    dit nar vi aldrig i det fallande provet."""
+    monkeypatch.setattr(classify, "gate_instrument",
+                        lambda *a, **k: ("prompten", {"canonical_batch_size": 50}))
+
+
+def test_live_ar_femtioform_aven_utan_flagga(utan_arkivberoende):
     """Formen ar vad en begaran BAR, inte vad den heter.
 
     Provet kor run() mot ett seriedygn med leverans="direkt" och utan
-    femtio-flaggan. Grinden ligger fore batches(), sa inga indatafiler behovs
-    och inget betalt anrop sker - faller den, har klausulen gjort sitt."""
+    femtio-flaggan. Formgrinden ligger fore batches(), sa inga indatafiler
+    behovs och inget betalt anrop sker - faller den, har klausulen gjort sitt."""
     with pytest.raises(gates.GateFailure) as e:
         classify.run(START, dry=True, leverans="direkt")
     assert classify.FORM_FEMTIO in str(e.value), (
@@ -132,14 +156,21 @@ def test_live_ar_femtioform_aven_utan_flagga():
         "Da star vagen till fel form oppen under ett annat namn.")
 
 
-def test_kontrollprov_batchvagen_pa_samma_dygn_faller_INTE_pa_formen():
+def test_kontrollprov_batchvagen_pa_samma_dygn_PASSERAR_formgrinden(
+        utan_arkivberoende, capsys):
     """Utan detta kan provet ovan inte skilja 'live ar femtioform' fran
-    'run() faller alltid pa det dygnet'."""
+    'run() faller alltid pa det dygnet'.
+
+    Provet laser grindRADEN, inte undantaget: batchvagen ska ge OK pa
+    formgrinden och sedan falla pa nagot senare steg - indatafiler, arkiv,
+    vad som helst. Vad den faller pa efterat ar inte det har provets sak."""
     try:
         classify.run(START, dry=True)
-    except gates.GateFailure as e:
-        assert classify.FORM_FEMTIO not in str(e.value), (
-            "batchvagen foll ocksa pa leveransformen - da mater provet ovan "
-            "inte klausulen utan nagot annat")
-    except SystemExit:
-        pass          # saknade indatafiler, en annan grind - ratt utfall har
+    except BaseException:
+        pass          # ett senare steg. Formgrinden ar redan passerad - se nedan
+    ut = capsys.readouterr().out
+    assert "leveransformen ar den beslutade" in ut, (
+        "formgrinden kordes inte alls - da mater provet ovan inte klausulen")
+    assert "STOPP leveransformen" not in ut, (
+        "batchvagen foll ocksa pa leveransformen - da mater provet ovan "
+        "inte klausulen utan nagot annat")
