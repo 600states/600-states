@@ -275,6 +275,13 @@ def step_forankra(day, data=DATA):
     # och en fil som ser ut som bevis men binder mindre an originalet ar nagot
     # nagon forr eller senare verifierar i stallet for det riktiga.
     kopia.unlink(missing_ok=True)
+    # KLIENTENS EGEN KOPIA LYDER SAMMA REGEL. ots upgrade skriver
+    # <manifest>.csv.ots.bak med originalets ofullstandiga bevis, och den
+    # hamnar i arkivet bredvid manifestet. Meningen ovan galler ordagrant
+    # aven den filen: vems hand som skrev den andrar inte vad den ar. Den
+    # tas bort har och inte tidigare, av samma skal som var egen - fram till
+    # forankringen ar den aterstallningsvagen. A25.
+    ots.with_name(ots.name + ".bak").unlink(missing_ok=True)
     for k in kal:
         print(f"        block {k['block_height']}  merkleroot {k['merkle_root']}")
     print(f"        {len(kal)} attestering(ar) - dygnet far publiceras")
