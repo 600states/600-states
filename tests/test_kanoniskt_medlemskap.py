@@ -146,11 +146,134 @@ def test_dygnet_sjalvt_och_senare_dygn_raknas_inte(tmp_path):
     assert brott == []
 
 
-def test_saknat_manifest_ar_ett_brott(tmp_path):
+# ---- 3b. franvaro ar ingen motsagelse (A27a/A27c, 2026-11-27) ------------
+#
+# Fram till e65d2ed var ett dygn med katalog men utan fryst pre-manifest ett
+# brott, och grinden stoppade darmed VARJE foljande natt tills nagon stadade
+# katalogen for hand. En forlorad dag blev en forlorad serie - precis det som
+# upplagget "600 verk, inte 600 datum" finns for att undvika.
+#
+# Regeln som ersatte det: ETT BROTT AR EN MOTSAGELSE MELLAN TVA FRYSTA FAKTA.
+# En franvaro ar ingen motsagelse. Proven nedan provar bada sidorna av den
+# gransen, och varje negativt pastaende bar ett positivt kontrollprov.
+
+def utan_seriefalt(rot, day, rads=None):
+    """Ett fryst pre-manifest i aldre form: utan series, canonical_index och
+    prev_canonical_sha256. Skrivs rakt och inte genom skriv_dygn, eftersom det
+    ar just franvaron av kolumnerna som provas."""
+    sp.outdir(rot, day).mkdir(parents=True, exist_ok=True)
+    fil = sp.pre_manifest(rot, day)
+    smala = ["state_id", "tile_index", "evidence_basis", "evidence_sha256"]
+    with open(fil, "w", newline="", encoding="utf-8") as fh:
+        w = csv.DictWriter(fh, fieldnames=smala)
+        w.writeheader()
+        for r in (rads if rads is not None else rader(3)):
+            w.writerow({k: r.get(k, "") for k in smala})
+    return fil
+
+
+def test_dygn_utan_fryst_manifest_ar_franvaro_inte_brott(tmp_path):
+    """VANDES 2026-11-27, A27a. Katalogen finns, manifestet frystes aldrig:
+    dygnet blev aldrig ett verk, och det ar samma sak som ett dygn som aldrig
+    kordes. Tidigare stod har det motsatta pastaendet."""
     sp.outdir(tmp_path, "20261201").mkdir(parents=True, exist_ok=True)
+    fore, prev, brott = pe.kedja(tmp_path, "20261202")
+    assert brott == []
+    assert fore == 0
+    assert prev == ""
+
+
+def test_kontrollprov_samma_dygn_med_manifest_raknas(tmp_path):
+    """Positivt kontrollprov till provet ovan: skillnaden ar filen, inte
+    katalogen. Utan det kunde kedja() returnera tomt for allting."""
+    skriv_dygn(tmp_path, "20261201", serie="CANONICAL", index=1)
+    fore, prev, brott = pe.kedja(tmp_path, "20261202")
+    assert brott == []
+    assert fore == 1
+    assert prev != ""
+
+
+def test_halvkort_dygn_stoppar_inte_ett_senare_dygns_korning(tmp_path):
+    """Beteendet som kan kosta en serie, provat genom GRINDEN och inte bara
+    genom kedja(). Dygn ett helt, dygn tva halvkort, dygn tre ska ga."""
+    skriv_dygn(tmp_path, "20261201", serie="CANONICAL", index=1)
+    sp.outdir(tmp_path, "20261202").mkdir(parents=True, exist_ok=True)
+    fore, _, brott = pe.kedja(tmp_path, "20261203")
+    gates.gate_kanonisk_kedja("CANONICAL", fore + 1, brott)
+
+
+def test_kontrollprov_grinden_faller_pa_en_riktig_motsagelse(tmp_path):
+    """Provet ovan ar vardelost om grinden slapper igenom allt. Samma vag,
+    samma anrop, men med en motsagelse i arkivet."""
+    skriv_dygn(tmp_path, "20261201", serie="CANONICAL", index=1)
+    skriv_dygn(tmp_path, "20261202", serie="CANONICAL", index=2, prev="0" * 64)
+    _, _, brott = pe.kedja(tmp_path, "20261203")
+    with pytest.raises(gates.GateFailure):
+        gates.gate_kanonisk_kedja("CANONICAL", 3, brott)
+
+
+def test_fryst_utan_seriefalten_inne_i_serien_ar_ett_brott(tmp_path):
+    """A27c. Utan kolumnerna faller lasningen tillbaka pa att rakna fram
+    serien ur raderna, bada lankkontrollerna hoppas over, och dygnet tar ett
+    nummer utan att vara lankat. Ett tal raknat ratt pa fel grund."""
+    utan_seriefalt(tmp_path, "20261201")
     _, _, brott = pe.kedja(tmp_path, "20261202")
+    assert any("v3.4" in b for b in brott)
+
+
+def test_samma_form_fore_seriestart_ar_inget_brott(tmp_path, monkeypatch):
+    """Avgransningen. Samma fil, samma dygn - bara seriestarten flyttad.
+    Fallbacken ar ratt for de dygn som frystes fore beslutet."""
+    monkeypatch.setattr(pe, "SERIESTART", "20270101")
+    utan_seriefalt(tmp_path, "20261201")
+    fore, _, brott = pe.kedja(tmp_path, "20261203")
+    assert brott == []
+    assert fore == 0
+
+
+def test_gransen_foljer_SERIESTART_och_inte_ett_datum_i_koden(tmp_path, monkeypatch):
+    """Samma form som golvprovet: flyttas konstanten ska gransen folja med.
+    Utan det kan provet ovan inte skilja en riktig implementation fran
+    datumet 20261201 skrivet i klartext."""
+    utan_seriefalt(tmp_path, "20270115")
+    monkeypatch.setattr(pe, "SERIESTART", "20270201")
+    _, _, brott = pe.kedja(tmp_path, "20270116")
+    assert brott == []
+    monkeypatch.setattr(pe, "SERIESTART", "20270101")
+    _, _, brott = pe.kedja(tmp_path, "20270116")
+    assert any("v3.4" in b for b in brott)
+
+
+def test_olasbart_manifest_ar_ett_brott_med_besked(tmp_path):
+    """Inte ett okastat undantag. En korning som kraschar pa en trasig fil
+    sager inte vilken fil eller vilket dygn det gallde."""
+    fil = skriv_dygn(tmp_path, "20261201", serie="CANONICAL", index=1)
+    fil.write_bytes(b"\xff\xfe\x00binart skrap")
+    _, _, brott = pe.kedja(tmp_path, "20261202")
+    # Brottet namnges med dygnets nyckel, inte med datumet - och nyckeln
+    # hamtas ur statepaths i stallet for att skrivas 2026_335 har. Ett varde
+    # pa tva stallen blir tva varden.
     assert len(brott) == 1
-    assert "20261201" in brott[0].replace("_", "") or "STATE" in brott[0]
+    assert sp.state_key("20261201") in brott[0]
+    assert "gar inte att lasa" in brott[0]
+
+
+def test_tva_former_i_samma_dygn_ar_ett_brott(tmp_path):
+    """Tva frysta filer som sager olika saker om samma dygn. Vilken som
+    galler ar inte kodens val."""
+    fil = skriv_dygn(tmp_path, "20261201", serie="CANONICAL", index=1)
+    fil.with_name(fil.name.replace(sp.V, "v3.3")).write_bytes(fil.read_bytes())
+    _, _, brott = pe.kedja(tmp_path, "20261202")
+    assert any("versioner" in b for b in brott)
+
+
+def test_tomt_ordningstal_pa_ett_kanoniskt_dygn_ar_ett_brott(tmp_path):
+    """Tidigare godtogs tom strang. Nar seriefalten kravs blir ett tomt
+    ordningstal samma hal som A27c stanger: ett nummer som inte ar raknat
+    fram ur arkivet."""
+    skriv_dygn(tmp_path, "20261201", serie="CANONICAL", index=None)
+    _, _, brott = pe.kedja(tmp_path, "20261202")
+    assert any("ordningstal" in b for b in brott)
 
 
 def test_lank_bakat_som_inte_stammer_ar_ett_brott(tmp_path):
