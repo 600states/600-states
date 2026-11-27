@@ -246,8 +246,107 @@ def test_journalen_vaxer_over_omgangar(tmp_path, monkeypatch):
     classify.skriv_journal("20260101", gammal, {**BAS, "calls": [anrop(5, 7, 3)]}, 2)
     ut = json.loads(fil.read_text(encoding="utf-8"))
     assert len(ut["calls"]) == 2
+    # HELA dicten jamfors, inte valda nycklar. En ny nyckel i totals ska gora
+    # provet rott och tvinga fram ett medvetet beslut - journalen ar
+    # manifestets proveniensansprak och far inte vaxa tyst. De tva nedan kom
+    # med A21, 2026-11-27.
     assert ut["totals"] == {"calls": 2, "input": 15, "output": 27, "cache_read": 3,
-                            "parse_failures": 3}
+                            "parse_failures": 3,
+                            "begaran": {"skickade": 2, "bokforda": 2,
+                                        "fallna_kanda": 0, "fallna_okanda": 0},
+                            "fallna_tokens": {"input": 0, "output": 0, "cache_read": 0}}
+
+
+# ---- A21: journalen bokfor ANROP, inte resultat -------------------------
+#
+# Fram till b228420 bokfordes ett anrop forst nar det lyckats hela vagen. Ett
+# svar som kom tillbaka, kostade pengar och foll pa parsning eller validering
+# slapptes som kostnad. Tre utfall provas nedan, och de far aldrig slas ihop:
+# ett fallet anrop ar inte ett lyckat, och ett okant ar inte ett nollat.
+
+def fallet(i, o, c): return {**anrop(i, o, c), "utfall": "fallet"}
+def okant(): return {"input_tokens": None, "output_tokens": None,
+                     "cache_read": None, "utfall": "okand"}
+
+
+def test_ett_fallet_anrop_bokfors_med_sina_tal(tmp_path, monkeypatch):
+    """Svaret kom tillbaka och kostade pengar. Talen gar att lasa, sa de ska
+    bokforas - men inte bland de lyckade, for da sager journalen att dygnet
+    producerade mer an det gjorde."""
+    fil = _journal(tmp_path, monkeypatch)
+    classify.skriv_journal("20260101", {}, {**BAS, "calls": [anrop(10, 20, 5),
+                                                             fallet(3, 7, 1)]}, 0)
+    t = json.loads(fil.read_text(encoding="utf-8"))["totals"]
+    assert (t["input"], t["output"], t["cache_read"]) == (10, 20, 5)
+    assert t["fallna_tokens"] == {"input": 3, "output": 7, "cache_read": 1}
+    assert t["begaran"] == {"skickade": 2, "bokforda": 1,
+                            "fallna_kanda": 1, "fallna_okanda": 0}
+
+
+def test_ett_okant_anrop_bokfors_som_okant_aldrig_som_noll(tmp_path, monkeypatch):
+    """API:et rapporterade sjalvt fel: errored, canceled eller expired bar
+    inget message, sa det finns ingen usage att lasa. En nollrad och en
+    saknad rad ljuger bada - en rad som sager okand ar sann."""
+    fil = _journal(tmp_path, monkeypatch)
+    classify.skriv_journal("20260101", {}, {**BAS, "calls": [anrop(10, 20, 5),
+                                                             okant()]}, 0)
+    ut = json.loads(fil.read_text(encoding="utf-8"))
+    t = ut["totals"]
+    assert t["begaran"]["fallna_okanda"] == 1
+    # Talen far INTE summeras som nollor nagonstans.
+    assert (t["input"], t["output"]) == (10, 20)
+    assert t["fallna_tokens"] == {"input": 0, "output": 0, "cache_read": 0}
+    # Och raden sjalv bar null i filen, inte 0.
+    rad = [x for x in ut["calls"] if x.get("utfall") == "okand"][0]
+    assert rad["input_tokens"] is None and rad["output_tokens"] is None
+
+
+def test_en_fallen_rad_gor_inte_passfilen_bokford(tmp_path, monkeypatch):
+    """unrecorded ar listan over passfiler journalen inte tacker. Raknades en
+    fallen rad som inspelad skulle ett dygn dar passfilen finns men bara
+    felraderna bokfordes se komplett ut."""
+    fil = _journal(tmp_path, monkeypatch)
+    (tmp_path / "classifier_passes" / "pass1_batch_01.json").write_text("[]", encoding="utf-8")
+    rad = {**fallet(1, 1, 0), "pass": 1, "batch": 1}
+    classify.skriv_journal("20260101", {}, {**BAS, "calls": [rad]}, 0)
+    assert json.loads(fil.read_text(encoding="utf-8"))["unrecorded"] == ["pass1_batch_01"]
+
+
+def test_kontrollprov_en_lyckad_rad_gor_passfilen_bokford(tmp_path, monkeypatch):
+    """Provet ovan pastar en narvaro i listan. Utan det har provet kunde
+    unrecorded namna varje passfil alltid."""
+    fil = _journal(tmp_path, monkeypatch)
+    (tmp_path / "classifier_passes" / "pass1_batch_01.json").write_text("[]", encoding="utf-8")
+    rad = {**anrop(1, 1, 0), "pass": 1, "batch": 1}
+    classify.skriv_journal("20260101", {}, {**BAS, "calls": [rad]}, 0)
+    assert json.loads(fil.read_text(encoding="utf-8"))["unrecorded"] == []
+
+
+def test_skickade_kan_inte_upptacka_ett_OBOKFORT_anrop(tmp_path, monkeypatch):
+    """DEN HAR LUCKAN AR OPPEN OCH PROVET PINNAR DEN.
+
+    totals.begaran.skickade raknas ur de BOKFORDA raderna sjalva, sa
+    identiteten skickade = bokforda + fallna + okanda ar sann per
+    konstruktion och kan aldrig brista. Ett anrop som ingen felgren bokforde
+    ar darfor osynligt aven i det nya talet - och bokforingen sker nu pa nio
+    stallen i stallet for tva.
+
+    Det enda oberoende talet ar batch_latency_seconds[].requests, som skrivs
+    ur len(jobb["begaran"]) FORE resultatslingan. Har visar provet att de tva
+    talen kan saga olika saker utan att nagot faller.
+
+    NAR GRINDEN BYGGS VANDS DET HAR PROVET. Det ar meningen.
+    """
+    fil = _journal(tmp_path, monkeypatch)
+    rec = {**BAS, "calls": [anrop(1, 1, 0), anrop(1, 1, 0)],
+           "batch_latency_seconds": [{"batch_id": "b1", "requests": 3, "seconds": 1.0}]}
+    classify.skriv_journal("20260101", {}, rec, 0)
+    ut = json.loads(fil.read_text(encoding="utf-8"))
+    oberoende = sum(x["requests"] for x in ut["batch_latency_seconds"])
+    assert oberoende == 3
+    assert ut["totals"]["begaran"]["skickade"] == 2
+    # Tre skickade, tva bokforda - och ingenting sager ifran.
+    assert oberoende != ut["totals"]["begaran"]["skickade"]
 
 def test_byte_av_instrument_mitt_i_ett_dygn_stoppar(tmp_path, monkeypatch):
     """Annan modell, prompt eller spec an i tidigare omgangar ar ett annat
