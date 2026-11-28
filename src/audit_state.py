@@ -137,6 +137,11 @@ def audit(day, data=DATA):
     ev = kalla("bevispool", las_bevis)
     site = kalla("sajtfilen", lambda: json.loads(
         sp.site_json(data, day).read_text(encoding="utf-8")))
+    # VERKETS EGEN HASH, sedan A43. Sidecaren lases bara om bilden finns:
+    # saknas bilden ar det den som ska namnas, inte en sidecar till en fil
+    # som inte ar dar.
+    verkets_rad = kalla("verkets sidecar", lambda: sp.sha_sidecar(
+        files["PNG"]).read_text(encoding="utf-8")) if "PNG" in files else None
 
     P = ("pre-emotion",)
     E = ("emotion+farg",)
@@ -272,6 +277,25 @@ def audit(day, data=DATA):
     prova("sajtens url = manifestet", S + P,
           lambda: ([t["u"] for t in site["tiles"]]
                    == [r["representative_url"] for r in i_ordning(pre)], ""))
+
+    # KONTROLL 20. Revisionen fragade aldrig efter verket: PNG:en bar noll av
+    # de nitton och anvandes bara i fillistan, sa ett dygn vars bild saknades
+    # gav nitton av nitton och felkod 0. Ett projekt vars forsta mening ar
+    # "The artwork is the Proof of State" kan inte ha en revision som godkanner
+    # ett State vars verk saknas. A37.
+    #
+    # Namnet sager vad den laser - FYND 014:s regel - och inte vad den heter i
+    # koden. Den jamfor bildens egen hash med sidecarens rad, samma jamforelse
+    # som provet gor for en enskild bild.
+    def _verket():
+        bildens = sha(files["PNG"])
+        delar = verkets_rad.split()
+        sidecarens = delar[0] if delar else ""
+        namnet = delar[1] if len(delar) > 1 else ""
+        return (sidecarens == bildens and namnet == files["PNG"].name,
+                f"{bildens[:16]} mot sidecarens {sidecarens[:16] or '(tom rad)'}")
+
+    prova("verkets sha256 = sidecarens rad", ("PNG", "verkets sidecar"), _verket)
 
     MARKE = {"OK": "  OK       ", "FEL": "  FEL      ", "EJ": "  EJ PROVAD"}
     print(f"\n=== STATE {sp.state_id(day)} ===")
