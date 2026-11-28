@@ -108,7 +108,7 @@ import statepaths as sp
 import audit_state
 
 DAG = "20261201"
-KONTROLLER = 19
+KONTROLLER = 20          # nitton till 2026-11-28, tjugo sedan A37
 
 
 def _kor(data):
@@ -129,14 +129,19 @@ def _bara_fargmanifest(tmp_path):
     return tmp_path
 
 
-def test_tomt_arkiv_ger_nitton_ej_provade(tmp_path):
-    """Ingenting gar att lasa - och alla nitton rapporteras anda."""
+def test_tomt_arkiv_ger_alla_som_ej_provade(tmp_path):
+    """Ingenting gar att lasa - och alla rapporteras anda."""
     (godkanda, fallna, ej_provade), _ = _kor(tmp_path)
     assert (godkanda, fallna, ej_provade) == (0, 0, KONTROLLER)
 
 
 def test_namnaren_krymper_aldrig(tmp_path):
-    """DET HAR AR POSTENS SKAL. 'stallda 0 av 19', aldrig 'stallda 0 av 0'."""
+    """DET HAR AR POSTENS SKAL. "stallda 0 av 20", aldrig "stallda 0 av 0".
+
+    Talet star i publik text - site/labs.html sager "twenty checks" - sa en
+    revision som stallde fjorton och skrev ALLT STAMMER gor den meningen
+    osann. KONTROLLER har ar den andra parten: andras antalet i koden utan
+    att nagon tanker pa sajten, blir det har rott."""
     _, utskrift = _kor(tmp_path)
     m = re.search(r"stallda (\d+) av (\d+), godkanda (\d+), fallna (\d+), "
                   r"ej provade (\d+)", utskrift)
@@ -209,3 +214,92 @@ def test_fallen_slar_ej_provad(tmp_path):
     rc, ut = _rc(_bara_fargmanifest(tmp_path))
     assert rc == 1, ut
     assert "AVVIKELSER HITTADE" in ut
+
+
+# ======================================================================
+# A37 - revisionen fragar efter verket
+#
+# Fore 24f6158 bar PNG:en noll av de nitton kontrollerna. Den anvandes bara
+# i fillistan, sa ett dygn UTAN BILD gav "stallda 19 av 19, godkanda 19"
+# och felkod 0: revisionen godkande ett State vars verk saknades.
+#
+# Code korde tre av de fyra lagena. Det fjarde - sidecaren finns och
+# stammer, men BILDEN ar en annan - ar det han inte korde, och det ar det
+# enda lage dar kontrollen maste lasa filen och inte bara raden.
+# ======================================================================
+
+BILD = b"\x89PNG\r\n\x1a\n" + b"rutor" * 40
+
+
+def _med_verk(tmp_path, bild=BILD, rad=None, sidecar=True):
+    """Ett arkiv med PNG och (om sidecar) dess .sha256. rad=None ger den
+    aktaradens form; annars skrivs den rad som skickas in."""
+    import hashlib
+    ut = sp.outdir(tmp_path, DAG)
+    ut.mkdir(parents=True, exist_ok=True)
+    png = sp.png(tmp_path, DAG)
+    png.write_bytes(bild)
+    if sidecar:
+        if rad is None:
+            rad = "%s  %s\n" % (hashlib.sha256(bild).hexdigest(), png.name)
+        sp.sha_sidecar(png).write_text(rad, encoding="utf-8")
+    return png
+
+
+def _raden(utskrift, namn="verkets sha256 = sidecarens rad"):
+    rader = [r for r in utskrift.splitlines() if namn in r]
+    assert len(rader) == 1, utskrift
+    return rader[0]
+
+
+def test_verket_utan_sidecar_blir_ej_provad(tmp_path):
+    _med_verk(tmp_path, sidecar=False)
+    (_, fallna, _), utskrift = _kor(tmp_path)
+    assert "EJ PROVAD" in _raden(utskrift)
+    assert ".png.sha256" in _raden(utskrift), "sidecarens filnamn ska namnas"
+
+
+def test_verket_och_sidecaren_stammer(tmp_path):
+    _med_verk(tmp_path)
+    _, utskrift = _kor(tmp_path)
+    rad = _raden(utskrift)
+    assert rad.strip().startswith("OK"), rad
+
+
+def test_en_annan_rad_i_sidecaren_faller(tmp_path):
+    _med_verk(tmp_path, rad="%s  %s\n" % ("0" * 64, sp.png(tmp_path, DAG).name))
+    (_, fallna, _), utskrift = _kor(tmp_path)
+    assert _raden(utskrift).strip().startswith("FEL")
+    assert fallna >= 1
+
+
+def test_en_annan_BILD_faller_ocksa(tmp_path):
+    """DET HAR AR LAGET CODE INTE KORDE. Sidecaren ar orord och ser riktig
+    ut; det ar bilden som bytts. En kontroll som bara laste raden skulle
+    saga OK har - och da vore den tjugonde kontrollen en grind som inte kan
+    falla for det den finns till for."""
+    import hashlib
+    rakt = "%s  %s\n" % (hashlib.sha256(BILD).hexdigest(),
+                          sp.png(tmp_path, DAG).name)
+    _med_verk(tmp_path, bild=BILD + b"en ruta till", rad=rakt)
+    (_, fallna, _), utskrift = _kor(tmp_path)
+    assert _raden(utskrift).strip().startswith("FEL"), _raden(utskrift)
+    assert fallna >= 1
+
+
+def test_sidecar_som_namnger_fel_fil_faller(tmp_path):
+    """Raden bar bade hash OCH filnamn. En sidecar fran ett annat dygn kan
+    ha ratt hash for sin egen bild och fel namn."""
+    import hashlib
+    _med_verk(tmp_path, rad="%s  %s\n" % (hashlib.sha256(BILD).hexdigest(),
+                                           "nagon_annan_fil.png"))
+    _, utskrift = _kor(tmp_path)
+    assert _raden(utskrift).strip().startswith("FEL")
+
+
+def test_verket_som_saknas_namnges_och_ger_felkod_2(tmp_path):
+    """Posten sjalv: ett dygn utan bild fick inte ge felkod 0."""
+    rc, ut = _rc(tmp_path)
+    assert rc == 2, ut
+    assert "verkets sha256 = sidecarens rad" in ut
+    assert "_CONSENSUS.png" in ut
