@@ -85,7 +85,13 @@ img{display:block;max-width:100%}
    1440px. Brevladorna ovan och under ar #0B0E12, samma som rutans botten. */
 .hero-name img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
 .hero-name::after{content:"";position:absolute;inset:0;background:rgba(10,10,11,.55)}
-.hero-name h1,.hero-name .sub{position:relative;z-index:1}
+/* PILOTRADEN LIGGER I SAMMA SKIKT SOM RUBRIKEN. Bilden ar har en
+   bakgrund under en skarm (::after), inte ett utstallt verk, sa raden
+   star dar sidans egen text redan star. Den maste in i z-index-skiktet
+   med de andra tva, annars hamnar den UNDER skarmen och blir en text
+   ingen kan lasa. */
+.hero-name h1,.hero-name .sub,.hero-name .pilot{position:relative;z-index:1}
+.hero-name .pilot{font-size:var(--step-micro);line-height:1.35;color:var(--muted);max-width:52ch;margin-top:14px}
 .hero-name{position:relative;background:#0B0E12;color:var(--ink);display:flex;flex-direction:column;justify-content:flex-end;padding:clamp(20px,2.4vw,40px)}
 .hero-name h1{font-size:clamp(3rem,1rem + 8.5vw,9.5rem);line-height:0.82}
 .hero-name .sub{font-size:clamp(1.125rem,1.1vw,1.3125rem);line-height:1.3;letter-spacing:-0.015em;color:var(--ink);max-width:36ch;margin-top:20px}
@@ -263,9 +269,10 @@ footer .repo a:hover{color:var(--ink)}
 <header class="board">
   <div class="hero">
     <div class="tile hero-name lift">
-      <img src="img/state_001.png" alt="A rendered 600 STATES field: 600 solid colour squares in a 30 by 20 grid, one day of observed news." width="3087" height="2057">
+      <img src="img/state_001.png" alt="A calibration work from the pilot series, not a State: 600 solid colour squares in a 30 by 20 grid, one day of observed news." width="3087" height="2057">
       <h1>600<br>LABS</h1>
       <p class="sub">Method errors found while building the instrument, what the measurement was, and what changed because of it.</p>
+      <p class="pilot">A calibration work from the pilot series, not a State. The canonical series begins 1 December 2026.</p>
     </div>
     <div class="tile hero-say lift">
       <p class="lead">There are seventeen write&#8209;ups here, and more findings than that. This is what has been written up, not everything that has been found.</p>
