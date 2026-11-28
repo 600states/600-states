@@ -94,7 +94,7 @@ img{display:block;max-width:100%}
    ur bildrutornas 3:2: vid 1512 px bredd blev tva sadana rader 1006 px, och
    pa en skarm med 900 px synlig hojd hamnade den gula rutans forklarande
    rad 142 px under vikningen. En siffra utan sin rad ar dekoration. */
-.board{padding:var(--gap);display:grid;gap:var(--gap);grid-template-rows:1fr auto;height:calc(100svh - 68px)}
+.board{padding:var(--gap);display:grid;gap:var(--gap);grid-template-rows:auto auto;align-content:start;height:calc(100svh - 68px)}
 /* Ankarhopp far inte lagga rubriken under den klistrade raden. */
 section[id]{scroll-margin-top:76px}
 .topbar{display:grid;gap:var(--gap);grid-template-columns:60px 1fr auto;height:60px}
@@ -113,8 +113,20 @@ section[id]{scroll-margin-top:76px}
 
    Talet 160px ar topplisten, rutnatets egen luft och bildtextens rad.
    Det ar uppmatt mot 1080, 900 och 768 px viewporthojd, inte raknat
-   fram. */
-.grid2{display:grid;gap:var(--gap);grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;min-height:0;max-width:calc((100svh - 160px) * 1.5 + var(--gap));margin-inline:auto;width:100%}
+   fram.
+
+   SPAREN AR auto, INTE 1fr. 1fr betyder halva rutnatets hojd, ett matt
+   som inte vet nagot om bilden: raden blev 480 px medan verket var 460,
+   och eftersom .t-pic haller sin 3:2 men .t-name och .t-split strackte
+   sig till radens hojd slutade rutorna i en rad 19,5 px fran varandra.
+   Med auto blir sparet sa hogt som radens hogsta ruta, och den rutan ar
+   verket - det ar darfor graden ovan maste rymmas i 2/3 av bredden,
+   annars vore det texten som satte raden igen.
+
+   align-content:start pa .board: rutnatet ar nu lagre an sitt spar, och
+   utan den raden skulle det streckas ut igen och alla tre matten vara
+   tillbaka. Overskottet ligger under bildtexten. */
+.grid2{display:grid;gap:var(--gap);grid-template-columns:1fr 1fr;grid-template-rows:auto auto;min-height:0;max-width:calc((100svh - 160px) * 1.5 + var(--gap));margin-inline:auto;width:100%}
 /* GRADEN KOMMER UR RUTAN, INTE UR FONSTRET. --step-huge skalar med vw.
    Sedan 4b binds rutnatets bredd av fonstrets HOJD, sa pa en lag och
    bred skarm vaxte graden medan kolumnen krympte - ett varde pa tva
