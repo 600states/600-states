@@ -115,8 +115,24 @@ section[id]{scroll-margin-top:76px}
    Det ar uppmatt mot 1080, 900 och 768 px viewporthojd, inte raknat
    fram. */
 .grid2{display:grid;gap:var(--gap);grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;min-height:0;max-width:calc((100svh - 160px) * 1.5 + var(--gap));margin-inline:auto;width:100%}
-.t-name{background:var(--paper);color:var(--paper-ink);display:flex;flex-direction:column;justify-content:flex-end;padding:24px}
-.t-name h1{font-size:var(--step-huge);line-height:0.82}
+/* GRADEN KOMMER UR RUTAN, INTE UR FONSTRET. --step-huge skalar med vw.
+   Sedan 4b binds rutnatets bredd av fonstrets HOJD, sa pa en lag och
+   bred skarm vaxte graden medan kolumnen krympte - ett varde pa tva
+   stallen, mellan tva axlar. Uppmatt vid 1366x768: graden 152,6 px i en
+   ruta med 408 px invandig bredd, och STATES 463,6 px. 55,6 px ut at
+   hoger, och ovankanten 40,9 px ovanfor rutan - .tile klipper bada, och
+   texten ar bottenstalld sa overskottet gar ut uppat.
+
+   cqw loser det vid kallan: container-type gor rutan till den storhet
+   graden mats i, sa graden foljer rutan vad som an binder den.
+
+   Talet 22 ar uppmatt, inte valt. Tva villkor ska hallas, och hojden ar
+   det trangre: texten maste rymmas i en ruta som ar 2/3 av sin bredd.
+   Brytpunkten ligger vid 24,8 vid 1366x768, som ar den trangsta av de
+   tre provade hojderna. 22 ger 18,6 px till godo dar, och 135 px pa
+   bredden. Fallbacktypsnittet ar matt ocksa, och ar smalare. */
+.t-name{background:var(--paper);color:var(--paper-ink);display:flex;flex-direction:column;justify-content:flex-end;padding:24px;container-type:inline-size}
+.t-name h1{font-size:clamp(3.5rem,22cqw,11.5rem);line-height:0.82}
 .t-sub{font-size:clamp(1.125rem,1.1vw,1.3125rem);line-height:1.3;letter-spacing:-0.015em;color:var(--paper-muted);max-width:34ch;margin-top:20px}
 .t-pic{background:#0B0E12}
 /* BILDTEXTEN STAR DAR VERKEN VISAS. De tva rutorna i hjalten ar
