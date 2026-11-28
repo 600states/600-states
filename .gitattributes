@@ -15,3 +15,8 @@ protocols/** -text
 # 2026-11-25: en utcheckning pa Windows hade gett 115 byte och en annan hash an
 # den publicerade, och minisign laser filen rad for rad.
 600states.pub -text
+
+# Typsnitten i tools/fonts/ ar binara filer vars bytes bestammer bokens
+# sha256. SIST I FILEN: sista traffen vinner, och raden far inte hamna
+# fore den generella regeln - se tests/test_radslutsreglerna.py.
+*.ttf binary

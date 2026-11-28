@@ -73,10 +73,17 @@ from reportlab.pdfbase.ttfonts import TTFont  # noqa: E402
 from reportlab.pdfgen import canvas as rl_canvas  # noqa: E402
 
 # ---------------------------------------------------------------- typsnitt --
-# Sokvagen ar INTE hardkodad, av samma skal som dataarkivets: en sokvag i ett
-# publikt repo sager nagot om den som skrev den. STATES_FONTS pekar ut
-# katalogen; utan den provas platsen typsnitten lag pa i den forsta
-# generatorns container.
+# TYPSNITTEN LIGGER I REPOT, i tools/fonts/. Bokens PDF publiceras som en
+# hash (BOKEN_SPEC 2), och vi vet redan att den inte ar byteidentisk mellan
+# tva reportlab-versioner. Att den DESSUTOM skulle bero pa vilka filer som
+# rakar ligga i /usr/share/fonts pa den maskin som kor ar en andra osynlig
+# axel i samma pastaende. Licensen tillater buntning - Bitstream Vera plus
+# publika andringar, samma sak Debian och Chromium gor - och licensfilen
+# ligger bredvid dem.
+#
+# Ordningen: STATES_FONTS ar kvar som en override for den som vill prova en
+# annan skarning, repots egen katalog ar det NORMALA, och systemets star
+# sist sa att en container utan repokopian anda hittar dem.
 TYPSNITT = OrderedDict([
     ("S", "DejaVuSans.ttf"),
     ("SB", "DejaVuSans-Bold.ttf"),
@@ -85,18 +92,23 @@ TYPSNITT = OrderedDict([
 ])
 
 
+REPOTS_TYPSNITT = Path(__file__).resolve().parent / "fonts"
+
+
 def typsnittskatalog():
     env = os.environ.get("STATES_FONTS")
     kandidater = [Path(env)] if env else []
+    kandidater.append(REPOTS_TYPSNITT)
     kandidater.append(Path("/usr/share/fonts/truetype/dejavu"))
     for k in kandidater:
         if all((k / f).exists() for f in TYPSNITT.values()):
             return k
+    # SVARET AR INTE LANGRE EN MILJOVARIABEL. Saknas filerna ar det repots
+    # kopia som ar borta, och det ar den raden som ska sta har.
     raise SystemExit(
         "Hittar inte DejaVu-typsnitten: " + ", ".join(TYPSNITT.values()) + "\n"
-        "Satt STATES_FONTS till katalogen som innehaller dem.\n"
-        '  Windows:  setx STATES_FONTS "<sokvag>"\n'
-        '  bash:     export STATES_FONTS="<sokvag>"')
+        f"De hor hemma i {REPOTS_TYPSNITT} och foljer med repot.\n"
+        "Sok dar forst; STATES_FONTS ar en override for en annan skarning.")
 
 
 def las_typsnitt():
