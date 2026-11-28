@@ -61,6 +61,10 @@ MONSTER = (
      'Skriv "before the first State is observed on 1 December 2026".'),
     (r"\bopens 1 december",
      'MESSAGE_BANK 0.1, 2026-11-28: "Opens 1 December 2026" - skriv "Begins".'),
+    (r"the 335th will\b",
+     'MESSAGE_BANK 0.1, 2026-11-28: "The 335th will" lovar kanoniskt medlemskap. '
+     'Golvet ar 90 % och utfallet UNQUALIFIED finns; dag ettens egen sida bar den '
+     'grenen. Skriv "The 335th is the first that can be".'),
 )
 
 
@@ -150,7 +154,9 @@ def test_grinden_faller_inte_pa_nagot_annat():
                 "// already near the opening: stagger these at load",
                 "A settled question is not reopened by asking",
                 "the first State, 2026/335, is observed on 1 December 2026",
-                "Begins 1 December 2026"):
+                "Begins 1 December 2026",
+                "The 335th is the first that can be",
+                "The 336th will be next"):
         assert not brott_i(ren), "falskt positiv: " + ren
 
 
@@ -160,7 +166,8 @@ def test_varje_monster_kan_falla():
     framtida rad inte kan laggas till som ren dekoration."""
     exempel = {"series opens": "the canonical series opens on 1 December",
                r"opens on 1 december": "it opens on 1 December 2026",
-               r"\bopens 1 december": "Opens 1 December 2026"}
+               r"\bopens 1 december": "Opens 1 December 2026",
+               r"the 335th will\b": "334 days will never be a State. The 335th will."}
     assert set(exempel) == {m for m, _ in MONSTER}, (
         "MONSTER och exempellistan har glidit isar - varje monster ska ha "
         "en strang som visar att det kan falla")
