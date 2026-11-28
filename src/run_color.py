@@ -57,10 +57,31 @@ def step_color(day, data=DATA):
     return out
 
 def step_render(day, data=DATA):
+    """Verket renderas och FAR SIN EGEN SIDECAR.
+
+    Manifestet ar hashat, stamplat och signerat. Bilden - som ar Proof of
+    State - hade ingen publicerad hash alls: fargsteget skriver en sidecar
+    bredvid sitt manifest, renderingssteget skrev ingen bredvid sin PNG.
+    Hashen rakandes redan har, men bara for att skrivas ut i loggen och
+    glommas. A43.
+
+    SAMMA FORM SOM FARGSTEGETS, ordagrant: digest, tva blanksteg, filnamn,
+    radslut. En granskare som kan prova det ena ska inte behova lara sig
+    ett andra format for det andra.
+
+    SIGNATURENS OMFANG UTVIDGAS INTE. Bilden ar harledbar ur manifestet,
+    sa dess integritet foljer redan av manifestets; sidecaren gor den
+    kontrollerbar utan att harleda om. Vad signaturen ska tacka ar en
+    annan och storre fraga.
+    """
     print("\n[render]")
     from render import render_state
     png = render_state(day, data)
-    print(f"        {png.name}  sha256 {_sha(png)[:16]}")
+    digest = _sha(png)
+    with atomic_write(sp.sha_sidecar(png)) as fh:
+        fh.write(f"{digest}  {png.name}\n")
+    print(f"        {png.name}  sha256 {digest[:16]}")
+    print(f"        {sp.sha_sidecar(png).name}")
     return png
 
 def step_site(day, data=DATA):
