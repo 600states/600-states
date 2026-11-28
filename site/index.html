@@ -94,7 +94,7 @@ img{display:block;max-width:100%}
    ur bildrutornas 3:2: vid 1512 px bredd blev tva sadana rader 1006 px, och
    pa en skarm med 900 px synlig hojd hamnade den gula rutans forklarande
    rad 142 px under vikningen. En siffra utan sin rad ar dekoration. */
-.board{padding:var(--gap);display:grid;gap:var(--gap);height:calc(100svh - 68px)}
+.board{padding:var(--gap);display:grid;gap:var(--gap);grid-template-rows:1fr auto;height:calc(100svh - 68px)}
 /* Ankarhopp far inte lagga rubriken under den klistrade raden. */
 section[id]{scroll-margin-top:76px}
 .topbar{display:grid;gap:var(--gap);grid-template-columns:60px 1fr auto;height:60px}
@@ -111,13 +111,26 @@ section[id]{scroll-margin-top:76px}
    skarm, utan att beskara verket och utan att rora bildregeln, ar att
    smalna kolumnerna. Rutnatet centreras da pa breda skarmar.
 
-   Talet 160px ar topplisten och rutnatets egen luft. Det ar uppmatt mot
-   1080, 900 och 768 px viewporthojd, inte raknat fram. */
+   Talet 160px ar topplisten, rutnatets egen luft och bildtextens rad.
+   Det ar uppmatt mot 1080, 900 och 768 px viewporthojd, inte raknat
+   fram. */
 .grid2{display:grid;gap:var(--gap);grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;min-height:0;max-width:calc((100svh - 160px) * 1.5 + var(--gap));margin-inline:auto;width:100%}
 .t-name{background:var(--paper);color:var(--paper-ink);display:flex;flex-direction:column;justify-content:flex-end;padding:24px}
 .t-name h1{font-size:var(--step-huge);line-height:0.82}
 .t-sub{font-size:clamp(1.125rem,1.1vw,1.3125rem);line-height:1.3;letter-spacing:-0.015em;color:var(--paper-muted);max-width:34ch;margin-top:20px}
 .t-pic{background:#0B0E12}
+/* BILDTEXTEN STAR DAR VERKEN VISAS. De tva rutorna i hjalten ar
+   kalibreringsdygn ur pilotserien, och upplysningen om det lag en
+   halv sida ner, i ett avsnitt om en annan bild. MESSAGE_BANK 0.2: "The
+   pilot / v3.0 distinction is public, not hidden".
+
+   Den star UNDER verken och aldrig over dem, och utanfor rutorna och
+   aldrig i en av dem. Ett band tvars over faltet vore en komponerad bild
+   av verket, och det ar just vad projektet sager att det inte gor. I den
+   forsta rutan hade texten dessutom klippts bort: .tile har overflow
+   hidden och .t-pic ar 3:2, sa det finns ingen plats over. Och den andra
+   rutan doljs pa mobil - en text dar hade forsvunnit med den. */
+.board-cap{padding:2px 2px 0;font-size:var(--step-micro);line-height:1.35;color:var(--dim)}
 /* height:auto, aldrig height:100%. I ett rutnat dar rutans hojd kommer ur
    radsparet kan Safari inte losa procenten och satter hojden till noll:
    bilden forsvinner och rutans bakgrund blir kvar som en lucka. Verket ar
@@ -345,10 +358,10 @@ h2{font-size:var(--step-head)}
       <p class="t-sub">A daily data artwork. One UTC day, 600 news observations, one irreversible field of colour.</p>
     </div>
     <div class="tile t-pic shutter" id="shutter">
-      <img fetchpriority="high" src="img/state_002.png" alt="A rendered 600 STATES field: 600 solid colour squares in a 30 by 20 grid." width="3087" height="2057">
+      <img fetchpriority="high" src="img/state_002.png" alt="A calibration work from the pilot series, not a State: 600 solid colour squares in a 30 by 20 grid." width="3087" height="2057">
     </div>
     <div class="tile t-pic second lift">
-      <img src="img/state_003.png" alt="A second rendered field of 600 colours from another observed day." width="3087" height="2057" loading="lazy">
+      <img src="img/state_003.png" alt="A second calibration work from the pilot series, not a State: 600 colours from another observed day." width="3087" height="2057" loading="lazy">
     </div>
     <div class="t-split lift">
       <p class="tile t-say lift">One UTC day becomes 600 news observations, 600 colours and one irreversible visual state.</p>
@@ -358,6 +371,7 @@ h2{font-size:var(--step-head)}
       </div>
     </div>
   </div>
+  <p class="board-cap">Calibration works from the pilot series, not States. The canonical series begins 1 December 2026.</p>
 </header>
 
 <section class="intro" id="about">
