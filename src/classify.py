@@ -825,20 +825,36 @@ def skriv_journal(day, gammal, rec, parse_fel):
                     "input": sum(x["input_tokens"] for x in ok),
                     "output": sum(x["output_tokens"] for x in ok),
                     "cache_read": sum(x["cache_read"] for x in ok),
+                    # CACHESKRIVNINGEN FANNS PER RAD OCH I INGEN SUMMA, sa en
+                    # uppraikning ur journalen blev ett golv inuti ett golv:
+                    # 2 412 tokens pa 2026/315 bar ingen total alls. Ny nyckel,
+                    # ingen befintlig summa raknas om. Hamtas med get(): en
+                    # journal som vagrar bli till tar bort just det spar som
+                    # behovs, och en rad fran en aldre form far inte kunna
+                    # stoppa skrivningen.
+                    "cache_write": sum(x.get("cache_write") or 0 for x in ok),
                     "parse_failures":
                         gammal.get("totals", {}).get("parse_failures", 0) + parse_fel,
-                    # Talet som gar att jamfora mot batch_latency_seconds[].
+                    # ETT ORD BETYDDE TVA TAL. Grindens rakning var alla rader,
+                    # den har var bara de lyckade, och bada skrevs ut som
+                    # "bokforda" - FYND 027, uppmatt pa 2026/330. Talen var
+                    # rakna ratt; ordet bar tva betydelser. Har star LYCKADE,
+                    # i grinden star MED RAD, och de gar inte att blanda ihop.
+                    #
+                    # skickade gar att jamfora mot batch_latency_seconds[].
                     # requests - det enda stallet dar 1 801 mot 1 800 syntes.
-                    "begaran": {"skickade": beg(c), "bokforda": beg(ok),
+                    "begaran": {"skickade": beg(c), "lyckade": beg(ok),
                                 "fallna_kanda": beg(fallna),
                                 "fallna_okanda": beg(okanda)},
                     "fallna_tokens": {
                         "input": sum(x["input_tokens"] for x in fallna),
                         "output": sum(x["output_tokens"] for x in fallna),
-                        "cache_read": sum(x["cache_read"] for x in fallna)}}
+                        "cache_read": sum(x["cache_read"] for x in fallna),
+                        "cache_write": sum(x.get("cache_write") or 0 for x in fallna)}}
     # Bara LYCKADE rader raknas som inspelade: en fallen rad for samma
-    # batch sager inte att passfilen ar bokford, och skulle annars dolja
-    # ett dygn dar passfilen finns men bara felraderna gor det.
+    # batch sager inte att passfilen TACKS, och skulle annars dolja ett
+    # dygn dar passfilen finns men bara felraderna gor det. Tacks ar
+    # unrecorded:s eget ord och det tredje begreppet i FYND 027.
     inspelade = {f"pass{x['pass']}_batch_{x['batch']:02d}" for x in ok
                  if "pass" in x and "batch" in x}
     ut["unrecorded"] = sorted({f.stem for f in passdir(day).glob("pass*_batch_*.json")}
@@ -858,10 +874,17 @@ def gate_journalen_tacker_anropen(day, data=DATA):
 
     A21 gav varje skickat anrop en rad, och totals.begaran.skickade
     summerar de raderna. Den identiteten ar sann per konstruktion:
-    skickade = bokforda + fallna + okanda kan aldrig brista, och ett anrop
+    skickade = lyckade + fallna + okanda kan aldrig brista, och ett anrop
     som ingen felgren bokforde ar osynligt aven i det nya talet. Nio
     bokforingsstallen som vilar pa att nagon kom ihag dem ar inte en
     matning.
+
+    TVA TAL, TVA ORD. Den har grinden raknar ANTALET RADER - MED RAD -
+    och totals.begaran.lyckade raknar bara de lyckade. Bada hette
+    "bokforda" och skrevs ut intill varandra: 1802 mot 1800 pa 2026/330,
+    bada rakna ratt, och den som jamforde dem trodde att nagot inte gick
+    ihop. FYND 004:s form inne i den grind som byggdes for att fanga
+    den - FYND 027.
 
     DET OBEROENDE TALET SKRIVS FORE BOKFORINGEN. batch_latency_seconds far
     sin requests ur jobbfilen i samma stund jobbet hamtas, alltsa innan en
@@ -872,10 +895,10 @@ def gate_journalen_tacker_anropen(day, data=DATA):
     TRE TILLSTAND, OCH DE FAR INTE SLAS IHOP:
 
       lika        varje skickat anrop har en rad
-      olika       FALLER. Ar det oberoende talet storre bokfordes inte
-                  varje anrop; ar det mindre bokfordes anrop som aldrig
-                  skickades. Bada betyder att journalen inte ar lika med
-                  dygnet.
+      olika       FALLER. Ar det oberoende talet storre saknar ett
+                  skickat anrop sin rad; ar det mindre finns en rad for
+                  ett anrop som aldrig skickades. Bada betyder att
+                  journalen inte ar lika med dygnet.
       inget tal   ett jobb utan created_at eller ended_at lamnar ingen
                   rad i batch_latency_seconds, och da FINNS inget
                   oberoende tal. Det sags rakt ut och lases aldrig som
@@ -922,12 +945,12 @@ def gate_journalen_tacker_anropen(day, data=DATA):
         return
 
     oberoende = sum(x.get("requests", 0) for x in bl)
-    bokforda = sum(x.get("requests", 1) for x in batchrader)
-    gates._say("varje skickat anrop har en rad i journalen", oberoende == bokforda,
-               f"{oberoende} skickade enligt jobben, {bokforda} bokforda"
-               + ("" if oberoende == bokforda else
-                  f" - {abs(oberoende - bokforda)} anrop "
-                  + ("saknar rad" if oberoende > bokforda else "har rad utan att ha skickats")))
+    med_rad = sum(x.get("requests", 1) for x in batchrader)
+    gates._say("varje skickat anrop har en rad i journalen", oberoende == med_rad,
+               f"{oberoende} skickade enligt jobben, {med_rad} med rad"
+               + ("" if oberoende == med_rad else
+                  f" - {abs(oberoende - med_rad)} anrop "
+                  + ("saknar rad" if oberoende > med_rad else "har rad utan att ha skickats")))
 
 
 def gate_dygnet_ar_oppet(day, data=DATA):
