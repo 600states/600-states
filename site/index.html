@@ -89,7 +89,12 @@ img{display:block;max-width:100%}
 .topbar-wrap .lift:nth-child(1){animation-delay:.05s}
 .topbar-wrap .lift:nth-child(2){animation-delay:.14s}
 .topbar-wrap .lift:nth-child(3){animation-delay:.23s}
-.board{padding:var(--gap);display:grid;gap:var(--gap);min-height:calc(100svh - 68px)}
+/* HJALTEN FYLLER FORSTA SKARMEN OCH VAXER INTE UR DEN. min-height sa bara
+   hur LITEN rutan fick bli och ingenting om hur stor. Hojden kom i stallet
+   ur bildrutornas 3:2: vid 1512 px bredd blev tva sadana rader 1006 px, och
+   pa en skarm med 900 px synlig hojd hamnade den gula rutans forklarande
+   rad 142 px under vikningen. En siffra utan sin rad ar dekoration. */
+.board{padding:var(--gap);display:grid;gap:var(--gap);height:calc(100svh - 68px)}
 /* Ankarhopp far inte lagga rubriken under den klistrade raden. */
 section[id]{scroll-margin-top:76px}
 .topbar{display:grid;gap:var(--gap);grid-template-columns:60px 1fr auto;height:60px}
@@ -100,7 +105,15 @@ section[id]{scroll-margin-top:76px}
 .t-nav a:hover{color:var(--ink)}
 .t-act{background:var(--ink);color:var(--bg);display:flex;align-items:center;padding:0 24px;font-size:var(--step-micro);text-decoration:none;transition:background .2s,color .2s}
 .t-act:hover{background:var(--accent);color:var(--accent-ink)}
-.grid2{display:grid;gap:var(--gap);grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
+/* RUTNATETS BREDD BINDS AV HOJDEN. Verken ar 3:2 och det forhallandet ar
+   fruset - rutan matas ur bilden, se regeln langre ner - sa tva rader
+   kostar alltid 2/3 av bredden i hojd. Enda vagen att fa in dem i en lag
+   skarm, utan att beskara verket och utan att rora bildregeln, ar att
+   smalna kolumnerna. Rutnatet centreras da pa breda skarmar.
+
+   Talet 160px ar topplisten och rutnatets egen luft. Det ar uppmatt mot
+   1080, 900 och 768 px viewporthojd, inte raknat fram. */
+.grid2{display:grid;gap:var(--gap);grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;min-height:0;max-width:calc((100svh - 160px) * 1.5 + var(--gap));margin-inline:auto;width:100%}
 .t-name{background:var(--paper);color:var(--paper-ink);display:flex;flex-direction:column;justify-content:flex-end;padding:24px}
 .t-name h1{font-size:var(--step-huge);line-height:0.82}
 .t-sub{font-size:clamp(1.125rem,1.1vw,1.3125rem);line-height:1.3;letter-spacing:-0.015em;color:var(--paper-muted);max-width:34ch;margin-top:20px}
@@ -260,7 +273,10 @@ h2{font-size:var(--step-head)}
   :root{--axis:0px}
   /* Ingen paatvingad viewport-hojd pa mobil heller: det ar den som blir
      tomrum nar iOS raknar om hojden medan verktygsfaltet glider. */
-  .board{grid-template-rows:auto auto;min-height:0}
+  /* OCH INGEN BUNDEN HOJD HELLER: basregeln har height:calc(100svh - 68px)
+     sedan hjalten slutade vaxa ur rutan, och den maste slappas har av
+     samma skal som min-height gjorde det. */
+  .board{grid-template-rows:auto auto;min-height:0;height:auto}
   /* Menyn doldes pa mobil, och da gick labs.html inte att na fran en telefon
      alls. Den ligger nu som en egen rad under raden med logotyp och knapp:
      brickor med mellanrum, samma formsprak som resten, ingen hamburgare och
@@ -337,7 +353,7 @@ h2{font-size:var(--step-head)}
     <div class="t-split lift">
       <p class="tile t-say lift">One UTC day becomes 600 news observations, 600 colours and one irreversible visual state.</p>
       <div class="tile t-count lift">
-        <p class="n" id="countdown">26</p>
+        <p class="n" id="countdown">&mdash;</p>
         <p class="l">days until the first State.<br>1 December 2026.</p>
       </div>
     </div>
