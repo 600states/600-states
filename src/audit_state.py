@@ -53,7 +53,17 @@ def audit(day, data=DATA):
         try:
             return hur()
         except FileNotFoundError as e:
-            fel[namn] = "FileNotFoundError: " + Path(e.filename or namn).name
+            # TVA FORMER AV SAMMA FEL. open() och read_text() satter
+            # .filename; sp.frozen() reser FileNotFoundError(path) med
+            # sokvagen som ENDA argument, och da ar .filename None. Fem av
+            # nio kallor gick genom den grenen och fick kallans etikett i
+            # stallet for filnamnet - "FileNotFoundError: PNG" pa den rad
+            # som ska saga vilken FORM som inte fanns. A46.
+            #
+            # Basnamnet tas ur det som finns, aldrig sokvagen: rapporten
+            # kan citeras, och arkivets sokvag hor inte hemma dar.
+            i_felet = e.filename or (e.args[0] if e.args else "")
+            fel[namn] = "FileNotFoundError: " + (Path(str(i_felet)).name or namn)
         except Exception as e:
             fel[namn] = f"{type(e).__name__}: {e}"
         return None
