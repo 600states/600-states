@@ -490,6 +490,21 @@ def build_favicon(data_root: Path, out: Path):
     src = render_for(data_root / "08_V3_STATES" / "STATE_001", "001")
     ico = out / "favicon.ico"
     cirkel_ur_verket(src, 48).save(ico, sizes=[(16, 16), (32, 32), (48, 48)])
+    # TVA STORA PNG-MARKEN, GENOMSKINLIGA. Utan dem fanns bara tva
+    # deklarationer, och den storsta av dem var apple-ikonen. Firefox
+    # valjer den storsta till sin startsidesruta och visade alltsa den
+    # enda fil som har malade svarta horn - en cirkel i en svart
+    # kvadrat i stallet for en fristaende cirkel. Nu finns storre
+    # filer som INTE har horn, och valet faller pa dem.
+    #
+    # Ingen ny bildlogik: samma cirkel_ur_verket som de andra tva.
+    # Alfakanalen sparas som den ar - plattas den mot en bakgrund ar
+    # vi tillbaka i samma fel.
+    stora = []
+    for n in (192, 512):
+        f = out / ("icon-%d.png" % n)
+        cirkel_ur_verket(src, n).save(f)
+        stora.append(f)
     # Apple visar ingen genomskinlighet, den blir svart. Lagg cirkeln pa
     # sidans egen bakgrund i stallet for att lata systemet valja.
     from PIL import Image
@@ -498,7 +513,7 @@ def build_favicon(data_root: Path, out: Path):
     platta.paste(c, (0, 0), c)
     apple = out / "apple-touch-icon.png"
     platta.save(apple)
-    for f in (ico, apple):
+    for f in [ico] + stora + [apple]:
         print("  %-14s %7d bytes" % (f.name, f.stat().st_size))
 
 

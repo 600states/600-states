@@ -50,6 +50,8 @@ En annan malmapp gar att ange: `python site/build.py <malmapp>`.
     data_2026_315.js
     field.js
     favicon.ico
+    icon-192.png
+    icon-512.png
     apple-touch-icon.png
     img/state_001.png
     img/state_002.png
@@ -61,7 +63,7 @@ En annan malmapp gar att ange: `python site/build.py <malmapp>`.
     img/book_2026_315_p319.png
     img/book_2026_315_p606.png
 
-Arton filer, cirka 1,6 MB. Ingenting annat.
+Tjugo filer, cirka 1,6 MB. Ingenting annat.
 
 De fyra `book_`-bilderna ar sidor ur bokens PDF, renderade av
 `tools/bokuppslag.py` och committade i `site/img/`. De ar de enda bilder i
