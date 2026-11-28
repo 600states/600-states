@@ -169,3 +169,78 @@ def test_matningarna_kan_falla():
     assert not pastar.search("Rendered field of 600 colours, 1 January 2026.")
     assert pastar.search("A calibration work from the pilot series, not a State: x")
     assert len(_regioner("<header>a</header><section>b</section>")) == 2
+
+
+# ======================================================================
+# HJALTENS GRAD OCH DESS RUTA FAR INTE HARLEDAS UR OLIKA STORHETER
+#
+# 2026-11-28, kvall: .grid2 fick max-width bunden av fonstrets HOJD, for att
+# den gula rutans forklarande rad skulle rymmas. Rubrikens grad rakhades
+# fortfarande ur fonstrets BREDD. Pa 1366x768 blev kolumnen 456 px och
+# STATES 463,6 px brett - 55,6 px over, klippt av .tile{overflow:hidden},
+# och overskottet pa hojden tryckte ut toppen av 600.
+#
+# Ett varde pa tva stallen, fast mellan tva AXLAR. Rattelsen var inte ett
+# nytt tal utan en ny harledning: graden mats i cqw, alltsa i rutans egen
+# bredd, och foljer darfor rutan oavsett vad som binder den.
+#
+# DET HAR PROVET AR INGEN GEOMETRI. Det provar att de tva inte kan sara pa
+# sig igen utan att nagon markar det. Geometrin matte Code i en webblasare,
+# och de talen star i commitmeddelandet - de gar inte att prova har.
+# ======================================================================
+
+def _regel(css, valjare):
+    """Sista forekomsten av en regel - mediafragor star senare i filen och
+    vinner, sa det ar den som galler pa de breda skarmar provet handlar om."""
+    traffar = re.findall(re.escape(valjare) + r"\s*\{([^}]*)\}", css)
+    return traffar[-1] if traffar else None
+
+
+def test_hjaltens_grad_och_ruta_binds_av_samma_axel():
+    css = _sida("index.html")
+    grid2 = re.search(r"\.grid2\{([^}]*)\}", css)
+    assert grid2, "hittar ingen .grid2-regel"
+    h1 = re.search(r"\.t-name h1\{([^}]*)\}", css)
+    assert h1, "hittar ingen .t-name h1-regel"
+
+    rutan_binds_av_hojden = "svh" in grid2.group(1) or "vh" in grid2.group(1)
+    # INTE en ordgrans fore vw: gransen mellan 0 och v i "10vw" ar ingen
+    # ordgrans, sa den formen slapper igenom precis den regression provet
+    # finns for. Fangat av en mutation 2026-11-28, i provets forsta version.
+    graden_ur_bredden = re.search(r"font-size:[^;]*[0-9.]\s*vw\b", h1.group(1))
+
+    assert not (rutan_binds_av_hojden and graden_ur_bredden), (
+        "regressionen fran 2026-11-28 ar tillbaka: .grid2 binds av fonstrets "
+        "hojd medan .t-name h1 skalar med fonstrets bredd. Pa en bred och lag "
+        "skarm vaxer graden medan rutan krymper, och rubriken klipps.\n"
+        "  .grid2:      %s\n  .t-name h1:  %s" % (grid2.group(1), h1.group(1)))
+
+
+def test_graden_mats_i_rutans_egen_bredd():
+    """Botemedlet, pinnat: en container query. Byts den mot ett viewportmatt
+    ar faran tillbaka aven om just den har kombinationen inte uppstar."""
+    css = _sida("index.html")
+    namn = re.search(r"\.t-name\{([^}]*)\}", css)
+    assert namn and "container-type" in namn.group(1), (
+        ".t-name saknar container-type - graden kan da inte mata rutan")
+    h1 = re.search(r"\.t-name h1\{([^}]*)\}", css)
+    assert "cqw" in h1.group(1) or "cqi" in h1.group(1), (
+        "rubrikens grad mats inte i containerenheter: %s" % h1.group(1))
+
+
+def test_verket_satter_radhojden_och_beskars_aldrig():
+    """Spar pa 1fr ar halva rutnatets hojd och vet ingenting om bilden - da
+    hanger text- och sifferrutan lagre an verket bredvid. Auto gor raden sa
+    hog som dess hogsta ruta, och den rutan ar verket.
+
+    Och verket far aldrig beskaras for att na en linje."""
+    css = _sida("index.html")
+    grid2 = re.search(r"\.grid2\{([^}]*)\}", css).group(1)
+    rader = re.search(r"grid-template-rows:\s*([^;]*)", grid2)
+    assert rader, "grid-template-rows saknas i .grid2"
+    assert "1fr" not in rader.group(1), (
+        "raden ar %r - ett 1fr-spar satts av rutnatets hojd och inte av "
+        "verket, sa rutorna slutar pa olika linjer" % rader.group(1))
+    assert "cover" not in css, (
+        "object-fit: cover beskar verket. En rad far aldrig jamnas genom att "
+        "klippa bilden")
