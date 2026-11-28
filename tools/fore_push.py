@@ -116,6 +116,49 @@ TILLATET = [
      "pushad commit och SKRIVS INTE BORT: NAS:ens uppdateringssteg kor git pull "
      "--ff-only, och en force-push bryter korning A sex dagar fore start. Posten ar "
      "pinnad till en oforanderlig blob och en rad, sa den kan inte vaxa."),
+
+    # DEJAVUS EGEN LICENSTEXT, atta rader. POSTERNA AR STALLEN OCH INTE
+    # TEXTER: en textpost hade skrivit ut adresserna och licensmeningarna
+    # har i filen, och da bar grinden dem sjalv och faller pa sin egen
+    # tillatlista - se punkt 3 i modulens docstring. Ett stalle stavar
+    # ingenting. Det ar ocksa det tataste: byter filen innehall byter den
+    # blob, och grinden faller igen. En licensfil ska aldrig andras, sa det
+    # ar ratt beteende.
+    ("e-post", ("b3d93a1235a82213fbc451853317c40e62ed9272", 3),
+     "tools/fonts/LICENSE-DejaVu.txt: upphovspersonens egen adress i DejaVus "
+     "licenstext. Inte var, och inte andringsbar - en redigerad licens ar ingen "
+     "licens. Pinnad till blob och rad."),
+    ("e-post", ("b3d93a1235a82213fbc451853317c40e62ed9272", 54),
+     "tools/fonts/LICENSE-DejaVu.txt: upphovspersonens egen adress i DejaVus "
+     "licenstext. Inte var, och inte andringsbar - en redigerad licens ar ingen "
+     "licens. Pinnad till blob och rad."),
+    ("e-post", ("b3d93a1235a82213fbc451853317c40e62ed9272", 55),
+     "tools/fonts/LICENSE-DejaVu.txt: upphovspersonens egen adress i DejaVus "
+     "licenstext. Inte var, och inte andringsbar - en redigerad licens ar ingen "
+     "licens. Pinnad till blob och rad."),
+    ("e-post", ("b3d93a1235a82213fbc451853317c40e62ed9272", 56),
+     "tools/fonts/LICENSE-DejaVu.txt: upphovspersonens egen adress i DejaVus "
+     "licenstext. Inte var, och inte andringsbar - en redigerad licens ar ingen "
+     "licens. Pinnad till blob och rad."),
+    ("e-post", ("b3d93a1235a82213fbc451853317c40e62ed9272", 57),
+     "tools/fonts/LICENSE-DejaVu.txt: upphovspersonens egen adress i DejaVus "
+     "licenstext. Inte var, och inte andringsbar - en redigerad licens ar ingen "
+     "licens. Pinnad till blob och rad."),
+    ("kommersiell strategi", ("b3d93a1235a82213fbc451853317c40e62ed9272", 33),
+     "tools/fonts/LICENSE-DejaVu.txt: Bitstream Vera-licensens eget villkor om "
+     "vad som far goras med typsnitten nar de foljer med en storre programvara, "
+     "och vad som inte far goras med en ensam kopia. Licensens ord, inte "
+     "projektets, och de star inte utskrivna har. Pinnad till blob och rad."),
+    ("kommersiell strategi", ("b3d93a1235a82213fbc451853317c40e62ed9272", 34),
+     "tools/fonts/LICENSE-DejaVu.txt: Bitstream Vera-licensens eget villkor om "
+     "vad som far goras med typsnitten nar de foljer med en storre programvara, "
+     "och vad som inte far goras med en ensam kopia. Licensens ord, inte "
+     "projektets, och de star inte utskrivna har. Pinnad till blob och rad."),
+    ("kommersiell strategi", ("b3d93a1235a82213fbc451853317c40e62ed9272", 48),
+     "tools/fonts/LICENSE-DejaVu.txt: Bitstream Vera-licensens eget villkor om "
+     "vad som far goras med typsnitten nar de foljer med en storre programvara, "
+     "och vad som inte far goras med en ensam kopia. Licensens ord, inte "
+     "projektets, och de star inte utskrivna har. Pinnad till blob och rad."),
 ]
 TILLATNA = {(p, t) for p, t, _ in TILLATET}
 
