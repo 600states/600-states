@@ -31,7 +31,11 @@ def audit(day, data=DATA):
     for f in sorted(sp.classifier_input(data, day).glob("batch_*.json")):
         for it in json.loads(f.read_text(encoding="utf-8")): inp[it["observation_id"]] = it
     ev = {}
-    p = DATA / "07_EVIDENCE" / "pool_titles.jsonl"
+    # ARKIVET SOM FUNKTIONEN FICK, inte modulens. Raden las DATA och var
+    # den enda i audit() som gjorde det: reviderade man ett dygn i ett annat
+    # arkiv lastes bevisposterna ur standardarkivet, och kontroll 11 svarade
+    # pa en fraga om fel arkiv. FYND 029.
+    p = data / "07_EVIDENCE" / "pool_titles.jsonl"
     for line in p.read_text(encoding="utf-8").splitlines():
         if line.strip():
             r = json.loads(line); ev[r["url"]] = r
