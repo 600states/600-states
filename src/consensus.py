@@ -15,7 +15,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE)); sys.path.insert(0, str(HERE.parent))
 import statepaths as sp
-from atomic import atomic_write
+from atomic import atomic_write, skriv_sha_sidecar
 from vocab import EMOTION_STATES, ORDER, arbitrate
 from config import DATA
 
@@ -83,8 +83,7 @@ def build(day, passdir, data=DATA):
     # Frys manifestet. Fargen far inte roras forran detta ligger fast - sidecar
     # med SHA256 ar det run_color.py kontrollerar innan den slapper fram hex.
     digest = hashlib.sha256(out.read_bytes()).hexdigest()
-    with atomic_write(sp.sha_sidecar(out)) as fh:
-        fh.write(f"{digest}  {out.name}\n")
+    skriv_sha_sidecar(out, digest)
     # Matpunkt 10, PARAMETER_REGISTER 1.17. Skrivs av det steg som ager talet -
     # hashen uppstar har, i frysningen, och raknas inte om nagon annanstans.
     # Frysningen kor efter step_select, sa faltet ar valfritt i matpostgrinden.

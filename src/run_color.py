@@ -31,7 +31,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE)); sys.path.insert(0, str(HERE.parent))
 import statepaths as sp
 import gates
-from atomic import atomic_write
+from atomic import atomic_write, skriv_sha_sidecar
 from config import DATA
 from color_protocol import hex_of_row
 
@@ -50,8 +50,7 @@ def step_color(day, data=DATA):
     with atomic_write(out) as fh:
         w = csv.DictWriter(fh, fieldnames=cols); w.writeheader(); w.writerows(rows)
     digest = _sha(out)
-    with atomic_write(sp.sha_sidecar(out)) as fh:
-        fh.write(f"{digest}  {out.name}\n")
+    skriv_sha_sidecar(out, digest)
     gates._say("alla rutor har farg", all(r["hex"] for r in rows), f"{len(rows)} rutor")
     print(f"        {out.name}  sha256 {digest[:16]}  ·  {len({r['hex'] for r in rows})} unika farger")
     return out
@@ -78,8 +77,7 @@ def step_render(day, data=DATA):
     from render import render_state
     png = render_state(day, data)
     digest = _sha(png)
-    with atomic_write(sp.sha_sidecar(png)) as fh:
-        fh.write(f"{digest}  {png.name}\n")
+    skriv_sha_sidecar(png, digest)
     print(f"        {png.name}  sha256 {digest[:16]}")
     print(f"        {sp.sha_sidecar(png).name}")
     return png

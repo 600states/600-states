@@ -37,6 +37,30 @@ def write_text(path, text, encoding="utf-8"):
         fh.write(text)
     return Path(path)
 
+def skriv_sha_sidecar(path, digest):
+    """Hashens sidecar bredvid filen, i EN form: digest, tva blanksteg,
+    filnamn, radslut.
+
+    Formen stod pa tre stallen - consensus.py for emotionsmanifestet,
+    run_color.py for fargmanifestet och for verket - och tre strangar som
+    maste vara lika ar FYND 004 i skrivform. En granskare som kan prova den
+    ena sidecaren ska kunna prova den andra utan att lara sig ett andra
+    format. A45.
+
+    DEN BOR HAR och inte i statepaths bredvid sha_sidecar(): skrivningen ar
+    en skrivning, och statepaths bygger sokvagar utan att rora disken. Den
+    lokala importen haller den riktningen - statepaths vet ingenting om
+    atomic, och ska inte behova veta det.
+
+    Digesten raknas av anroparen. Steget som fryser filen har redan talet,
+    och en andra hashning har vore samma varde raknat pa tva stallen.
+    """
+    import statepaths as sp
+    with atomic_write(sp.sha_sidecar(path)) as fh:
+        fh.write(f"{digest}  {path.name}\n")
+    return sp.sha_sidecar(path)
+
+
 def write_bytes(path, data):
     path = Path(path); path.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp = tempfile.mkstemp(dir=str(path.parent), prefix="." + path.name + ".", suffix=".tmp")
