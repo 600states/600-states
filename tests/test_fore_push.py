@@ -214,3 +214,145 @@ def test_binar_blob_kraschar_inte(repo, capfd):
     kod, ut = kor(repo, capfd)
     assert kod == 0
     assert "binara blobbar" in ut
+
+
+# ======================================================================
+# TILLATLISTANS ATTA STALLEN FOR DejaVus LICENSTEXT
+#
+# Typsnitten lades i repot 2026-11-28. Licensen maste folja med och maste sta
+# ordagrant - en redigerad licenstext ar ingen licens - och atta av dess rader
+# faller under ordlistan: fem upphovspersoners adresser och tre meningar om vad
+# som far och inte far goras kommersiellt. Ingen av dem ar projektets.
+#
+# Posterna ar STALLEN, (blob, radnr), och det ar TVINGANDE. En textpost hade
+# skrivit ut adresserna i fore_push.py, och da bar grinden dem sjalv och faller
+# pa sin egen tillatlista - docstringens punkt 3, en niva till.
+#
+# DET FELET INTRAFFADE ANDA, i skalstexten: den forsta lydelsen stavade ut
+# licensens villkor med ett ord ur ordlistan, och grinden foll pa sin egen
+# motivering. Testet nedan - att HELA tillatlistan passerar grinden den vaktar -
+# ar skrivet for just det.
+#
+# Proven ror aldrig projektets repo. De laser TILLATET och licensfilens blob.
+# ======================================================================
+
+LICENSFILEN = "tools/fonts/LICENSE-DejaVu.txt"
+
+
+def _arkivets_ordlista():
+    """Arkivets riktiga ordlista. INGEN try/except: ett prov som hoppar over
+    sig sjalvt for att ett funktionsnamn glidit ar ett prov som sager gront
+    utan att ha provat nagot. Saknas filen hoppas provet over, och DET sags."""
+    fil = fore_push.config.data_root() / fore_push.ORDLISTA
+    if not fil.exists():
+        pytest.skip("arkivets ordlista saknas - satt STATES_DATA")
+    return [r.strip() for r in fil.read_text(encoding="utf-8").splitlines()
+            if r.strip() and not r.startswith("#")]
+
+
+def _git_rot(*a):
+    return subprocess.run(["git", "-C", str(ROT), *a],
+                          capture_output=True, text=True).stdout.strip()
+
+
+def _dejavuposter():
+    """Posterna som ar stallen. En post ar ett stalle nar vad:et inte ar text."""
+    return [(m, v, skal) for m, v, skal in fore_push.TILLATET
+            if not isinstance(v, str)]
+
+
+kraver_licensfilen = pytest.mark.skipif(
+    not (ROT / LICENSFILEN).exists(),
+    reason="licensfilen saknas - typsnitten ar inte i det har tradet")
+
+
+@kraver_licensfilen
+def test_posterna_pekar_pa_licensfilens_egen_blob():
+    """Blobben mats, den tas inte ur posten. En post som pinnar fel objekt
+    slapper igenom ingenting och syns aldrig - den bara ligger dar."""
+    blob = _git_rot("rev-parse", "HEAD:" + LICENSFILEN)
+    assert len(blob) == 40, "hittar ingen blob for " + LICENSFILEN
+    rader = sorted(v[1] for _, v, _ in _dejavuposter() if v[0] == blob)
+    assert len(rader) == 8, (
+        "forvantade atta poster pinnade till licensfilens blob, fick %d" % len(rader))
+    assert len(set(rader)) == 8, "tva poster pekar pa samma rad: %s" % rader
+
+
+@kraver_licensfilen
+def test_varje_post_pekar_pa_en_rad_som_verkligen_faller():
+    """En post vars rad inte traffar ar dekoration. Ordlistan ar arkivets, sa
+    provet hoppas over utan den."""
+    mon = fore_push.monster(_arkivets_ordlista())
+    blob = _git_rot("rev-parse", "HEAD:" + LICENSFILEN)
+    text = (ROT / LICENSFILEN).read_text(encoding="utf-8", errors="replace")
+    traffar = {radnr: namn for namn, _, radnr, _ in fore_push.prova(text, mon)}
+    for namn, (sha, radnr), _ in _dejavuposter():
+        if sha != blob:
+            continue
+        assert radnr in traffar, (
+            "post pa rad %d traffar ingenting - posten ar dekoration" % radnr)
+        assert traffar[radnr] == namn, (
+            "rad %d faller under %r, posten star under %r"
+            % (radnr, traffar[radnr], namn))
+
+
+def test_tillatlistan_passerar_sjalv_den_grind_den_vaktar():
+    """DET HAR AR SKALET TILL ATT POSTERNA AR STALLEN.
+
+    Varje skalstext i TILLATET lases av grinden som vilken annan rad som helst.
+    Stavar en motivering ut det den motiverar faller grinden pa sin egen
+    tillatlista - och den enda vagen ut ar att vitlista vitlistan, vilket ar
+    samma sak som att ta bort grinden.
+
+    Det intraffade 2026-11-28: skalstexten till DejaVus villkorsposter bar ett
+    ord ur ordlistan, och grinden foll pa sin egen motivering."""
+    mon = fore_push.monster(_arkivets_ordlista())
+    brott = []
+    for m, v, skal in fore_push.TILLATET:
+        vad = v if isinstance(v, str) else "stalle"
+        for namn, traffad, _, rad in fore_push.prova(skal, mon):
+            # GRINDENS EGEN NYCKELSLAGNING, inte en strangare. En post som star
+            # pa ORDET slapper igenom sitt eget skal, och det ar meningen -
+            # posten for royalty forklarar varfor i sin egen text. Det provet
+            # ska fanga ar ett skal som INGEN post tacker.
+            if any(n in fore_push.TILLATNA
+                   for n in ((namn, traffad), (namn, rad.strip()))):
+                continue
+            brott.append("%s | %s: skalet traffar %r och ingen post tacker det"
+                         % (m, vad, namn))
+    assert not brott, (
+        "tillatlistans egna motiveringar faller under grinden:\n  "
+        + "\n  ".join(brott))
+
+
+@kraver_licensfilen
+def test_en_andrad_licensfil_slutar_matcha():
+    """Posten ar pinnad till innehallet, inte till filnamnet. Andras filen
+    byter den blob och posterna slutar galla - grinden faller igen, och nagon
+    far titta. Det ar ratt beteende for en licens."""
+    import hashlib
+    byte = (ROT / LICENSFILEN).read_bytes()
+    def blobsha(b):
+        h = hashlib.sha1()
+        h.update(b"blob %d\0" % len(b)); h.update(b)
+        return h.hexdigest()
+    nu = blobsha(byte)
+    assert nu == _git_rot("rev-parse", "HEAD:" + LICENSFILEN), (
+        "testets egen blobrakning stammer inte - da provar resten ingenting")
+    efter = blobsha(byte + b"\n")
+    assert efter != nu
+    pinnade = {v[0] for _, v, _ in _dejavuposter()}
+    assert nu in pinnade
+    assert efter not in pinnade, "en andrad fil skulle fortfarande vara vitlistad"
+
+
+@kraver_licensfilen
+def test_ingen_adress_och_ingen_licensmening_star_utskriven():
+    """Kontroll mot att nagon senare gor om posterna till texter."""
+    kallan = (ROT / "tools" / "fore_push.py").read_text(encoding="utf-8")
+    licensen = (ROT / LICENSFILEN).read_text(encoding="utf-8", errors="replace")
+    for radnr in (3, 33, 34, 48, 54, 55, 56, 57):
+        rad = licensen.splitlines()[radnr - 1].strip()
+        assert rad, "rad %d ar tom - radnumren har glidit" % radnr
+        assert rad not in kallan, (
+            "licensens rad %d star utskriven i fore_push.py" % radnr)
