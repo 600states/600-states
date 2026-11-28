@@ -252,9 +252,11 @@ def test_journalen_vaxer_over_omgangar(tmp_path, monkeypatch):
     # med A21, 2026-11-27.
     assert ut["totals"] == {"calls": 2, "input": 15, "output": 27, "cache_read": 3,
                             "parse_failures": 3,
-                            "begaran": {"skickade": 2, "bokforda": 2,
+                            "begaran": {"skickade": 2, "lyckade": 2,
                                         "fallna_kanda": 0, "fallna_okanda": 0},
-                            "fallna_tokens": {"input": 0, "output": 0, "cache_read": 0}}
+                            "fallna_tokens": {"input": 0, "output": 0,
+                                              "cache_read": 0, "cache_write": 0},
+                            "cache_write": 0}
 
 
 # ---- A21: journalen bokfor ANROP, inte resultat -------------------------
@@ -278,8 +280,9 @@ def test_ett_fallet_anrop_bokfors_med_sina_tal(tmp_path, monkeypatch):
                                                              fallet(3, 7, 1)]}, 0)
     t = json.loads(fil.read_text(encoding="utf-8"))["totals"]
     assert (t["input"], t["output"], t["cache_read"]) == (10, 20, 5)
-    assert t["fallna_tokens"] == {"input": 3, "output": 7, "cache_read": 1}
-    assert t["begaran"] == {"skickade": 2, "bokforda": 1,
+    assert t["fallna_tokens"] == {"input": 3, "output": 7,
+                                  "cache_read": 1, "cache_write": 0}
+    assert t["begaran"] == {"skickade": 2, "lyckade": 1,
                             "fallna_kanda": 1, "fallna_okanda": 0}
 
 
@@ -295,16 +298,17 @@ def test_ett_okant_anrop_bokfors_som_okant_aldrig_som_noll(tmp_path, monkeypatch
     assert t["begaran"]["fallna_okanda"] == 1
     # Talen far INTE summeras som nollor nagonstans.
     assert (t["input"], t["output"]) == (10, 20)
-    assert t["fallna_tokens"] == {"input": 0, "output": 0, "cache_read": 0}
+    assert t["fallna_tokens"] == {"input": 0, "output": 0,
+                                  "cache_read": 0, "cache_write": 0}
     # Och raden sjalv bar null i filen, inte 0.
     rad = [x for x in ut["calls"] if x.get("utfall") == "okand"][0]
     assert rad["input_tokens"] is None and rad["output_tokens"] is None
 
 
-def test_en_fallen_rad_gor_inte_passfilen_bokford(tmp_path, monkeypatch):
+def test_en_fallen_rad_gor_inte_passfilen_tackt(tmp_path, monkeypatch):
     """unrecorded ar listan over passfiler journalen inte tacker. Raknades en
     fallen rad som inspelad skulle ett dygn dar passfilen finns men bara
-    felraderna bokfordes se komplett ut."""
+    felraderna tacktes se komplett ut."""
     fil = _journal(tmp_path, monkeypatch)
     (tmp_path / "classifier_passes" / "pass1_batch_01.json").write_text("[]", encoding="utf-8")
     rad = {**fallet(1, 1, 0), "pass": 1, "batch": 1}
@@ -312,7 +316,7 @@ def test_en_fallen_rad_gor_inte_passfilen_bokford(tmp_path, monkeypatch):
     assert json.loads(fil.read_text(encoding="utf-8"))["unrecorded"] == ["pass1_batch_01"]
 
 
-def test_kontrollprov_en_lyckad_rad_gor_passfilen_bokford(tmp_path, monkeypatch):
+def test_kontrollprov_en_lyckad_rad_gor_passfilen_tackt(tmp_path, monkeypatch):
     """Provet ovan pastar en narvaro i listan. Utan det har provet kunde
     unrecorded namna varje passfil alltid."""
     fil = _journal(tmp_path, monkeypatch)
@@ -330,8 +334,8 @@ def test_journalen_doljer_inte_skillnaden_mellan_talen(tmp_path, monkeypatch):
     gick ihop - en journal som vagrar bli till nar nagot ar fel tar bort
     just det spar som behovs for att forsta felet.
 
-    totals.begaran.skickade raknas ur de bokforda raderna sjalva, sa
-    identiteten skickade = bokforda + fallna + okanda ar sann per
+    totals.begaran.skickade raknas ur journalens egna rader, sa identiteten
+    skickade = lyckade + fallna + okanda ar sann per
     konstruktion. Det oberoende talet ar batch_latency_seconds[].requests,
     skrivet ur jobbfilen FORE resultatslingan. Provet visar att de tva kan
     saga olika saker OCH att bada talen star kvar i filen.
@@ -347,7 +351,7 @@ def test_journalen_doljer_inte_skillnaden_mellan_talen(tmp_path, monkeypatch):
     oberoende = sum(x["requests"] for x in ut["batch_latency_seconds"])
     assert oberoende == 3
     assert ut["totals"]["begaran"]["skickade"] == 2
-    # Tre skickade, tva bokforda - och ingenting sager ifran.
+    # Tre skickade, tva med rad - och ingenting sager ifran.
     assert oberoende != ut["totals"]["begaran"]["skickade"]
 
 def test_byte_av_instrument_mitt_i_ett_dygn_stoppar(tmp_path, monkeypatch):
@@ -450,7 +454,7 @@ def jobb(bid="b1", n=1): return {"batch_id": bid, "requests": n, "seconds": 1.0}
 
 
 def test_grinden_faller_nar_ett_skickat_anrop_saknar_rad(tmp_path, monkeypatch):
-    """Tre skickade enligt jobbet, tva bokforda. Det egna talet foljer med
+    """Tre skickade enligt jobbet, tva med rad. Det egna talet foljer med
     ner i felet; det oberoende gor det inte."""
     _journal(tmp_path, monkeypatch)
     classify.skriv_journal("20260101", {}, {**BAS, "calls": [batchrad(), batchrad()],
@@ -519,7 +523,7 @@ def test_batchraderna_vaxer_over_omgangar_och_raknas_inte_tva_ganger(
     classify.gate_journalen_tacker_anropen("20260101", tmp_path)
     ut = capsys.readouterr().out
     assert "INGET OBEROENDE TAL" not in ut, "b1 tappade sitt oberoende tal"
-    assert "2 skickade enligt jobben, 2 bokforda" in ut
+    assert "2 skickade enligt jobben, 2 med rad" in ut
 
 
 def test_samma_jobb_tva_ganger_raknas_en_gang(tmp_path, monkeypatch):
