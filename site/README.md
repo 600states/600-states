@@ -56,8 +56,18 @@ En annan malmapp gar att ange: `python site/build.py <malmapp>`.
     img/state_003.png
     img/state_004.png
     img/state_2026_315.png
+    img/book_2026_315_p001.png
+    img/book_2026_315_p004.png
+    img/book_2026_315_p319.png
+    img/book_2026_315_p606.png
 
-Fjorton filer, cirka 860 KB. Ingenting annat.
+Arton filer, cirka 1,6 MB. Ingenting annat.
+
+De fyra `book_`-bilderna ar sidor ur bokens PDF, renderade av
+`tools/bokuppslag.py` och committade i `site/img/`. De ar de enda bilder i
+bygget som kommer ur REPOT och inte ur arkivet: verken ar inte
+MIT-licensierade och hor inte i git, men en rendering av en genererad bok
+ar harledd ur repots egen kod.
 
 `state-2026-315.html` ar kalibreringsverket 2026/315 pa en egen adress, och
 star med flit inte i menyn: det ar inte ett numrerat State och ska inte sta

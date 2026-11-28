@@ -728,6 +728,14 @@ def main(argv):
     shutil.copyfile(HERE / "field.js", out / "field.js")
     print("  %-14s %7d bytes" % ("field.js", (out / "field.js").stat().st_size))
 
+    # BILDER SOM LIGGER I REPOT, inte i arkivet: bokens uppslag. Verken
+    # kommer ur arkivet och hor inte i git, men en rendering AV boken ar
+    # harledd ur repots egen kod och foljer med den. De kopieras som de ar,
+    # och byggets lista sager hur manga det blev.
+    for f in sorted((HERE / "img").glob("*.png")):
+        shutil.copyfile(f, out / "img" / f.name)
+        print("  img/%s  %7d bytes" % (f.name, f.stat().st_size))
+
     build_favicon(data_root, out)
 
     for day in DAYS:
